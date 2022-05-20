@@ -1,11 +1,16 @@
-use std::{borrow::Cow, ffi::CString, fmt::Display};
+use std::{borrow::Cow, ffi::CString, fmt::Display, ptr::NonNull, time::Duration};
 
 use visa_sys as vs;
 
+pub mod event;
 pub mod flags;
+pub mod handler;
+
+pub const TIMEOUT_IMMEDIATE: Duration = Duration::from_millis(vs::VI_TMO_IMMEDIATE as _);
+pub const TIMEOUT_INFINITE: Duration = Duration::from_micros(vs::VI_TMO_INFINITE as _);
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
-pub struct Error(vs::ViInt32);
+pub struct Error(vs::ViStatus);
 
 impl std::error::Error for Error {}
 
@@ -15,9 +20,15 @@ impl std::fmt::Display for Error {
     }
 }
 
-impl From<vs::ViInt32> for Error {
-    fn from(s: vs::ViInt32) -> Self {
+impl From<vs::ViStatus> for Error {
+    fn from(s: vs::ViStatus) -> Self {
         Self(s)
+    }
+}
+
+impl Into<vs::ViStatus> for Error {
+    fn into(self) -> vs::ViStatus {
+        self.0
     }
 }
 
@@ -72,7 +83,7 @@ impl DefaultRM {
         &self,
         res_name: &ResID,
         access_mode: flags::AccessMode,
-        open_timeout: std::time::Duration,
+        open_timeout: Duration,
     ) -> Result<Instrument> {
         let mut instr: vs::ViSession = 0;
         wrap_raw_error_in_unsafe!(vs::viOpen(
@@ -117,15 +128,19 @@ impl ResList {
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash, Clone)]
-pub struct ResID(CString);
+pub struct VisaString(CString);
 
-impl From<CString> for ResID {
+pub type ResID = VisaString;
+pub type KeyID = VisaString;
+pub type AccessKey = VisaString;
+
+impl From<CString> for VisaString {
     fn from(c: CString) -> Self {
         Self(c)
     }
 }
 
-impl ResID {
+impl VisaString {
     fn as_vi_const_string(&self) -> vs::ViConstString {
         self.0.as_ptr()
     }
@@ -193,7 +208,7 @@ impl std::io::Write for Instrument {
     fn flush(&mut self) -> std::io::Result<()> {
         self.raw_flush(flags::FlushMode::WRITE_BUF)
             .map_err(map_to_io_err)
-        //should call flags::FlushMODE::IO_OUT_BUF ?
+        // ? should call flags::FlushMODE::IO_OUT_BUF
     }
 }
 
@@ -228,7 +243,135 @@ impl Instrument {
     pub fn term(&mut self, job: JobID) -> Result<()> {
         todo!()
     }
-    pub fn lock(&mut self)
+    pub fn lock(
+        &mut self,
+        mode: flags::AccessMode,
+        timeout: Duration,
+        key: KeyID,
+    ) -> Result<AccessKey> {
+        todo!()
+    }
+    pub fn unlock(&mut self) -> Result<()> {
+        wrap_raw_error_in_unsafe!(vs::viUnlock(self.0))?;
+        Ok(())
+    }
+    pub fn enable_event(
+        &mut self,
+        event_kind: event::EventKind,
+        mechanism: event::Mechanism,
+        filter: event::EventFilter,
+    ) -> Result<()> {
+        wrap_raw_error_in_unsafe!(vs::viEnableEvent(
+            self.0,
+            event_kind as _,
+            mechanism as _,
+            filter as _
+        ))?;
+        Ok(())
+    }
+    pub fn disable_event(
+        &mut self,
+        event_kind: event::EventKind,
+        mechanism: event::Mechanism,
+    ) -> Result<()> {
+        wrap_raw_error_in_unsafe!(vs::viDisableEvent(self.0, event_kind as _, mechanism as _,))?;
+        Ok(())
+    }
+    pub fn discard_events(
+        &mut self,
+        event: event::EventKind,
+        mechanism: event::Mechanism,
+    ) -> Result<()> {
+        wrap_raw_error_in_unsafe!(vs::viDiscardEvents(self.0, event as _, mechanism as _,))?;
+        Ok(())
+    }
+    pub fn wait_on_event(
+        &mut self,
+        event_kind: event::EventKind,
+        timeout: Duration,
+    ) -> Result<event::Event> {
+        let mut handler: vs::ViEvent = 0;
+        let mut out_kind: vs::ViEventType = 0;
+        wrap_raw_error_in_unsafe!(vs::viWaitOnEvent(
+            self.0,
+            event_kind as _,
+            timeout.as_millis() as _,
+            &mut out_kind as _,
+            &mut handler as _
+        ))?;
+        let kind = event::EventKind::try_from(out_kind).expect("should be valid event type");
+        Ok(event::Event { handler, kind })
+    }
+    pub fn install_handler<F, Out>(
+        &mut self,
+        event_kind: event::EventKind,
+        ops: impl FnMut(&mut Instrument, event::Event) -> Result<Out>,
+    ) -> Result<handler::Handler<Out, impl FnMut(&mut Instrument, event::Event) -> vs::ViStatus>>
+    {
+        let (sender, receiver) = std::sync::mpsc::channel();
+        let mut ops = ops;
+        let closure = move |instr: &mut Instrument, event: event::Event| -> vs::ViStatus {
+            let ret = ops(instr, event);
+            match ret {
+                Err(e) => e.into(),
+                Ok(r) => {
+                    sender.send(r).expect("receiver side should be valid");
+                    SUCCESS
+                }
+            }
+        };
+        let (p_f, p_c, call) = split_closure(closure);
+
+        wrap_raw_error_in_unsafe!(vs::viInstallHandler(
+            self.0,
+            event_kind as _,
+            Some(call),
+            p_c
+        ))?;
+        Ok(handler::Handler::new(
+            self.0, receiver, event_kind, call, p_f,
+        ))
+    }
 }
 
-pub struct JobID(vs::JobID);
+fn split_closure<F>(
+    closure: F,
+) -> (
+    std::ptr::NonNull<F>,
+    *mut std::ffi::c_void,
+    unsafe extern "C" fn(
+        vs::ViSession,
+        vs::ViEventType,
+        vs::ViEvent,
+        *mut std::ffi::c_void,
+    ) -> vs::ViStatus,
+)
+where
+    F: FnMut(&mut Instrument, event::Event) -> vs::ViStatus,
+{
+    use std::ffi::c_void;
+    let data = Box::into_raw(Box::new(closure));
+    unsafe extern "C" fn trampoline<T>(
+        instr: vs::ViSession,
+        event_type: vs::ViEventType,
+        event: vs::ViEvent,
+        user_data: *mut c_void,
+    ) -> vs::ViStatus
+    where
+        T: FnMut(&mut Instrument, event::Event) -> vs::ViStatus,
+    {
+        let closure: &mut T = &mut *(user_data as *mut T);
+        let mut instr = Instrument(instr);
+        let ret = closure(&mut instr, event::Event::new(event, event_type));
+        std::mem::forget(instr); // ? no sure yet, in official example session not closed
+        ret
+    }
+
+    (
+        NonNull::new(data).expect("impossible to pass in a null ptr"),
+        data as *mut c_void,
+        trampoline::<F>,
+    )
+}
+
+pub struct JobID(vs::ViJobId);
