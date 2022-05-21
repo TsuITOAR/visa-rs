@@ -2,6 +2,7 @@ use std::{borrow::Cow, ffi::CString, fmt::Display, ptr::NonNull, time::Duration}
 
 use visa_sys as vs;
 
+mod session;
 pub mod event;
 pub mod flags;
 pub mod handler;
@@ -106,7 +107,7 @@ pub struct ResList {
 
 impl ResList {
     pub fn find_next(&mut self) -> Result<Option<ResID>> {
-        if self.cnt < 0 {
+        if self.cnt < 1 {
             return Ok(None);
         }
         let next = ResID::from(
@@ -119,10 +120,10 @@ impl ResList {
             )
             .expect("can not be null"),
         );
-        self.cnt -= 1;
-        if self.cnt > 0 {
+        if self.cnt > 1 {
             wrap_raw_error_in_unsafe!(vs::viFindNext(self.list, self.instr_desc.as_mut_ptr()))?;
         }
+        self.cnt -= 1;
         Ok(next.into())
     }
 }
@@ -151,7 +152,7 @@ impl VisaString {
 
 impl Display for ResID {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.to_string().fmt(f)
+        self.to_string_lossy().fmt(f)
     }
 }
 
