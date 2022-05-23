@@ -22,7 +22,7 @@ macro_rules! consts_to_enum {
         }
     } => {
         #[repr(i32)]
-        #[derive(num_enum::TryFromPrimitive,num_enum::IntoPrimitive, Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
+        #[derive(num_enum::TryFromPrimitive,num_enum::IntoPrimitive, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
         pub enum $enum_id{
             $(
                 #[doc=$des]
@@ -38,6 +38,13 @@ macro_rules! consts_to_enum {
                         $(Self::$status => $des),*
                     }
                 )
+            }
+        }
+        impl ::std::fmt::Debug for $enum_id{
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+                match self{
+                    $(Self::$status => write!(f,"Error {:#010X}: {}", $value, $des)),*
+                }
             }
         }
     };

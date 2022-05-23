@@ -1,6 +1,6 @@
 use std::{
     ffi::CString,
-    io::{BufRead, BufReader, Read, Write},
+    io::{BufRead, BufReader, Write},
 };
 
 use visa_rs::{flags::AccessMode, *};
@@ -18,7 +18,7 @@ fn list_instr() -> Result<()> {
 #[test]
 fn send_idn() -> Result<()> {
     let rm = DefaultRM::new()?;
-    let mut list = rm.find_res(&CString::new("?*KEYSIGH?*INSTR").unwrap().into())?;
+    let mut list = rm.find_res(&CString::new("*KEYSIGH?*INSTR").unwrap().into())?;
     if let Some(n) = list.find_next()? {
         let mut instr = rm.open(&n, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
         instr.write_all(b"*IDN?\n").unwrap();
