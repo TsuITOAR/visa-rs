@@ -43,7 +43,7 @@ macro_rules! consts_to_enum {
         impl ::std::fmt::Debug for $enum_id{
             fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
                 match self{
-                    $(Self::$status => write!(f,"Error {:#010X}: {}", $value, $des)),*
+                    $(Self::$status => write!(f,"{:#010X}: {}", $value, $des)),*
                 }
             }
         }
