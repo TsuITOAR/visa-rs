@@ -2,53 +2,11 @@
 //! comes from [official NI-visa document](https://www.ni.com/docs/en-US/bundle/ni-visa/page/ni-visa/completion_codes.html),
 //! pdf can download from [here](https://www.ni.com/pdf/manuals/370132c.pdf)
 //!
-
-
-macro_rules! format_status_code {
-    {
-        pub enum $enum_id:ident{
-            Completion Codes	Values	Meaning
-            $($status:ident $value:literal $des:literal)*
-        }
-    } => {
-        visa_rs_proc::rusty_ident!{
-            format_status_code!{
-                @actual
-                pub enum $enum_id{
-                    Completion Codes	Values	Meaning
-                    $($status $value $des)*
-                }
-            }
-        }
-    };
-    {   @actual
-        pub enum $enum_id:ident{
-            Completion Codes	Values	Meaning
-            $($status:tt $value:literal $des:literal)*
-        }
-    } => {
-        #[repr(i32)]
-        #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
-        pub enum $enum_id{
-            $($status=$value as _),*
-        }
-        impl ::std::fmt::Display for $enum_id{
-            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-                write!(
-                    f,
-                    "{}",
-                    match self{
-                        $(Self::$status => $des),*
-                    }
-                )
-            }
-        }
-    };
-}
-
-pub mod error {
+pub use completion::CompletionCode;
+pub use error::ErrorCode;
+mod error {
     #![allow(overflowing_literals)]
-    format_status_code! {
+    consts_to_enum! {
         pub enum ErrorCode{
             Completion Codes	Values	Meaning
             VI_ERROR_SYSTEM_ERROR	0xBFFF0000	"Unknown system error (miscellaneous error)."
@@ -134,8 +92,8 @@ pub mod error {
         }
     }
 }
-pub mod completion {
-    format_status_code! {
+mod completion {
+    consts_to_enum! {
         pub enum CompletionCode{
             Completion Codes	Values	Meaning
             VI_SUCCESS	0x0	"Operation completed successfully."

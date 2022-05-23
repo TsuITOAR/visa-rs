@@ -1,8 +1,7 @@
-use num_enum::TryFromPrimitive;
 use visa_sys as vs;
 
 #[repr(u32)]
-#[derive(TryFromPrimitive, Debug, PartialEq, PartialOrd, Eq, Ord, Hash, Clone, Copy)]
+#[derive(num_enum::TryFromPrimitive, Debug, PartialEq, PartialOrd, Eq, Ord, Hash, Clone, Copy)]
 pub enum EventKind {
     IoCompletion = vs::VI_EVENT_IO_COMPLETION,
 }

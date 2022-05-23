@@ -2,45 +2,59 @@ use std::{borrow::Cow, ffi::CString, fmt::Display, ptr::NonNull, time::Duration}
 
 use visa_sys as vs;
 
+pub mod enums;
 pub mod event;
 pub mod flags;
 pub mod handler;
-pub mod status;
 mod session;
 pub const TIMEOUT_IMMEDIATE: Duration = Duration::from_millis(vs::VI_TMO_IMMEDIATE as _);
 pub const TIMEOUT_INFINITE: Duration = Duration::from_micros(vs::VI_TMO_INFINITE as _);
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
-pub struct Error(vs::ViStatus);
+pub struct Error(enums::ErrorCode);
 
 impl std::error::Error for Error {}
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
+        self.0.fmt(f)
     }
 }
 
-impl From<vs::ViStatus> for Error {
-    fn from(s: vs::ViStatus) -> Self {
+impl From<enums::ErrorCode> for Error {
+    fn from(s: enums::ErrorCode) -> Self {
         Self(s)
+    }
+}
+
+impl Into<enums::ErrorCode> for Error {
+    fn into(self) -> enums::ErrorCode {
+        self.0
     }
 }
 
 impl Into<vs::ViStatus> for Error {
     fn into(self) -> vs::ViStatus {
-        self.0
+        self.0.into()
     }
 }
 
+impl TryFrom<vs::ViStatus> for Error {
+    type Error = <enums::ErrorCode as TryFrom<vs::ViStatus>>::Error;
+    fn try_from(value: vs::ViStatus) -> std::result::Result<Self, Self::Error> {
+        Ok(Self(value.try_into()?))
+    }
+}
 pub type Result<T> = std::result::Result<T, Error>;
 const SUCCESS: vs::ViStatus = vs::VI_SUCCESS as _;
 
 macro_rules! wrap_raw_error_in_unsafe {
     ($s:expr) => {
         match unsafe { $s } {
-            state if state >= SUCCESS => Result::<vs::ViStatus>::Ok(state),
-            e => Err(e.into()),
+            state if state >= SUCCESS => {
+                Result::<enums::CompletionCode>::Ok(state.try_into().unwrap())
+            }
+            e => Result::<enums::CompletionCode>::Err(e.try_into().unwrap()),
         }
     };
 }
@@ -168,24 +182,25 @@ impl Drop for Instrument {
 }
 
 fn map_to_io_err(err: Error) -> std::io::Error {
+    use enums::ErrorCode::*;
     use std::io::ErrorKind::*;
     std::io::Error::new(
         match err.0 {
-            vs::VI_ERROR_INV_OBJECT => AddrNotAvailable,
-            vs::VI_ERROR_NSUP_OPER => Unsupported,
-            vs::VI_ERROR_RSRC_LOCKED => ConnectionRefused,
-            vs::VI_ERROR_TMO => TimedOut,
-            vs::VI_ERROR_RAW_WR_PROT_VIOL | vs::VI_ERROR_RAW_RD_PROT_VIOL => InvalidData,
-            vs::VI_ERROR_INP_PROT_VIOL | vs::VI_ERROR_OUTP_PROT_VIOL => BrokenPipe,
-            vs::VI_ERROR_BERR => BrokenPipe,
-            vs::VI_ERROR_INV_SETUP => InvalidInput,
-            vs::VI_ERROR_NCIC => PermissionDenied,
-            vs::VI_ERROR_NLISTENERS => Other,
-            vs::VI_ERROR_ASRL_PARITY | vs::VI_ERROR_ASRL_FRAMING => Other,
-            vs::VI_ERROR_ASRL_OVERRUN => Other,
-            vs::VI_ERROR_CONN_LOST => BrokenPipe,
-            vs::VI_ERROR_INV_MASK => InvalidInput,
-            vs::VI_ERROR_IO => return std::io::Error::last_os_error(),
+            ErrorInvObject => AddrNotAvailable,
+            ErrorNsupOper => Unsupported,
+            ErrorRsrcLocked => ConnectionRefused,
+            ErrorTmo => TimedOut,
+            ErrorRawWrProtViol | ErrorRawRdProtViol => InvalidData,
+            ErrorInpProtViol | ErrorOutpProtViol => BrokenPipe,
+            ErrorBerr => BrokenPipe,
+            ErrorInvSetup => InvalidInput,
+            ErrorNcic => PermissionDenied,
+            ErrorNlisteners => Other,
+            ErrorAsrlParity | ErrorAsrlFraming => Other,
+            ErrorAsrlOverrun => Other,
+            ErrorConnLost => BrokenPipe,
+            ErrorInvMask => InvalidInput,
+            ErrorIo => return std::io::Error::last_os_error(),
             _ => unreachable!(),
         },
         err,
@@ -232,10 +247,10 @@ impl Instrument {
         wrap_raw_error_in_unsafe!(vs::viFlush(self.0, mode.bits()))?;
         Ok(())
     }
-    pub fn get_attr(&self, attr_kind: flags::AttrKind) -> flags::Attribute {
+    pub fn get_attr(&self, attr_kind: enums::AttrKind) -> enums::Attribute {
         todo!()
     }
-    pub fn set_attr(&mut self, attr: flags::Attribute) {
+    pub fn set_attr(&mut self, attr: enums::Attribute) {
         todo!()
     }
     pub fn status_desc(&mut self, error: Error) -> Result<String> {
