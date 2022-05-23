@@ -11,5 +11,3 @@ impl Drop for Session {
         }
     }
 }
-
-use std::net::TcpStream;

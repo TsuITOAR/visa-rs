@@ -2,15 +2,15 @@ use std::{borrow::Cow, ffi::CString, fmt::Display, ptr::NonNull, time::Duration}
 
 use visa_sys as vs;
 
-mod session;
 pub mod event;
 pub mod flags;
 pub mod handler;
-
+pub mod status;
+mod session;
 pub const TIMEOUT_IMMEDIATE: Duration = Duration::from_millis(vs::VI_TMO_IMMEDIATE as _);
 pub const TIMEOUT_INFINITE: Duration = Duration::from_micros(vs::VI_TMO_INFINITE as _);
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct Error(vs::ViStatus);
 
 impl std::error::Error for Error {}
