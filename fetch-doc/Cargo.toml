@@ -1,0 +1,13 @@
+[package]
+name = "fetch-doc"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+reqwest = "^0.11"
+scraper = "^0.13"
+selectors = "^0.22"
+tokio = { version = "^1", features = ["rt-multi-thread", "macros"] }
