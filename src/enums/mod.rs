@@ -1,34 +1,61 @@
 macro_rules! consts_to_enum {
     {
-        pub enum $enum_id:ident{
-            Completion Codes	Values	Meaning
+        pub enum $enum_id:ident $(:$align:ty)?{
             $($status:ident $value:literal $des:literal)*
         }
     } => {
         visa_rs_proc::rusty_ident!{
             consts_to_enum!{
-                @inner
+                @enum
+                pub enum $enum_id $(:$align)?{
+                    $($status $value)*
+                }
+            }
+            consts_to_enum!{
+                @fmt
                 pub enum $enum_id{
-                    Completion Codes	Values	Meaning
                     $($status $value $des)*
                 }
             }
         }
+
     };
-    {   @inner
-        pub enum $enum_id:ident{
-            Completion Codes	Values	Meaning
-            $($status:tt $value:literal $des:literal)*
+    {
+        pub enum $enum_id:ident $(:$align:ty)?{
+            $($status:ident $value:literal)*
         }
     } => {
-        #[repr(i32)]
+        visa_rs_proc::rusty_ident!{
+            consts_to_enum!{
+                @enum
+                pub enum $enum_id $(:$align)?{
+                    $($status $value)*
+                }
+            }
+        }
+    };
+
+    {   @enum
+        pub enum $enum_id:ident $(:$align:ty)?{
+            $($status:tt $value:literal $($des:literal)?)*
+        }
+    } => {
+         $(#[repr($align)])?
         #[derive(num_enum::TryFromPrimitive,num_enum::IntoPrimitive, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
         pub enum $enum_id{
             $(
-                #[doc=$des]
+                $(#[doc=$des])?
                 $status=$value as _
             ),*
         }
+
+    };
+    {
+        @fmt
+        pub enum $enum_id:ident $(:$align:ty)?{
+            $($status:tt $value:literal $des:literal)*
+        }
+    } => {
         impl ::std::fmt::Display for $enum_id{
             fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
                 write!(
@@ -47,7 +74,7 @@ macro_rules! consts_to_enum {
                 }
             }
         }
-    };
+    }
 }
 
 mod attribute;

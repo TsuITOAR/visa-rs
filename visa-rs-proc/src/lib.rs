@@ -8,13 +8,33 @@ use syn::{
     Ident, Result, Token,
 };
 
-struct CallMacroInside {
+struct Macros {
+    inner: Vec<MacroInside>,
+}
+
+impl Parse for Macros {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let mut inner = Vec::new();
+        while !input.is_empty() {
+            inner.push(input.parse()?);
+        }
+        Ok(Self { inner })
+    }
+}
+
+impl ToTokens for Macros {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
+        self.inner.iter().for_each(|x| x.to_tokens(tokens))
+    }
+}
+
+struct MacroInside {
     mac: Ident,
     exc: Token![!],
     body: Body,
 }
 
-impl Parse for CallMacroInside {
+impl Parse for MacroInside {
     fn parse(input: ParseStream) -> Result<Self> {
         let mac: Ident = input.parse()?;
         let exc = input.parse::<Token![!]>()?;
@@ -23,7 +43,7 @@ impl Parse for CallMacroInside {
     }
 }
 
-impl ToTokens for CallMacroInside {
+impl ToTokens for MacroInside {
     fn to_tokens(&self, tokens: &mut TokenStream2) {
         let Self { mac, exc, body } = self;
         mac.to_tokens(tokens);
@@ -86,6 +106,6 @@ fn subst_ident(t: TokenTree) -> TokenStream2 {
 
 #[proc_macro]
 pub fn rusty_ident(input: TokenStream) -> TokenStream {
-    let nested_macro = parse_macro_input!(input as CallMacroInside);
-    quote! {#nested_macro}.into()
+    let macros = parse_macro_input!(input as Macros);
+    quote! {#macros}.into()
 }

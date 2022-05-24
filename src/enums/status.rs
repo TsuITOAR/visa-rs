@@ -7,8 +7,8 @@ pub use error::ErrorCode;
 mod error {
     #![allow(overflowing_literals)]
     consts_to_enum! {
-        pub enum ErrorCode{
-            Completion Codes	Values	Meaning
+        pub enum ErrorCode: i32{
+            //Completion Codes	Values	Meaning
             VI_ERROR_SYSTEM_ERROR	0xBFFF0000	"Unknown system error (miscellaneous error)."
             VI_ERROR_INV_OBJECT	0xBFFF000E	"The given session or object reference is invalid."
             VI_ERROR_RSRC_LOCKED	0xBFFF000F	"Specified type of lock cannot be obtained or specified operation cannot be performed, because the resource is locked."
@@ -94,8 +94,7 @@ mod error {
 }
 mod completion {
     consts_to_enum! {
-        pub enum CompletionCode{
-            Completion Codes	Values	Meaning
+        pub enum CompletionCode: i32{
             VI_SUCCESS	0x0	"Operation completed successfully."
             VI_SUCCESS_EVENT_EN	0x3FFF0002	"Specified event is already enabled for at least one of the specified mechanisms."
             VI_SUCCESS_EVENT_DIS	0x3FFF0003	"Specified event is already disabled for at least one of the specified mechanisms."
