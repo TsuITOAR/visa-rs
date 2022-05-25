@@ -214,4 +214,472 @@ mod attributes {
             VI_ATTR_PXI_ALLOW_WRITE_COMBINE	0x3FFF0246              //
         }
     }
+    pass_compile!{
+        const VI_ATTR_4882_COMPLIANT: r#"VI_ATTR_4882_COMPLIANT specifies whether the device is 488.2 compliant."#
+        (Read Only Global) (ViBoolean)::<VI_TRUE (1) VI_FALSE (0)> = N/A
+
+        const VI_ATTR_ASRL_ALLOW_TRANSMIT: r#"If set to VI_FALSE, it suspends transmission as if an XOFF character has been received. If set to VI_TRUE , it resumes transmission as if an XON character has been received. If XON/XOFF flow control (software handshaking) is not being used, it is invalid to set this attribute to VI_FALSE ."#
+        (Read/Write Global) (ViBoolean)::<VI_TRUE (1) VI_FALSE (0)> = VI_TRUE
+
+        const VI_ATTR_ASRL_AVAIL_NUM: r#"VI_ATTR_ASRL_AVAIL_NUM shows the number of bytes available in the low-level I/O receive buffer."#
+        (Read Only Global) (ViUInt32)::<0 to FFFFFFFFh> = N/A
+
+        const VI_ATTR_ASRL_BAUD: r#"VI_ATTR_ASRL_BAUD is the baud rate of the interface. It is represented as an unsigned 32-bit integer so that any baud rate can be used, but it usually requires a commonly used rate such as 300, 1200, 2400, or 9600 baud."#
+        (Read/Write Global) (ViUInt32)::<0 to FFFFFFFFh> = 9600
+
+        const VI_ATTR_ASRL_BREAK_LEN: r#"This controls the duration (in milliseconds) of the break signal asserted when VI_ATTR_ASRL_END_OUT is set to VI_ASRL_END_BREAK . If you want to control the assertion state and length of a break signal manually, use the VI_ATTR_ASRL_BREAK_STATE attribute instead."#
+        (Read/Write Local) (ViInt16)::<1-500> = 250
+
+        const VI_ATTR_ASRL_BREAK_STATE: r#"If set to VI_STATE_ASSERTED , it suspends character transmission and places the transmission line in a break state until this attribute is reset to VI_STATE_UNASSERTED . This attribute lets you manually control the assertion state and length of a break signal. If you want VISA to send a break signal after each write operation automatically, use the VI_ATTR_ASRL_BREAK_LEN and VI_ATTR_ASRL_END_OUT attributes instead."#
+        (Read/Write Global) (ViInt16)::<VI_STATE_ASSERTED (1) VI_STATE_UNASSERTED (0) VI_STATE_UNKNOWN (-1)> = VI_STATE_UNASSERTED
+
+        const VI_ATTR_ASRL_CONNECTED: r#"VI_ATTR_ASRL_CONNECTED indicates whether the port is properly connected to another port or device. This attribute is valid only with serial drivers developed by National Instruments and documented to support this feature with the corresponding National Instruments hardware."#
+        (Read Only Global) (ViBoolean)::<VI_TRUE (1) VI_FALSE (0)> = N/A
+
+        const VI_ATTR_ASRL_CTS_STATE: r#"VI_ATTR_ASRL_CTS_STATE shows the current state of the Clear To Send (CTS) input signal."#
+        (Read Only Global) (ViInt16)::<VI_STATE_ASSERTED (1) VI_STATE_UNASSERTED (0) VI_STATE_UNKNOWN (-1)> = N/A
+
+        const VI_ATTR_ASRL_DATA_BITS: r#"VI_ATTR_ASRL_DATA_BITS is the number of data bits contained in each frame (from 5 to 8). The data bits for each frame are located in the low-order bits of every byte stored in memory."#
+        (Read/Write Global) (ViUInt16)::<5 to 8> = 8
+
+        const VI_ATTR_ASRL_DCD_STATE: r#"VI_ATTR_ASRL_DCD_STATE represents the current state of the Data Carrier Detect (DCD) input signal. The DCD signal is often used by modems to indicate the detection of a carrier (remote modem) on the telephone line. The DCD signal is also known as Receive Line Signal Detect (RLSD). This attribute is Read Only except when the VI_ATTR_ASRL_WIRE_MODE attribute is set to VI_ASRL_WIRE_232_DCE , or VI_ASRL_WIRE_232_AUTO with the hardware currently in the DCE state."#
+        (Read/Write Global) (ViInt16)::<VI_STATE_ASSERTED (1) VI_STATE_UNASSERTED (0) VI_STATE_UNKNOWN (-1)> = N/A
+
+        const VI_ATTR_ASRL_DISCARD_NULL: r#"If set to VI_TRUE , NUL characters are discarded. Otherwise, they are treated as normal data characters. For binary transfers, set this attribute to VI_FALSE ."#
+        (Read/Write Global) (ViBoolean)::<VI_TRUE (1) VI_FALSE (0)> = VI_FALSE
+
+        const VI_ATTR_ASRL_DSR_STATE: r#"VI_ATTR_ASRL_DSR_STATE shows the current state of the Data Set Ready (DSR) input signal."#
+        (Read Only Global) (ViInt16)::<VI_STATE_ASSERTED (1) VI_STATE_UNASSERTED (0) VI_STATE_UNKNOWN (-1)> = N/A
+
+        const VI_ATTR_ASRL_DTR_STATE: r#"VI_ATTR_ASRL_DTR_STATE shows the current state of the Data Terminal Ready (DTR) input signal. When the VI_ATTR_ASRL_FLOW_CNTRL attribute is set to VI_ASRL_FLOW_DTR_DSR , this attribute is Read Only. Querying the value will return VI_STATE_UNKNOWN ."#
+        (Read/Write Global) (ViInt16)::<VI_STATE_ASSERTED (1) VI_STATE_UNASSERTED (0) VI_STATE_UNKNOWN (-1)> = N/A
+
+        const VI_ATTR_ASRL_END_IN: r#"VI_ATTR_ASRL_END_IN indicates the method used to terminate read operations. If it is set to VI_ASRL_END_NONE , the read will not terminate until all of the requested data is received (or an error occurs). If it is set to VI_ASRL_END_LAST_BIT , the read will terminate as soon as a character arrives with its last bit set. For example, if VI_ATTR_ASRL_DATA_BITS is set to 8, the read will terminate when a character arrives with the 8th bit set. If it is set to VI_ASRL_END_TERMCHAR , the read will terminate as soon as the character in VI_ATTR_TERMCHAR is received. In this case, VI_ATTR_TERMCHAR_EN is ignored. Because the default value of VI_ATTR_TERMCHAR is 0Ah (linefeed), read operations on serial ports will stop reading whenever a linefeed is encountered. To change this behavior, you must change the value of one of these attributes— VI_ATTR_ASRL_END_IN or VI_ATTR_TERMCHAR ."#
+        (Read/Write Local) (ViUInt16)::<VI_ASRL_END_NONE (0) VI_ASRL_END_LAST_BIT (1) VI_ASRL_END_TERMCHAR (2)> = VI_ASRL_END_TERMCHAR
+
+        const VI_ATTR_ASRL_END_OUT: r#"VI_ATTR_ASRL_END_OUT indicates the method used to terminate write operations. If it is set to VI_ASRL_END_NONE , the write will transmit the exact contents of the user buffer, without modifying it and without appending anything to the data being written. If it is set to VI_ASRL_END_LAST_BIT , and VI_ATTR_SEND_END_EN is set to VI_TRUE , the write will send all but the last character with the highest bit clear, then transmit the last character with the highest bit set. For example, if VI_ATTR_ASRL_DATA_BITS is set to 8, the write will clear the eighth bit for all but the last character, then transmit the last character with the eighth bit set. If VI_ATTR_SEND_END_EN is set to VI_FALSE , the write will send all the characters with the highest bit clear. If it is set to VI_ASRL_END_TERMCHAR , and VI_ATTR_SEND_END_EN is set to VI_TRUE , the write will send the character in VI_ATTR_TERMCHAR after the data being transmitted. If VI_ATTR_SEND_END_EN is set to VI_FALSE , the write will transmit the exact contents of the user buffer, without modifying it and without appending anything to the data being written. If it is set to VI_ASRL_END_BREAK , and VI_ATTR_SEND_END_EN is set to VI_TRUE , the write will transmit a break after all the characters for the write have been sent. If VI_ATTR_SEND_END_EN is set to VI_FALSE , the write will transmit the exact contents of the user buffer, without modifying it and without appending anything to the data being written. "#
+        (Read/Write Local) (ViUInt16)::<VI_ASRL_END_NONE (0) VI_ASRL_END_LAST_BIT (1) VI_ASRL_END_TERMCHAR (2) VI_ASRL_END_BREAK (3)> = VI_ASRL_END_NONE
+
+        const VI_ATTR_ASRL_FLOW_CNTRL: r#"VI_ATTR_ASRL_FLOW_CNTRL indicates the type of flow control used by the transfer mechanism. If this attribute is set to VI_ASRL_FLOW_NONE , the transfer mechanism does not use flow control, and buffers on both sides of the connection are assumed to be large enough to hold all data transferred. If this attribute is set to VI_ASRL_FLOW_XON_XOFF , the transfer mechanism uses the XON and XOFF characters to perform flow control. The transfer mechanism controls input flow by sending XOFF when the low-level I/O receive buffer is nearly full, and it controls the output flow by suspending transmission when XOFF is received. If this attribute is set to VI_ASRL_FLOW_RTS_CTS , the transfer mechanism uses the RTS output signal and the CTS input signal to perform flow control. The transfer mechanism controls input flow by unasserting the RTS signal when the low-level I/O receive buffer is nearly full, and it controls output flow by suspending the transmission when the CTS signal is unasserted. If this attribute is set to VI_ASRL_FLOW_DTR_DSR , the transfer mechanism uses the DTR output signal and the DSR input signal to perform flow control. The transfer mechanism controls input flow by unasserting the DTR signal when the low-level I/O receive buffer is nearly full, and it controls output flow by suspending the transmission when the DSR signal is unasserted. This attribute can specify multiple flow control mechanisms by bit-ORing multiple values together. However, certain combinations may not be supported by all serial ports and/or operating systems."#
+        (Read/Write Global) (ViUInt16)::<VI_ASRL_FLOW_NONE (0) VI_ASRL_FLOW_XON_XOFF (1) VI_ASRL_FLOW_RTS_CTS (2) VI_ASRL_FLOW_DTR_DSR (4)> = VI_ASRL_FLOW_NONE
+
+        const VI_ATTR_ASRL_PARITY: r#"VI_ATTR_ASRL_PARITY is the parity used with every frame transmitted and received. VI_ASRL_PAR_MARK means that the parity bit exists and is always 1. VI_ASRL_PAR_SPACE means that the parity bit exists and is always 0. "#
+        (Read/Write Global) (ViUInt16)::<VI_ASRL_PAR_NONE (0) VI_ASRL_PAR_ODD (1) VI_ASRL_PAR_EVEN (2) VI_ASRL_PAR_MARK (3) VI_ASRL_PAR_SPACE (4)> = VI_ASRL_PAR_NONE
+
+        const VI_ATTR_ASRL_REPLACE_CHAR: r#"VI_ATTR_ASRL_REPLACE_CHAR specifies the character to be used to replace incoming characters that arrive with errors (such as parity error)."#
+        (Read/Write Local) (ViUInt8)::<0 to FFh> = 0
+
+        const VI_ATTR_ASRL_RI_STATE: r#"VI_ATTR_ASRL_RI_STATE represents the current state of the Ring Indicator (RI) input signal. The RI signal is often used by modems to indicate that the telephone line is ringing. This attribute is Read Only except when the VI_ATTR_ASRL_WIRE_MODE attribute is set to VI_ASRL_WIRE_232_DCE , or VI_ASRL_WIRE_232_AUTO with the hardware currently in the DCE state."#
+        (Read/Write Global) (ViInt16)::<VI_STATE_ASSERTED (1) VI_STATE_UNASSERTED (0) VI_STATE_UNKNOWN (-1)> = N/A
+
+        const VI_ATTR_ASRL_RTS_STATE: r#"VI_ATTR_ASRL_RTS_STATE is used to manually assert or unassert the Request To Send (RTS) output signal. When the VI_ATTR_ASRL_FLOW_CNTRL attribute is set to VI_ASRL_FLOW_RTS_CTS , this attribute is Read Only. Querying the value will return VI_STATE_UNKNOWN ."#
+        (Read/Write Global) (ViInt16)::<VI_STATE_ASSERTED (1) VI_STATE_UNASSERTED (0) VI_STATE_UNKNOWN (-1)> = N/A
+
+        const VI_ATTR_ASRL_STOP_BITS: r#"VI_ATTR_ASRL_STOP_BITS is the number of stop bits used to indicate the end of a frame. The value VI_ASRL_STOP_ONE5 indicates one-and-one-half (1.5) stop bits."#
+        (Read/Write Global) (ViUInt16)::<VI_ASRL_STOP_ONE (10) VI_ASRL_STOP_ONE5 (15) VI_ASRL_STOP_TWO (20)> = VI_ASRL_STOP_ONE
+
+        const VI_ATTR_ASRL_WIRE_MODE: r#" VI_ATTR_ASRL_WIRE_MODE represents the current wire/transceiver mode. For RS-485 hardware, this attribute is valid only with the RS-485 serial driver developed by National Instruments. For RS-232 hardware, the values RS232/DCE and RS232/AUTO are valid only with RS-232 serial drivers developed by National Instruments and documented to support this feature with the corresponding National Instruments hardware. When this feature is not supported, RS232/DTE is the only valid value. RS-232 settings: VI_ASRL_WIRE_232_DTE uses DTE mode. VI_ASRL_WIRE_232_DCE uses DCE mode. VI_ASRL_WIRE_232_AUTO automatically detects which mode to use. (Windows) RS-485 settings: VI_ASRL_WIRE_485_4 uses 4-wire mode. VI_ASRL_WIRE_485_2_DTR_ECHO uses 2-wire DTR mode controlled with echo. VI_ASRL_WIRE_485_2_DTR_CTRL uses 2-wire DTR mode controlled without echo. VI_ASRL_WIRE_485_2_AUTO uses 2-wire auto mode controlled with TXRDY. (Linux) RS-485 settings: \t VI_ASRL_WIRE_485_4 uses 4-wire mode. \t VI_ASRL_WIRE_485_2_AUTO uses 2-wire auto mode controlled with TXRDY. Note: This attribute is valid only on the platforms on which National Instruments supports its RS-232 or RS-485 products."#
+        (Read/Write Global) (ViInt16)::<VI_ASRL_WIRE_485_4 (0) VI_ASRL_WIRE_485_2_DTR_ECHO (1) VI_ASRL_WIRE_485_2_DTR_CTRL (2) VI_ASRL_WIRE_485_2_AUTO (3) VI_ASRL_WIRE_232_DTE (128) VI_ASRL_WIRE_232_DCE (129) VI_ASRL_WIRE_232_AUTO (130) VI_STATE_UNKNOWN (-1)> = N/A
+
+        const VI_ATTR_ASRL_XOFF_CHAR: r#"VI_ATTR_ASRL_XOFF_CHAR specifies the value of the XOFF character used for XON/XOFF flow control (both directions). If XON/XOFF flow control (software handshaking) is not being used, the value of this attribute is ignored."#
+        (Read/Write Local) (ViUInt8)::<0 to FFh> = <Control-S> (13h)
+
+        const VI_ATTR_ASRL_XON_CHAR: r#"VI_ATTR_ASRL_XON_CHAR specifies the value of the XON character used for XON/XOFF flow control (both directions). If XON/XOFF flow control (software handshaking) is not being used, the value of this attribute is ignored."#
+        (Read/Write Local) (ViUInt8)::<0 to FFh> = <Control-Q> (11h)
+
+        const VI_ATTR_BUFFER: r#"VI_ATTR_BUFFER contains the address of a buffer that was used in an asynchronous operation."#
+        (Read Only) (ViBuf)::<N/A> = N/A
+
+        const VI_ATTR_CMDR_LA: r#"VI_ATTR_CMDR_LA is the unique logical address of the commander of the VXI device used by the given session."#
+        (Read Only Global) (ViInt16)::<0 to 255 VI_UNKNOWN_LA (-1)> = N/A
+
+        const VI_ATTR_DEST_ACCESS_PRIV: r#"VI_ATTR_DEST_ACCESS_PRIV specifies the address modifier to be used in high-level access operations, such as viOut XX () and viMoveOut XX () , when writing to the destination. Note: The values VI_D64_PRIV (6) and VI_D64_NPRIV (7) apply to only the block move operations. If you set this attribute to one of these values and then call one of the viOutXX() operations, the operation returns VI_ERROR_INV_SETUP ."#
+        (Read/Write Local) (ViUInt16)::<VI_DATA_PRIV (0) VI_DATA_NPRIV (1) VI_PROG_PRIV (2) VI_PROG_NPRIV (3) VI_BLCK_PRIV (4) VI_BLCK_NPRIV (5) VI_D64_PRIV (6) VI_D64_NPRIV (7)> = VI_DATA_PRIV
+
+        const VI_ATTR_DEST_BYTE_ORDER: r#"VI_ATTR_DEST_BYTE_ORDER specifies the byte order to be used in high-level access operations, such as viOut XX () and viMoveOut XX () , when writing to the destination."#
+        (Read/Write Local) (ViUInt16)::<VI_BIG_ENDIAN (0) VI_LITTLE_ENDIAN (1)> = VI_BIG_ENDIAN
+
+        const VI_ATTR_DEST_INCREMENT: r#"VI_ATTR_DEST_INCREMENT is used in the viMoveOut XX () operations to specify by how many elements the destination offset is to be incremented after every transfer. The default value of this attribute is 1 (that is, the destination address will be incremented by 1 after each transfer), and the viMoveOut XX () operations move into consecutive elements. If this attribute is set to 0, the viMoveOut XX () operations will always write to the same element, essentially treating the destination as a FIFO register."#
+        (Read/Write Local) (ViInt32)::<0 to 1> = 1
+
+        const VI_ATTR_DEV_STATUS_BYTE: r#"This attribute specifies the 488-style status byte of the local controller or device associated with this session. If this attribute is written and bit 6 (40h) is set, this device or controller will assert a service request (SRQ) if it is defined for this interface."#
+        (Read/Write Global) (ViUInt8)::<0 to FFh> = N/A
+
+        const VI_ATTR_DMA_ALLOW_EN: r#"This attribute specifies whether I/O accesses should use DMA ( VI_TRUE ) or Programmed I/O ( VI_FALSE ). In some implementations, this attribute may have global effects even though it is documented to be a local attribute. Since this affects performance and not functionality, that behavior is acceptable."#
+        (Read/Write Local) (ViBoolean)::<VI_TRUE(1) VI_FALSE(0)> = N/A
+
+        const VI_ATTR_EVENT_TYPE: r#"VI_ATTR_EVENT_TYPE is the unique logical identifier for the event type of the specified event."#
+        (Read Only) (ViEventType)::<0h to FFFFFFFFh> = N/A
+
+        const VI_ATTR_FDC_CHNL: r#"VI_ATTR_FDC_CHNL determines which Fast Data Channel (FDC) will be used to transfer the buffer."#
+        (Read/Write Local) (ViUInt16)::<0 to 7> = N/A
+
+        const VI_ATTR_FDC_MODE: r#"VI_ATTR_FDC_MODE specifies which Fast Data Channel (FDC) mode to use (either normal or stream mode)."#
+        (Read/Write Local) (ViUInt16)::<VI_FDC_NORMAL (1) VI_FDC_STREAM (2)> = VI_FDC_NORMAL
+
+        const VI_ATTR_FDC_USE_PAIR: r#"Setting VI_ATTR_FDC_USE_PAIR to VI_TRUE specifies to use a channel pair for transferring data. Otherwise, only one channel will be used."#
+        (Read/Write Local) (ViBoolean)::<VI_TRUE (1) VI_FALSE (0)> = VI_FALSE
+
+        const VI_ATTR_FILE_APPEND_EN: r#"This attribute specifies whether viReadToFile() will overwrite (truncate) or append when opening a file."#
+        (Read/Write Local) (ViBoolean)::<VI_TRUE (1) VI_FALSE (0)> = VI_FALSE
+
+        const VI_ATTR_GPIB_ADDR_STATE: r#"This attribute shows whether the specified GPIB interface is currently addressed to talk or listen, or is not addressed."#
+        (Read Only Global) (ViInt16)::<VI_GPIB_UNADDRESSED(0) VI_GPIB_TALKER(1) VI_GPIB_LISTENER(2)> = N/A
+
+        const VI_ATTR_GPIB_ATN_STATE: r#"This attribute shows the current state of the GPIB ATN (ATtentioN) interface line."#
+        (Read Only Global) (ViInt16)::<VI_STATE_ASSERTED(1) VI_STATE_UNASSERTED(0) VI_STATE_UNKNOWN(-1)> = N/A
+
+        const VI_ATTR_GPIB_CIC_STATE: r#"This attribute shows whether the specified GPIB interface is currently CIC (Controller In Charge)."#
+        (Read Only Global) (ViBoolean)::<VI_TRUE(1) VI_FALSE(0)> = N/A
+
+        const VI_ATTR_GPIB_HS488_CBL_LEN: r#"This attribute specifies the total number of meters of GPIB cable used in the specified GPIB interface."#
+        (Read/Write Global) (ViInt16)::<VI_GPIB_HS488_NIMPL(-1) VI_GPIB_HS488_DISABLED(0) 1-15> = N/A
+
+        const VI_ATTR_GPIB_NDAC_STATE: r#"This attribute shows the current state of the GPIB NDAC (Not Data ACcepted) interface line."#
+        (Read Only Global) (ViInt16)::<VI_STATE_ASSERTED(1) VI_STATE_UNASSERTED(0) VI_STATE_UNKNOWN(-1)> = N/A
+
+        const VI_ATTR_GPIB_PRIMARY_ADDR: r#"VI_ATTR_GPIB_PRIMARY_ADDR specifies the primary address of the GPIB device used by the given session. For the GPIB INTFC Resource, this attribute is Read-Write."#
+        (INSTR, MEMACC, BACKPLANE: Read Only Global INTFC: Read/Write Global) (ViUInt16)::<0 to 30> = N/A
+
+        const VI_ATTR_GPIB_READDR_EN: r#"VI_ATTR_GPIB_READDR_EN specifies whether to use repeat addressing before each read or write operation."#
+        (Read/Write Local) (ViBoolean)::<VI_TRUE (1) VI_FALSE (0)> = VI_TRUE
+
+        const VI_ATTR_GPIB_RECV_CIC_STATE: r#"This attribute specifies whether the local controller has gained or lost CIC status."#
+        (Read-Only) (ViBoolean)::<VI_TRUE (1) VI_FALSE (0)> = N/A
+
+        const VI_ATTR_GPIB_REN_STATE: r#"VI_ATTR_GPIB_REN_STATE returns the current state of the GPIB REN (Remote ENable) interface line."#
+        (Read Only Global) (ViInt16)::<VI_STATE_ASSERTED(1) VI_STATE_UNASSERTED(0) VI_STATE_UNKNOWN(-1)> = N/A
+
+        const VI_ATTR_GPIB_SECONDARY_ADDR: r#"VI_ATTR_GPIB_SECONDARY_ADDR specifies the secondary address of the GPIB device used by the given session. For the GPIB INTFC Resource, this attribute is Read-Write."#
+        (INSTR, MEMACC, BACKPLANE: Read Only Global INTFC: Read/Write Global) (ViUInt16)::<0 to 30, VI_NO_SEC_ADDR (FFFFh)> = N/A
+
+        const VI_ATTR_GPIB_SRQ_STATE: r#"This attribute shows the current state of the GPIB SRQ (Service ReQuest) interface line."#
+        (Read Only Global) (ViInt16)::<VI_STATE_ASSERTED(1) VI_STATE_UNASSERTED(0) VI_STATE_UNKNOWN(-1)> = N/A
+
+        const VI_ATTR_GPIB_SYS_CNTRL_STATE: r#"This attribute shows whether the specified GPIB interface is currently the system controller. In some implementations, this attribute may be modified only through a configuration utility. On these systems this attribute is read-only (RO)."#
+        (Read/Write Global) (ViBoolean)::<VI_TRUE(1) VI_FALSE(0)> = N/A
+
+        const VI_ATTR_GPIB_UNADDR_EN: r#"VI_ATTR_GPIB_UNADDR_EN specifies whether to unaddress the device (UNT and UNL) after each read or write operation."#
+        (Read/Write Local) (ViBoolean)::<VI_TRUE (1) VI_FALSE (0)> = VI_FALSE
+
+        const VI_ATTR_IMMEDIATE_SERV: r#"VI_ATTR_IMMEDIATE_SERV specifies whether the device associated with this session is an immediate servant of the controller running VISA."#
+        (Read Only Global) (ViBoolean)::<VI_TRUE (1) VI_FALSE (0)> = N/A
+
+        const VI_ATTR_INTF_INST_NAME: r#"VI_ATTR_INTF_INST_NAME specifies human-readable text that describes the given interface. Note: The value of this attribute is for display purposes only and not for programmatic decisions, as the value can differ between VISA implementations and/or revisions."#
+        (Read Only Global) (ViString)::<N/A> = N/A
+
+        const VI_ATTR_INTF_NUM: r#"VI_ATTR_INTF_NUM specifies the board number for the given interface."#
+        (Read Only Global) (ViUInt16)::<0h to FFFFh> = 0
+
+        const VI_ATTR_INTF_TYPE: r#"VI_ATTR_INTF_TYPE specifies the interface type of the given session."#
+        (Read Only Global) (ViUInt16)::<VI_INTF_GPIB (1) VI_INTF_VXI (2) VI_INTF_GPIB_VXI (3) VI_INTF_ASRL (4) VI_INTF_PXI (5) VI_INTF_TCPIP (6) VI_INTF_USB (7)> = N/A
+
+        const VI_ATTR_INTR_STATUS_ID: r#"VI_ATTR_INTR_STATUS_ID specifies the 32-bit status/ID retrieved during the IACK cycle."#
+        (Read Only Global) (ViUInt32)::<0 to FFFFFFFFh> = N/A
+
+        const VI_ATTR_IO_PROT: r#"VI_ATTR_IO_PROT specifies which protocol to use. In VXI, you can choose normal word serial or fast data channel (FDC). In GPIB, you can choose normal or high-speed (HS-488) transfers. In serial, TCPIP, or USB RAW, you can choose normal transfers or 488.2-defined strings. In USB INSTR, you can choose normal or vendor-specific transfers. In previous versions of VISA, VI_PROT_NORMAL was known as VI_NORMAL , VI_PROT_FDC was known as VI_FDC , VI_PROT_HS488 was known as VI_HS488 , and VI_PROT_4882_STRS was known as VI_ASRL488 ."#
+        (Read/Write Local) (ViUInt16)::<GPIB : VI_PROT_NORMAL (1) VI_PROT_HS488 (3)> = VI_PROT_NORMAL
+
+        const VI_ATTR_JOB_ID: r#"VI_ATTR_JOB_ID contains the job ID of the asynchronous operation that has completed."#
+        (Read Only) (ViJobId)::<N/A> = N/A
+
+        const VI_ATTR_MAINfRAME_LA: r#"VI_ATTR_MA.infRAME_LA specifies the lowest logical address in the mainframe. If the logical address is not known, VI_UNKNOWN_LA is returned."#
+        (Read Only Global) (ViInt16)::<0 to 255 VI_UNKNOWN_LA (-1)> = N/A
+
+        const VI_ATTR_MANF_ID: r#"VI_ATTR_MANF_ID is the manufacturer identification number of the device. For VXI resources, this refers to the VXI Manufacturer ID. For PXI INSTR resources, if the subsystem PCI Vendor ID is nonzero, this refers to the subsystem Vendor ID. Otherwise, this refers to the Vendor ID. For USB resources, this refers to the Vendor ID (VID)."#
+        (Read Only Global) (ViUInt16)::<0h to FFFFh> = N/A
+
+        const VI_ATTR_MANF_NAME: r#"This string attribute is the manufacturer name. Note: The value of this attribute should be used for display purposes only and not for programmatic decisions, as the value can differ between VISA implementations and/or revisions."#
+        (Read Only Global) (ViString)::<N/A> = N/A
+
+        const VI_ATTR_MAX_QUEUE_LENGTH: r#"VI_ATTR_MAX_QUEUE_LENGTH specifies the maximum number of events that can be queued at any time on the given session. Events that occur after the queue has become full will be discarded. VI_ATTR_MAX_QUEUE_LENGTH is a Read/Write attribute until the first time viEnableEvent() is called on a session. Thereafter, this attribute is Read Only."#
+        (Read/Write Local) (ViUInt32)::<1h to FFFFFFFFh> = 50
+
+        const VI_ATTR_MEM_BASE/VI_ATTR_MEM_BASE_32/VI_ATTR_MEM_BASE_64: r#"VI_ATTR_MEM_BASE , VI_ATTR_MEM_BASE_32 , and VI_ATTR_MEM_BASE_64 specify the base address of the device in VXIbus memory address space. This base address is applicable to A24 or A32 address space. If the value of VI_ATTR_MEM_SPACE is VI_A16_SPACE , the value of this attribute is meaningless for the given VXI device."#
+        (Read Only Global) (VI_ATTR_MEM_BASE: ViBusAddress VI_ATTR_MEM_BASE_32: ViUInt32 VI_ATTR_MEM_BASE_64: ViUInt64)::<VI_ATTR_MEM_BASE: 0h to FFFFFFFFh for 32-bit applications 0h to FFFFFFFFFFFFFFFFh for 64-bit applications VI_ATTR_MEM_BASE_32: 0h to FFFFFFFFh VI_ATTR_MEM_BASE_64: 0h to FFFFFFFFFFFFFFFFh> = N/A
+
+        const VI_ATTR_MEM_SIZE/VI_ATTR_MEM_SIZE_32/VI_ATTR_MEM_SIZE_64: r#"VI_ATTR_MEM_SIZE , VI_ATTR_MEM_SIZE_32 , and VI_ATTR_MEM_SIZE_64 specify the size of memory requested by the device in VXIbus address space. If the value of VI_ATTR_MEM_SPACE is VI_A16_SPACE , the value of this attribute is meaningless for the given VXI device."#
+        (Read Only Global) (VI_ATTR_MEM_SIZE: ViBusSize VI_ATTR_MEM_SIZE_32: ViUInt32 VI_ATTR_MEM_SIZE_64: ViUInt64)::<VI_ATTR_MEM_SIZE: 0h to FFFFFFFFh for 32-bit applications 0h to FFFFFFFFFFFFFFFFh for 64-bit applications VI_ATTR_MEM_SIZE_32: 0h to FFFFFFFFh VI_ATTR_MEM_SIZE_64: 0h to FFFFFFFFFFFFFFFFh> = N/A
+
+        const VI_ATTR_MEM_SPACE: r#"VI_ATTR_MEM_SPACE specifies the VXIbus address space used by the device. The three types are A16, A24, or A32 memory address space. A VXI device with memory in A24 or A32 space also has registers accessible in the configuration section of A16 space. A VME device with memory in multiple address spaces requires one VISA resource for each address space used."#
+        (Read Only Global) (ViUInt16)::<VI_A16_SPACE (1) VI_A24_SPACE (2) VI_A32_SPACE (3)> = VI_A16_SPACE
+
+        const VI_ATTR_MODEL_CODE: r#"VI_ATTR_MODEL_CODE specifies the model code for the device. For VXI resources, this refers to the VXI Model Code. For PXI INSTR resources, if the subsystem PCI Vendor ID is nonzero, this refers to the subsystem Device ID. Otherwise, this refers to the Device ID. For USB resources, this refers to the Product ID (PID)."#
+        (Read Only Global) (ViUInt16)::<0h to FFFFh> = N/A
+
+        const VI_ATTR_MODEL_NAME: r#"This string attribute is the model name of the device. Note: The value of this attribute should be used for display purposes only and not for programmatic decisions, as the value can be different between VISA implementations and/or revisions."#
+        (Read Only Global) (ViString)::<N/A> = N/A
+
+        const VI_ATTR_OPER_NAME: r#"VI_ATTR_OPER_NAME contains the name of the operation generating this event."#
+        (Read Only) (ViString)::<N/A> = N/A
+
+        const VI_ATTR_PXI_ACTUAL_LWIDTH: r#"VI_ATTR_PXI_ACTUAL_LWIDTH specifies the PCI Express link width negotiated between the PCI Express host controller and the device. A value of -1 indicates that the device is not a PXI/PCI Express device."#
+        (Read Only Global) (ViInt16)::<-1, 1, 2, 4, 8, 16> = N/A
+
+        const VI_ATTR_PXI_BUS_NUM: r#"VI_AT TR_PXI_BUS_NUM specifies the PCI bus number of this device."#
+        (Read Only Global) (ViUInt16)::<0 to 255> = N/A
+
+        const VI_ATTR_PXI_CHASSIS: r#"VI_ATTR_PXI_CHASSIS specifies the PXI chassis number of this device. A value of -1 means the chassis number is unknown."#
+        (Read Only Global) (ViInt16)::<-1, 0 to 255> = N/A
+
+        const VI_ATTR_PXI_DEST_TRIG_BUS: r#"VI_ATTR_PXI_DEST_TRIG_BUS specifies the segment to use to qualify trigDest in viMapTrigger . Note: Some PXI chassis, typically those with more than 8 slots, have multiple trigger buses (also called segments). viMapTrigger is used on the PXI BACKPLANE resource to map a trigger between two trigger buses. One trigger bus, specified by VI_ATTR_PXI_SRC_TRIG_BUS , is the source or "writer" for this trigger line. The other trigger bus, specified by VI_ATTR_PXI_DEST_TRIG_BUS , is a "reader." You can have multiple readers, but only one writer for a given trigger line. For example, if you want to have triggers mapped from trigger bus 1 to trigger bus 2 and then from trigger bus 2 to trigger bus 3, observe that in this case trigger bus 1 is the writer for this line, writing to both trigger bus 2 and trigger bus 3. Therefore, you should perform your viMapTrigger from 1 to 2 and from 1 to 3—mapping from 1 to 2 and then 2 to 3 would not be allowed because it would require 2 also to be a writer (as well as 1). Note also that mapping from one line in the source trigger bus to a different line in the destination trigger bus ( trigSrc != trigDest ) is dependent on hardware capabilities and a specific software implementation, and may not be supported. Code to map trigger 5 from trigger segment 1 to trigger segment 2 of an 18-slot chassis would look like the following, where backplaneSession is a session to a PXI BACKPLANE resource:\t viSetAttribute(backplaneSession, VI_ATTR_PXI_SRC_TRIG_BUS, 1); \tviSetAttribute(backplaneSession, VI_ATTR_PXI_DEST_TRIG_BUS, 2); \tviMapTrigger(backplaneSession, VI_TRIG_TTL5, VI_TRIG_TTL5, VI_NULL); * You can determine the number of segments from MAX (in the trigger reservation panel), from the chassis documentation, and by looking at the dividing lines on the physical front panel of the chassis itself."#
+        (Read/Write Local) (ViInt16)::<Single-Segment Chassis (8 Slots or Less): N/A Multisegment Chassis (More than 8 Slots): 1...number of chassis segments *> = -1
+
+        const VI_ATTR_PXI_DEV_NUM: r#"This is the PXI device number."#
+        (Read Only Global) (ViUInt16)::<0 to 31> = N/A
+
+        const VI_ATTR_PXI_DSTAR_BUS: r#"VI_ATTR_PXI_DSTAR_BUS specifies the differential star bus number of this device. A value of -1 means the chassis is unidentified or does not have a timing slot."#
+        (Read Only Global) (ViInt16)::<N/A> = N/A
+
+        const VI_ATTR_PXI_DSTAR_SET: r#"VI_ATTR_PXI_DSTAR_SET specifies the set of PXIe DStar lines connected to the slot this device is in. Each slot can be connected to a set of DStar lines, and each set has a number. For example, one slot could be connected to the DStar set 2, while the next one could be connected to the DStar set 4. The VI_ATTR_PXI_DSTAR_SET value does not represent individual line numbers; instead, it represents the number of the set itself. A PXIe DStar set consists of the numbered differential pairs PXIe-DSTARA, PXIe-DSTARB, and PXIe-DSTARC routed from the PXIe system timing slot. For example, if VI_ATTR_PXI_DSTAR_SET is 4, the slot the device is in is connected to PXIe-DStarA_4, PXIe-DStarB_4, and PXIe-DStarC_4. A value of -1 means the chassis is unidentified or the slot the device is in does not have a DStar set connected to it. Also, although a PXIe slot has a DStar connection, the device in that slot may not. In that case, the value of VI_ATTR_PXI_DSTAR_SET still will be the set connected to the slot the device is in."#
+        (Read Only Global) (ViInt16)::<-1, 0 to 16> = N/A
+
+        const VI_ATTR_PXI_FUNC_NUM: r#"This is the PCI function number of the PXI/PCI resource. For most devices, the function number is 0, but a multifunction device may have a function number up to 7. The meaning of a function number other than 0 is device specific."#
+        (Read Only Global) (ViUInt16)::<0 to 7> = 0
+
+        const VI_ATTR_PXI_IS_EXPRESS: r#"VI_ATTR_PXI_IS_EXPRESS specifies whether the device is PXI/PCI or PXI/PCI Express."#
+        (Read Only Global) (ViBoolean)::<VI_TRUE, VI_FALSE> = N/A
+
+        const VI_ATTR_PXI_MAX_LWIDTH: r#"VI_ATTR_PXI_MAX_LWIDTH specifies the maximum PCI Express link width of the device. A value of -1 indicates that the device is not a PXI/PCI Express device."#
+        (Read Only Global) (ViInt16)::<-1, 1, 2, 4, 8, 16> = N/A
+
+        const VI_ATTR_PXI_MEM_BASE_BAR0/ VI_ATTR_PXI_MEM_BASE_BAR1/ VI_ATTR_PXI_MEM_BASE_BAR2/ VI_ATTR_PXI_MEM_BASE_BAR3/ VI_ATTR_PXI_MEM_BASE_BAR4/ VI_ATTR_PXI_MEM_BASE_BAR5: r#"PXI memory base address assigned to the specified BAR. If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BAR x is VI_PXI_ADDR_NONE , the value of this attribute is undefined for the given PXI device."#
+        (Read Only Global) (ViUInt32)::<0 to FFFFFFFFh> = N/A
+
+        const VI_ATTR_PXI_MEM_SIZE_BAR0/ VI_ATTR_PXI_MEM_SIZE_BAR1/ VI_ATTR_PXI_MEM_SIZE_BAR2/ VI_ATTR_PXI_MEM_SIZE_BAR3/ VI_ATTR_PXI_MEM_SIZE_BAR4/ VI_ATTR_PXI_MEM_SIZE_BAR5: r#"Memory size used by the device in the specified BAR. If the value of the corresponding VI_ATTR_PXI_MEM_TYPE_BAR x is VI_PXI_ADDR_NONE , the value of this attribute is undefined for the given PXI device."#
+        (Read Only Global) (ViUInt32)::<0 to FFFFFFFFh> = N/A
+
+        const VI_ATTR_PXI_MEM_TYPE_BAR0/ VI_ATTR_PXI_MEM_TYPE_BAR1/ VI_ATTR_PXI_MEM_TYPE_BAR2/ VI_ATTR_PXI_MEM_TYPE_BAR3/ VI_ATTR_PXI_MEM_TYPE_BAR4/ VI_ATTR_PXI_MEM_TYPE_BAR5: r#"Memory type used by the device in the specified BAR (if applicable)."#
+        (Read Only Global) (ViUInt16)::<VI_PXI_ADDR_NONE(0) VI_PXI_ADDR_MEM(1) VI_PXI_ADDR_IO(2)> = N/A
+
+        const VI_ATTR_PXI_RECV_INTR_DATA: r#"VI_ATTR_PXI_RECV_INTR_DATA shows the first PXI/PCI register that was read in the successful interrupt detection sequence."#
+        (Read Only) (ViUInt32)::<N/A> = N/A
+
+        const VI_ATTR_PXI_RECV_INTR_SEQ: r#"VI_ATTR_PXI_RECV_INTR_SEQ shows the index of the interrupt sequence that detected the interrupt condition."#
+        (Read Only) (ViInt16)::<N/A> = N/A
+
+        const VI_ATTR_PXI_SLOT_LBUS_LEFT: r#"VI_ATTR_PXI_SLOT_LBUS_LEFT specifies the slot number or special feature connected to the local bus left lines of this device."#
+        (Read Only Global) (ViInt16)::<VI_PXI_LBUS_UNKNOWN (-1) ; VI_PXI_LBUS_NONE (0) ; Normal slots (1 to 18); VI_PXI_LBUS_STAR_TRIG_BUS_0 (1000) to VI_PXI_LBUS_STAR_TRIG_BUS_9 (1009) ; VI_PXI_STAR_TRIG_CONTROLLER (1413) ; VI_PXI_LBUS_SCXI (2000)> = N/A
+
+        const VI_ATTR_PXI_SLOT_LBUS_RIGHT: r#"VI_ATTR_PXI_SLOT_LBUS_RIGHT specifies the slot number or special feature connected to the local bus right lines of this device."#
+        (Read Only Global) (ViInt16)::<VI_PXI_LBUS_UNKNOWN (-1) ; VI_PXI_LBUS_NONE (0) ; Normal slots (1 to 18); VI_PXI_LBUS_STAR_TRIG_BUS_0 (1000) to VI_PXI_LBUS_STAR_TRIG_BUS_9 (1009) ; VI_PXI_STAR_TRIG_CONTROLLER (1413) ; VI_PXI_LBUS_SCXI (2000)> = N/A
+
+        const VI_ATTR_PXI_SLOT_LWIDTH: r#"VI_ATTR_PXI_SLOT_LWIDTH specifies the PCI Express link width of the PXI Express peripheral slot in which the device resides. A value of -1 indicates that the device is not a PXI Express device."#
+        (Read Only Global) (ViInt16)::<-1, 1, 4, 8> = N/A
+
+        const VI_ATTR_PXI_SLOTPATH: r#"VI_ATTR_PXI_SLOTPATH specifies the slot path of this device. The purpose of a PXI slot path is to describe the PCI bus hierarchy in a manner independent of the PCI bus number. PXI slot paths are a sequence of values representing the PCI device number and function number of a PCI module and each parent PCI bridge that routes the module to the host PCI bridge (bus 0). Each value is represented as " dev[.func] ", where the function number is listed only if it is non-zero. When a PXI slot path includes multiple values, the values are comma-separated. The string format of the attribute value looks like this: device1[.function1][,device2[.function2]][,...] An example string is " 5.1,12,8 ". In this case, there is a PCI-to-PCI bridge on device 8 on the root bus. On its secondary bus, there is another PCI-to-PCI bridge on device 12. On its secondary bus, there is an instrument on device 5, function 1. The example string value describes this instrument's slot path."#
+        (Read Only Global) (ViString)::<N/A> = N/A
+
+        const VI_ATTR_PXI_SRC_TRIG_BUS: r#"VI_ATTR_PXI_SRC_TRIG_BUS specifies the segment to use to qualify trigSrc in viMapTrigger . Note: Some PXI chassis, typically those with more than 8 slots, have multiple trigger buses (also called segments). viMapTrigger is used on the PXI BACKPLANE resource to map a trigger between two trigger buses. One trigger bus, specified by VI_ATTR_PXI_SRC_TRIG_BUS , is the source or "writer" for this trigger line. The other trigger bus, specified by VI_ATTR_PXI_DEST_TRIG_BUS , is a "reader." You can have multiple readers, but only one writer for a given trigger line. For example, if you want to have triggers mapped from trigger bus 1 to trigger bus 2 and then from trigger bus 2 to trigger bus 3, observe that in this case trigger bus 1 is the writer for this line, writing to both trigger bus 2 and trigger bus 3. Therefore, you should perform your viMapTrigger from 1 to 2 and from 1 to 3—mapping from 1 to 2 and then 2 to 3 would not be allowed because it would require 2 also to be a writer (as well as 1). Note also that mapping from one line in the source trigger bus to a different line in the destination trigger bus ( trigSrc != trigDest ) is dependent on hardware capabilities and a specific software implementation, and may not be supported. Code to map trigger 5 from trigger segment 1 to trigger segment 2 of an 18-slot chassis would look like the following, where backplaneSession is a session to a PXI BACKPLANE resource:\t viSetAttribute(backplaneSession, VI_ATTR_PXI_SRC_TRIG_BUS, 1); \tviSetAttribute(backplaneSession, VI_ATTR_PXI_DEST_TRIG_BUS, 2); \tviMapTrigger(backplaneSession, VI_TRIG_TTL5, VI_TRIG_TTL5, VI_NULL); * You can determine the number of segments from MAX (in the trigger reservation panel), from the chassis documentation, and by looking at the dividing lines on the physical front panel of the chassis itself."#
+        (Read/Write Local) (ViInt16)::<Single-Segment Chassis (8 Slots or Less): N/A Multisegment Chassis (More than 8 Slots): 1...number of chassis segments *> = -1
+
+        const VI_ATTR_PXI_STAR_TRIG_BUS: r#"VI_ATTR_PXI_STAR_TRIG_BUS specifies the star trigger bus number of this device."#
+        (Read Only Global) (ViInt16)::<N/A> = N/A
+
+        const VI_ATTR_PXI_STAR_TRIG_LINE: r#"V I_ATTR_PXI_STAR_TRIG_LINE specifies the PXI_STAR line connected to this device."#
+        (Read Only Global) (ViInt16)::<N/A> = N/A
+
+        const VI_ATTR_PXI_TRIG_BUS: r#"VI_ATTR_PXI_TRIG_BUS specifies the trigger bus number of this device."#
+        (INSTR: Read Only Global BACKPLANE: Read/Write Local) (ViInt16)::<N/A> = N/A
+
+        const VI_ATTR_RD_BUF_OPER_MODE: r#"VI_ATTR_RD_BUF_OPER_MODE specifies the operational mode of the formatted I/O read buffer. When the operational mode is set to VI_FLUSH_DISABLE (default), the buffer is flushed only on explicit calls to viFlush() . If the operational mode is set to VI_FLUSH_ON_ACCESS , the read buffer is flushed every time a viScanf() (or related) operation completes."#
+        (Read/Write Local) (ViUInt16)::<VI_FLUSH_ON_ACCESS (1) VI_FLUSH_DISABLE (3)> = VI_FLUSH_DISABLE
+
+        const VI_ATTR_RD_BUF_SIZE: r#"This is the current size of the formatted I/O input buffer for this session. The user can modify this value by calling viSetBuf() ."#
+        (Read Only Local) (ViUInt32)::<N/A> = N/A
+
+        const VI_ATTR_RECV_INTR_LEVEL: r#"VI_ATTR_RECV_INTR_LEVEL is the VXI interrupt level on which the interrupt was received."#
+        (Read Only) (ViInt16)::<1 to 7; VI_UNKNOWN_LEVEL (-1)> = N/A
+
+        const VI_ATTR_RECV_TRIG_ID: r#"VI_ATTR_RECV_TRIG_ID identifies the triggering mechanism on which the specified trigger event was received."#
+        (Read Only) (ViInt16)::<VI_TRIG_SW(-1) VI_TRIG_TTL0 (0) to VI_TRIG_TTL7 (7); VI_TRIG_ECL0 (8) to VI_TRIG_ECL1 (9)> = N/A
+
+        const VI_ATTR_RET_COUNT/VI_ATTR_RET_COUNT_32/VI_ATTR_RET_COUNT_64: r#"VI_ATTR_RET_COUNT , VI_ATTR_RET_COUNT_32 , and VI_ATTR_RET_COUNT_64 contain the actual number of elements that were asynchronously transferred. VI_ATTR_RET_COUNT_32 is always a 32-bit value. VI_ATTR_RET_COUNT_64 is always a 64-bit value. VI_ATTR_RET_COUNT_64 is not supported with 32-bit applications. VI_ATTR_RET_COUNT is a 32-bit value for 32-bit applications and a 64-bit value for 64-bit applications."#
+        (Read Only) (VI_ATTR_RET_COUNT: ViUInt32 for 32-bit applications ViUInt64 for 64-bit applications VI_ATTR_RET_COUNT_32: ViUInt32 VI_ATTR_RET_COUNT_64: ViUInt64)::<VI_ATTR_RET_COUNT: 0h to FFFFFFFFh for 32-bit applications 0h to FFFFFFFFFFFFFFFFh for 64-bit applications VI_ATTR_RET_COUNT_32: 0h to FFFFFFFFh VI_ATTR_RET_COUNT_64: 0h to FFFFFFFFFFFFFFFFh> = N/A
+
+        const VI_ATTR_RM_SESSION: r#"VI_ATTR_RM_SESSION specifies the session of the Resource Manager that was used to open this session."#
+        (Read Only Local) (ViSession)::<N/A> = N/A
+
+        const VI_ATTR_RSRC_CLASS: r#"VI_ATTR_RSRC_CLASS specifies the resource class (for example, "INSTR") as defined by the canonical resource name."#
+        (Read Only Global) (ViString)::<N/A> = N/A
+
+        const VI_ATTR_RSRC_IMPL_VERSION: r#"VI_ATTR_RSRC_IMPL_VERSION is the resource version that uniquely identifies each of the different revisions or implementations of a resource. This attribute value is defined by the individual manufacturer and increments with each new revision. The format of the value has the upper 12 bits as the major number of the version, the next lower 12 bits as the minor number of the version, and the lowest 8 bits as the sub-minor number of the version."#
+        (Read Only Global) (ViVersion)::<0h to FFFFFFFFh> = N/A
+
+        const VI_ATTR_RSRC_LOCK_STATE: r#"VI_ATTR_RSRC_LOCK_STATE indicates the current locking state of the resource. The resource can be unlocked, locked with an exclusive lock, or locked with a shared lock."#
+        (Read Only Global) (ViAccessMode)::<VI_NO_LOCK (0) VI_EXCLUSIVE_LOCK (1) VI_SHARED_LOCK (2)> = VI_NO_LOCK
+
+        const VI_ATTR_RSRC_MANF_ID: r#"VI_ATTR_RSRC_MANF_ID is a value that corresponds to the VXI manufacturer ID of the vendor that implemented the VISA library. This attribute is not related to the device manufacturer attributes."#
+        (Read Only Global) (ViUInt16)::<0h to 3FFFh> = N/A
+
+        const VI_ATTR_RSRC_MANF_NAME: r#"VI_ATTR_RSRC_MANF_NAME is a string that corresponds to the manufacturer name of the vendor that implemented the VISA library. This attribute is not related to the device manufacturer attributes. Note: The value of this attribute is for display purposes only and not for programmatic decisions, as the value can differ between VISA implementations and/or revisions."#
+        (Read Only Global) (ViString)::<N/A> = N/A
+
+        const VI_ATTR_RSRC_NAME: r#"VI_ATTR_RSRC_NAME is the unique identifier for a resource. Refer to VISA Resource Syntax and Examples for the syntax of resource strings and examples."#
+        (Read Only Global) (ViRsrc)::<N/A> = N/A
+
+        const VI_ATTR_RSRC_SPEC_VERSION: r#"VI_ATTR_RSRC_SPEC_VERSION is the resource version that uniquely identifies the version of the VISA specification to which the implementation is compliant. The format of the value has the upper 12 bits as the major number of the version, the next lower 12 bits as the minor number of the version, and the lowest 8 bits as the sub-minor number of the version. The current VISA specification defines the value to be 00300000h."#
+        (Read Only Global) (ViVersion)::<0h to FFFFFFFFh> = 00300000h
+
+        const VI_ATTR_SEND_END_EN: r#"VI_ATTR_SEND_END_EN specifies whether to assert END during the transfer of the last byte of the buffer. VI_ATTR_SEND_END_EN is relevant only in viWrite and related operations. On Serial INSTR sessions, if this attribute is set to VI_FALSE, the write will transmit the exact contents of the user buffer, without modifying it and without appending anything to the data being written. If this attribute is set to VI_TRUE, VISA will perform the behavior described in VI_ATTR_ASRL_END_OUT . On GPIB, VXI, TCP/IP INSTR, and USB INSTR sessions, if this attribute is set to VI_TRUE, VISA will include the 488.2 defined "end of message" terminator."#
+        (Read/Write Local) (ViBoolean)::<VI_TRUE (1) VI_FALSE (0)> = VI_TRUE
+
+        const VI_ATTR_SIGP_STATUS_ID: r#"VI_ATTR_SIGP_STATUS_ID is the 16-bit Status/ID value retrieved during the IACK cycle or from the Signal register."#
+        (Read Only) (ViUInt16)::<0h to FFFFh> = N/A
+
+        const VI_ATTR_SLOT: r#"VI_ATTR_SLOT specifies the physical slot location of the device. If the slot number is not known, VI_UNKNOWN_SLOT is returned."#
+        (Read Only Global) (ViInt16)::<VXI 0 to 12 VI_UNKNOWN_SLOT (-1) PXI 1 to 18 VI_UNKNOWN_SLOT (-1)> = N/A
+
+        const VI_ATTR_SRC_ACCESS_PRIV: r#"VI_ATTR_SRC_ACCESS_PRIV specifies the address modifier to be used in high-level access operations, such as viIn XX () and viMoveIn XX () , when reading from the source. Note: The values VI_D64_PRIV (6) and VI_D64_NPRIV (7) apply to only the block move operations. If you set this attribute to one of these values and then call one of the viIn XX () operations, the operation returns VI_ERROR_INV_SETUP ."#
+        (Read/Write Local) (ViUInt16)::<VI_DATA_PRIV (0) VI_DATA_NPRIV (1) VI_PROG_PRIV (2) VI_PROG_NPRIV (3) VI_BLCK_PRIV (4) VI_BLCK_NPRIV (5) VI_D64_PRIV (6) VI_D64_NPRIV (7)> = VI_DATA_PRIV
+
+        const VI_ATTR_SRC_BYTE_ORDER: r#"VI_ATTR_SRC_BYTE_ORDER specifies the byte order to be used in high-level access operations, such as viIn XX () and viMoveIn XX () , when reading from the source."#
+        (Read/Write Local) (ViUInt16)::<VI_BIG_ENDIAN (0) VI_LITTLE_ENDIAN (1)> = VI_BIG_ENDIAN
+
+        const VI_ATTR_SRC_INCREMENT: r#"VI_ATTR_SRC_INCREMENT is used in the viMoveIn XX () operations to specify by how many elements the source offset is to be incremented after every transfer. The default value of this attribute is 1 (that is, the source address will be incremented by 1 after each transfer), and the viMoveIn XX () operations move from consecutive elements. If this attribute is set to 0, the viMoveIn XX () operations will always read from the same element, essentially treating the source as a FIFO register."#
+        (Read/Write Local) (ViInt32)::<0 to 1> = 1
+
+        const VI_ATTR_STATUS: r#"VI_ATTR_STATUS contains the return code of the operation generating this event."#
+        (Read Only) (ViStatus)::<N/A> = N/A
+
+        const VI_ATTR_SUPPRESS_END_EN: r#"VI_ATTR_SUPPRESS_END_EN is relevant only in viRead and related operations. For all session types on which this attribute is supported, if this attribute is set to VI_TRUE, read will not terminate due to an END condition. However, a read may still terminate successfully if VI_ATTR_TERMCHAR_EN is set to VI_TRUE. Otherwise, read will not terminate until all requested data is received (or an error occurs). On Serial INSTR sessions, if this attribute is set to VI_FALSE, VISA will perform the behavior described in VI_ATTR_ASRL_END_IN . On USB RAW sessions, if this attribute is set to VI_FALSE, VISA will perform the behavior described in VI_ATTR_USB_END_IN . On TCP/IP SOCKET sessions, if this attribute is set to VI_FALSE, if NI-VISA reads some data and then detects a pause in the arrival of data packets, it will terminate the read operation. On TCP/IP SOCKET sessions, this attribute defaults to VI_TRUE in NI-VISA. On VXI INSTR sessions, if this attribute is set to VI_FALSE, the END bit terminates read operations."#
+        (Read/Write Local) (ViBoolean)::<VI_TRUE (1) VI_FALSE (0)> = VI_FALSE
+
+        const VI_ATTR_TCPIP_ADDR: r#"This is the TCPIP address of the device to which the session is connected. This string is formatted in dot notation."#
+        (Read Only Global) (ViString)::<N/A> = N/A
+
+        const VI_ATTR_TCPIP_DEVICE_NAME: r#"This specifies the LAN device name used by the VXI-11 or LXI protocol during connection."#
+        (Read Only Global) (ViString)::<N/A> = N/A
+
+        const VI_ATTR_TCPIP_HOSTNAME: r#"This specifies the host name of the device. If no host name is available, this attribute returns an empty string."#
+        (Read Only Global) (ViString)::<N/A> = N/A
+
+        const VI_ATTR_TCPIP_KEEPALIVE: r#"Setting this attribute to TRUE requests that a TCP/IP provider enable the use of keep-alive packets on TCP connections. After the system detects that a connection was dropped, VISA returns a lost connection error code on subsequent I/O calls on the session. The time required for the system to detect that the connection was dropped is dependent on the system and is not settable."#
+        (Read/Write Local) (ViBoolean)::<VI_TRUE(1) VI_FALSE(0)> = VI_FALSE
+
+        const VI_ATTR_TCPIP_NODELAY: r#"The Nagle algorithm is disabled when this attribute is enabled (and vice versa). The Nagle algorithm improves network performance by buffering "send" data until a full-size packet can be sent. This attribute is enabled by default in VISA to verify that synchronous writes get flushed immediately."#
+        (Read/Write Local) (ViBoolean)::<VI_TRUE(1) VI_FALSE(0)> = VI_TRUE
+
+        const VI_ATTR_TCPIP_PORT: r#"This specifies the port number for a given TCPIP address. For a TCPIP SOCKET Resource, this is a required part of the address string."#
+        (Read Only Global) (ViUInt16)::<0 to FFFFh> = N/A
+
+        const VI_ATTR_TERMCHAR: r#"VI_ATTR_TERMCHAR is the termination character. When the termination character is read and VI_ATTR_TERMCHAR_EN is enabled during a read operation, the read operation terminates. For a Serial INSTR session, VI_ATTR_TERMCHAR is Read/Write when the corresponding session is not enabled to receive VI_EVENT_ASRL_TERMCHAR events. When the session is enabled to receive VI_EVENT_ASRL_TERMCHAR events, the attribute VI_ATTR_TERMCHAR is Read Only. For all other session types, the attribute VI_ATTR_TERMCHAR is always Read/Write."#
+        (Read/Write Local) (ViUInt8)::<0 to FFh> = 0Ah (linefeed)
+
+        const VI_ATTR_TERMCHAR_EN: r#"VI_ATTR_TERMCHAR_EN is a flag that determines whether the read operation should terminate when a termination character is received. This attribute is ignored if VI_ATTR_ASRL_END_IN is set to VI_ASRL_END_TERMCHAR. This attribute is valid for both raw I/O (viRead) and formatted I/O (viScanf)."#
+        (Read/Write Local) (ViBoolean)::<VI_TRUE (1) VI_FALSE (0)> = VI_FALSE
+
+        const VI_ATTR_TMO_VALUE: r#"VI_ATTR_TMO_VALUE specifies the minimum timeout value to use (in milliseconds) when accessing the device associated with the given session. A timeout value of VI_TMO_IMMEDIATE means that operations should never wait for the device to respond. A timeout value of VI_TMO_INFINITE disables the timeout mechanism. Notice that the actual timeout value used by the driver may be higher than the requested one. The actual timeout value is returned when this attribute is retrieved via viGetAttribute() ."#
+        (Read/Write Local) (ViUInt32)::<VI_TMO_IMMEDIATE (0) ; 1 to FFFFFFFEh; VI_TMO_INFINITE (FFFFFFFFh)> = 2000
+
+        const VI_ATTR_TRIG_ID: r#"VI_ATTR_TRIG_ID is the identifier for the current triggering mechanism. VI_ATTR_TRIG_ID is Read/Write when the corresponding session is not enabled to receive trigger events. When the session is enabled to receive trigger events, the attribute VI_ATTR_TRIG_ID is Read Only."#
+        (Read/Write Local) (ViInt16)::<GPIB , Serial , TCPIP : VI_TRIG_SW (-1)> = VI_TRIG_SW
+
+        const VI_ATTR_USB_ALT_SETTING: r#"VI_ATTR_USB_ALT_SETTING specifies the USB alternate setting used by this USB interface. VI_ATTR_USB_ALT_SETTING is Read/Write when the corresponding session is not enabled to receive USB interrupt events. If the session is enabled to receive USB interrupt events or if there are any other sessions to this resource, the attribute VI_ATTR_USB_ALT_SETTING is Read Only."#
+        (Read/Write Global) (ViInt16)::<0 to FFh> = 0
+
+        const VI_ATTR_USB_BULK_IN_PIPE: r#"VI_ATTR_USB_BULK_IN_PIPE specifies the endpoint address of the USB bulk-in pipe used by the given session. An initial value of -1 signifies that this resource does not have any bulk-in pipes. This endpoint is used in viRead and related operations."#
+        (Read/Write Local) (ViInt16)::<-1, 81h to 8Fh> = N/A
+
+        const VI_ATTR_USB_BULK_IN_STATUS: r#"VI_ATTR_USB_BULK_IN_STATUS specifies whether the USB bulk-in pipe used by the given session is stalled or ready. This attribute can be set to only VI_USB_PIPE_READY ."#
+        (Read/Write Local) (ViInt16)::<VI_USB_PIPE_STATE_UNKNOWN (-1) VI_USB_PIPE_READY (0) VI_USB_PIPE_STALLED (1)> = N/A
+
+        const VI_ATTR_USB_BULK_OUT_PIPE: r#"VI_ATTR_USB_BULK_OUT_PIPE specifies the endpoint address of the USB bulk-out or interrupt-out pipe used by the given session. An initial value of -1 signifies that this resource does not have any bulk-out or interrupt-out pipes. This endpoint is used in viWrite and related operations."#
+        (Read/Write Local) (ViInt16)::<-1, 01h to 0Fh> = N/A
+
+        const VI_ATTR_USB_BULK_OUT_STATUS: r#"VI_ATTR_USB_BULK_OUT_STATUS specifies whether the USB bulk-out or interrupt-out pipe used by the given session is stalled or ready. This attribute can be set to only VI_USB_PIPE_READY ."#
+        (Read/Write Local) (ViInt16)::<VI_USB_PIPE_STATE_UNKNOWN (-1) VI_USB_PIPE_READY (0) VI_USB_PIPE_STALLED (1)> = N/A
+
+        const VI_ATTR_USB_CLASS: r#"VI_ATTR_USB_CLASS specifies the USB class used by this USB interface."#
+        (Read Only Global) (ViInt16)::<0 to FFh> = N/A
+
+        const VI_ATTR_USB_CTRL_PIPE: r#"VI_ATTR_USB_CTRL_PIPE specifies the endpoint address of the USB control pipe used by the given session. A value of 0 signifies that the default control pipe will be used. This endpoint is used in viUsbControlIn and viUsbControlOut operations. Nonzero values may not be supported on all platforms."#
+        (Read/Write Local) (ViInt16)::<00h to 0Fh> = 00h
+
+        const VI_ATTR_USB_END_IN: r#"VI_ATTR_USB_END_IN indicates the method used to terminate read operations. If it is set to VI_USB_END_NONE , short packets are ignored for read operations, so reads will not terminate until all of the requested data is received (or an error occurs). If it is set to VI_USB_END_SHORT , the read operation will terminate on a short packet; use this if the device will terminate all read transfers with a short packet, including sending a zero (short) packet when the last data packet is full. If it is set to VI_USB_END_SHORT_OR_COUNT , the read operation will terminate on a short packet or when it receives the requested count of data bytes; use this if the device does not send zero packets."#
+        (Read/Write Local) (ViUInt16)::<VI_USB_END_NONE (0) VI_USB_END_SHORT (4) VI_USB_END_SHORT_OR_COUNT (5)> = VI_USB_END_SHORT_OR_COUNT
+
+        const VI_ATTR_USB_INTFC_NUM: r#"VI_ATTR_USB_INTFC_NUM specifies the USB interface number used by the given session."#
+        (Read Only Global) (ViInt16)::<0 to FEh> = 0
+
+        const VI_ATTR_USB_INTR_IN_PIPE: r#"VI_ATTR_USB_INTR_IN_PIPE specifies the endpoint address of the USB interrupt-in pipe used by the given session. An initial value of -1 signifies that this resource does not have any interrupt-in pipes. This endpoint is used in viEnableEvent for VI_EVENT_USB_INTR ."#
+        (Read/Write Local) (ViInt16)::<-1, 81h to 8Fh> = N/A
+
+        const VI_ATTR_USB_INTR_IN_STATUS: r#"VI_ATTR_USB_INTR_IN_STATUS specifies whether the USB interrupt-in pipe used by the given session is stalled or ready. This attribute can be set to only VI_USB_PIPE_READY ."#
+        (Read/Write Local) (ViInt16)::<VI_USB_PIPE_STATE_UNKNOWN (-1) VI_USB_PIPE_READY (0) VI_USB_PIPE_STALLED (1)> = N/A
+
+        const VI_ATTR_USB_MAX_INTR_SIZE: r#"VI_ATTR_USB_MAX_INTR_SIZE specifies the maximum size of data that will be stored by any given USB interrupt. If a USB interrupt contains more data than this size, the data in excess of this size will be lost. VI_ATTR_USB_MAX_INTR_SIZE is Read/Write when the corresponding session is not enabled to receive USB interrupt events. When the session is enabled to receive USB interrupt events, the attribute VI_ATTR_USB_MAX_INTR_SIZE is Read Only."#
+        (Read/Write Local) (ViUInt16)::<0 to FFFFh> = N/A
+
+        const VI_ATTR_USB_NUM_INTFCS: r#"VI_ATTR_USB_NUM_INTFCS specifies the number of interfaces supported by this USB device."#
+        (Read Only Global) (ViInt16)::<1 to FFh> = N/A
+
+        const VI_ATTR_USB_NUM_PIPES: r#"VI_ATTR_USB_NUM_PIPES specifies the number of pipes supported by this USB interface. This does not include the default control pipe."#
+        (Read Only Global) (ViInt16)::<0 to 30> = N/A
+
+        const VI_ATTR_USB_PROTOCOL: r#"VI_ATTR_USB_PROTOCOL specifies the USB protocol used by this USB interface."#
+        (Read Only Global) (ViInt16)::<0 to FFh> = N/A
+
+        const VI_ATTR_USB_RECV_INTR_DATA: r#"VI_ATTR_USB_RECV_INTR_DATA contains the actual received data from the USB Interrupt. The passed in data buffer must be of size at least equal to the value of VI_ATTR_USB_RE CV_INTR_SIZE ."#
+        (Read Only) (ViAUInt8)::<N/A> = N/A
+
+        const VI_ATTR_USB_RECV_INTR_SIZE: r#"VI_ATTR_USB_RECV_INTR_SIZE contains the number of bytes of USB interrupt data that is stored."#
+        (Read Only) (ViUInt16)::<N/A> = N/A
+
+        const VI_ATTR_USB_SERIAL_NUM: r#"VI_ATTR_USB_SERIAL_NUM specifies the USB serial number of this device."#
+        (Read Only Global) (ViString)::<N/A> = N/A
+
+        const VI_ATTR_USB_SUBCLASS: r#"VI_ATTR_USB_SUBCLASS specifies the USB subclass used by this USB interface."#
+        (Read Only Global) (ViInt16)::<0 to FFh> = N/A
+
+        const VI_ATTR_USER_DATA/VI_ATTR_USER_DATA_32/VI_ATTR_USER_DATA_64: r#"VI_ATTR_USER_DATA , VI_ATTR_USER_DATA_32 , and VI_ATTR_USER_DATA_64 store data to be used privately by the application for a particular session. VISA does not use this data for any purpose. It is provided to the application for its own use. VI_ATTR_USER_DATA_64 is not supported with 32-bit applications."#
+        (Read/Write Local) (VI_ATTR_USER_DATA: ViAddr VI_ATTR_USER_DATA_32: ViUInt32 VI_ATTR_USER_DATA_64: ViUInt64)::<VI_ATTR_USER_DATA: Not specified VI_ATTR_USER_DATA_32: 0h to FFFFFFFFh VI_ATTR_USER_DATA_64: 0h to FFFFFFFFFFFFFFFFh> = N/A
+
+        const VI_ATTR_VXI_DEV_CLASS: r#"This attribute represents the VXI-defined device class to which the resource belongs, either message based ( VI_VXI_CLASS_MESSAGE ), register based ( VI_VXI_CLASS_REGISTER ), extended ( VI_VXI_CLASS_EXTENDED ), or memory ( VI_VXI_CLASS_MEMORY ). VME devices are usually either register based or belong to a miscellaneous class ( VI_VXI_CLASS_OTHER )."#
+        (Read Only Global) (ViUInt16)::<VI_VXI_CLASS_MEMORY(0) VI_VXI_CLASS_EXTENDED(1) VI_VXI_CLASS_MESSAGE(2) VI_VXI_CLASS_REGISTER(3) VI_VXI_CLASS_OTHER(4)> = N/A
+
+        const VI_ATTR_VXI_LA: r#"For an INSTR session, VI_ATTR_VXI_LA specifies the logical address of the VXI or VME device used by the given session. For a MEMACC or SERVANT session, this attribute specifies the logical address of the local controller."#
+        (Read Only Global) (ViInt16)::<0 to 511> = N/A
+
+        const VI_ATTR_TRIG_DIR: r#"VI_ATTR_TRIG_DIR is a bit map of the directions of the mapped TTL trigger lines. Bits 0-7 represent TTL triggers 0-7 respectively. A bit's value of 0 means the line is routed out of the frame, and a value of 1 means into the frame. In order for a direction to be set, the line must also be enabled using VI_ATTR_VXI_TRIG_LINES_EN . "#
+        (Read/Write Global) (ViUInt16)::<N/A> = 0
+
+        const VI_ATTR_VXI_TRIG_LINES_EN: r#"VI_ATTR_VXI_TRIG_LINES_EN is a bit map of what VXI TLL triggers have mappings. Bits 0-7 represent TTL triggers 0-7 respectively. A bit's value of 0 means the trigger line is unmapped, and 1 means a mapping exists. Use VI_ATTR_VXI_TRIG_DIR to set an enabled line's direction. "#
+        (Read/Write Global) (ViUInt16)::<N/A> = 0
+
+        const VI_ATTR_VXI_TRIG_STATUS: r#"This attribute shows the current state of the VXI trigger lines. This is a bit vector with bits 0-9 corresponding to VI_TRIG_TTL0 through VI_TRIG_ECL1 ."#
+        (Read Only Global) (ViUInt32)::<N/A> = N/A
+
+        const VI_ATTR_VXI_TRIG_SUPPORT: r#"This attribute shows which VXI trigger lines this implementation supports. This is a bit vector with bits 0-9 corresponding to VI_TRIG_TTL0 through VI_TRIG_ECL1 ."#
+        (Read Only Global) (ViUInt32)::<N/A> = N/A
+
+        const VI_ATTR_VXI_VME_INTR_STATUS: r#"This attribute shows the current state of the VXI/VME interrupt lines. This is a bit vector with bits 0-6 corresponding to interrupt lines 1-7."#
+        (Read Only Global) (ViUInt16)::<N/A> = N/A
+
+        const VI_ATTR_VXI_VME_SYSFAIL_STATE: r#"This attribute shows the current state of the VXI/VME SYSFAIL (SYStem FAILure) backplane line."#
+        (Read Only Global) (ViInt16)::<VI_STATE_ASSERTED(1) VI_STATE_DEASSERTED(0) VI_STATE_UNKNOWN(-1)> = N/A
+
+        const VI_ATTR_WIN_ACCESS: r#"VI_ATTR_WIN_ACCESS specifies the modes in which the current window may be accessed. If VI_NMAPPED , the window is not currently mapped. If VI_USE_OPERS , the window is accessible through the viPeek XX () and viPoke XX () operations only. If VI_DEREF_ADDR , you can either use operations or directly dereference the mapped address as a pointer. "#
+        (Read Only Local) (ViUInt16)::<VI_NMAPPED (1) VI_USE_OPERS (2) VI_DEREF_ADDR (3)> = VI_NMAPPED
+
+        const VI_ATTR_WIN_ACCESS_PRIV: r#"VI_ATTR_WIN_ACCESS_PRIV specifies the address modifier to be used in low-level access operations, such as viMapAddress() , viPeek XX () , and viPoke XX () , when accessing the mapped window. This attribute is Read/Write when the corresponding session is not mapped (that is, when VI_ATTR_WIN_ACCESS is VI_NMAPPED . When the session is mapped, this attribute is Read Only."#
+        (Read/Write Local) (ViUInt16)::<VI_DATA_PRIV (0) VI_DATA_NPRIV (1) VI_PROG_PRIV (2) VI_PROG_NPRIV (3) VI_BLCK_PRIV (4) VI_BLCK_NPRIV (5)> = VI_DATA_PRIV
+
+        const VI_ATTR_WIN_BASE_ADDR/VI_ATTR_WIN_BASE_ADDR_32/VI_ATTR_WIN_BASE_ADDR_64: r#"VI_ATTR_WIN_BASE_ADDR , VI_ATTR_WIN_BASE_ADDR_32 , and VI_ATTR_WIN_BASE_ADDR_64 specify the base address of the interface bus to which this window is mapped. If the value of VI_ATTR_WIN_ACCESS is VI_NMAPPED , the value of this attribute is undefined."#
+        (Read Only Local) (VI_ATTR_WIN_BASE_ADDR: ViBusAddress VI_ATTR_WIN_BASE_ADDR_32: ViUInt32 VI_ATTR_WIN_BASE_ADDR_64: ViUInt64)::<VI_ATTR_WIN_BASE_ADDR: 0h to FFFFFFFFh for 32-bit applications 0h to FFFFFFFFFFFFFFFFh for 64-bit applications VI_ATTR_WIN_BASE_ADDR_32: 0h to FFFFFFFFh VI_ATTR_WIN_BASE_ADDR_64: 0h to FFFFFFFFFFFFFFFFh> = N/A
+
+        const VI_ATTR_WIN_BYTE_ORDER: r#"VI_ATTR_WIN_BYTE_ORDER specifies the byte order to be used in low-level access operations, such as viMapAddress() , viPeek XX () , and viPoke XX () , when accessing the mapped window. This attribute is Read/Write when the corresponding session is not mapped (that is, when VI_ATTR_WIN_ACCESS is VI_NMAPPED . When the session is mapped, this attribute is Read Only."#
+        (Read/Write Local) (ViUInt16)::<VI_BIG_ENDIAN (0) VI_LITTLE_ENDIAN (1)> = VI_BIG_ENDIAN
+
+        const VI_ATTR_WIN_SIZE/VI_ATTR_WIN_SIZE_32/VI_ATTR_WIN_SIZE_64: r#"VI_ATTR_WIN_SIZE , VI_ATTR_WIN_SIZE_32 , and VI_ATTR_WIN_SIZE_64 specify the size of the region mapped to this window. If the value of VI_ATTR_WIN_ACCESS is VI_NMAPPED , the value of this attribute is undefined."#
+        (Read Only Local) (VI_ATTR_WIN_SIZE: ViBusSize VI_ATTR_WIN_SIZE_32: ViUInt32 VI_ATTR_WIN_SIZE_64: ViUInt64)::<VI_ATTR_WIN_SIZE: 0h to FFFFFFFFh for 32-bit applications 0h to FFFFFFFFFFFFFFFFh for 64-bit applications VI_ATTR_WIN_SIZE_32: 0h to FFFFFFFFh VI_ATTR_WIN_SIZE_64: 0h to FFFFFFFFFFFFFFFFh> = N/A
+
+        const VI_ATTR_WR_BUF_OPER_MODE: r#"VI_ATTR_WR_BUF_OPER_MODE specifies the operational mode of the formatted I/O write buffer. When the operational mode is set to VI_FLUSH_WHEN_FULL (default), the buffer is flushed when an END indicator is written to the buffer, or when the buffer fills up. If the operational mode is set to VI_FLUSH_ON_ACCESS , the write buffer is flushed under the same conditions, and also every time a viPrintf() (or related) operation completes."#
+        (Read/Write Local) (ViUInt16)::<VI_FLUSH_ON_ACCESS (1) VI_FLUSH_WHEN_FULL (2)> = VI_FLUSH_WHEN_FULL
+
+        const VI_ATTR_WR_BUF_SIZE: r#"This is the current size of the formatted I/O output buffer for this session. The user can modify this value by calling viSetBuf() ."#
+        (Read Only Local) (ViUInt32)::<N/A> = N/A
+
+
+    }
 }

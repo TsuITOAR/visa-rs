@@ -173,7 +173,7 @@ fn extract_text(src: &Html, selector: &str, nav: &str) -> Result<Vec<String>> {
 impl<O: ToString> ToString for DocItem<O> {
     fn to_string(&self) -> String {
         format!(
-            "const {}: \"{}\"\n{}\n",
+            "const {}: r#\"{}\"#\n{}\n",
             self.name,
             self.desc,
             self.other.to_string(),
