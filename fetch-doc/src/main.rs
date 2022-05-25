@@ -1,16 +1,16 @@
-use std::{collections::HashMap, io::Write};
+use std::io::Write;
 
 use scraper::{Html, Selector};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
-type Result<O> = std::result::Result<O, Box<dyn std::error::Error>>;
+type Result<O> = std::result::Result<O, anyhow::Error>;
 
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 struct DocIndex {
     items: Vec<DocIndexItem>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 struct DocIndexItem {
     url: Option<String>,
     nav_path: Option<String>,
@@ -29,25 +29,29 @@ impl DocIndex {
         let content: Vec<DocIndexItem> = response.json().await?;
         Ok(Self { items: content })
     }
-    fn fetch_list<'a>(&'a self, parent: &str) -> Option<impl Iterator<Item = &'a str>> {
+    fn fetch_list<'a>(&'a self, target: &str) -> Option<impl Iterator<Item = &'a str>> {
         fn fetch_list_in<'a>(
             index: &'a DocIndexItem,
-            parent: &str,
+            target: &str,
         ) -> Option<impl Iterator<Item = &'a str>> {
-            for child in &index.child_entries {
-                if child.title == parent {
-                    return Some(
-                        child
-                            .child_entries
-                            .iter()
-                            .filter_map(|x| x.url.as_ref().map(|x| x.as_str())),
-                    );
+            if index.title == target {
+                return Some(
+                    index
+                        .child_entries
+                        .iter()
+                        .filter_map(|x| x.nav_path.as_ref().map(|x| x.as_str())),
+                );
+            } else {
+                for child in &index.child_entries {
+                    if let Some(s) = fetch_list_in(child, target) {
+                        return Some(s);
+                    }
                 }
             }
             None
         }
         for item in &self.items {
-            match fetch_list_in(item, parent) {
+            match fetch_list_in(item, target) {
                 Some(e) => return Some(e),
                 None => (),
             }
@@ -58,23 +62,27 @@ impl DocIndex {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct DocFetcher {
+    url: String,
     content: Html,
 }
 
 impl DocFetcher {
     async fn new(url: &str) -> Result<Self> {
-        let content: HashMap<String, String> = reqwest::get(url).await?.json().await?;
-        let content = &content["topic_html"];
-        let html = Html::parse_document(content);
-        return Ok(Self { content: html });
+        let data = reqwest::get(url).await?.text().await?;
+        let response: serde_json::Value = serde_json::from_str(&data)?;
+        let html = Html::parse_fragment(&response["topic_html"].to_string());
+        return Ok(Self {
+            url: url.to_owned(),
+            content: html,
+        });
     }
-    fn fetch_current<O: FromHtml>(&self) -> Result<DocItem<O>> {
-        DocItem::<O>::from_html(&self.content)
+    fn fetch_current<Item: FromHtml>(&self) -> Result<Item> {
+        Item::from_html(&self.content, &self.url)
     }
 }
 
 trait FromHtml: Sized {
-    fn from_html(src: &Html) -> Result<Self>;
+    fn from_html(src: &Html, nav: &str) -> Result<Self>;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -85,16 +93,19 @@ struct DocItem<Other> {
 }
 
 impl<O: FromHtml> FromHtml for DocItem<O> {
-    fn from_html(src: &Html) -> Result<Self> {
-        let name = extract_text(
-            src,
-            r"#root > div.wrapper > div > div > div > div.topicPage_topicPageContainer.topicPageContainer.zDocsTopicPage.topicPage_zDocsTopicPage__16mFX > div.topicContainer > div.topic_articleContainer.articleContainer > article > div.article__content.topic_articleContainer__DjiK9 > div > div > h1",
-        )?;
-        let desc = extract_text(
-            src,
-            r"#bundle\:ni-visa\/enus\/ni-visa\/vi_attr_4882_compliant\.html > article > p:nth-child(7)",
-        )?;
-        let other = O::from_html(src)?;
+    fn from_html(src: &Html, nav: &str) -> Result<Self> {
+        let name = extract_text(src, r"article >  article > h1:first-child", nav)?
+            .join(" ")
+            .to_owned();
+        let desc = extract_text(src, r"article >  article > *", nav)?
+            .into_iter()
+            .skip_while(|x| !x.contains("Description"))
+            .skip(1)
+            .take_while(|x| !x.contains("Related Topics"))
+            .collect::<Vec<_>>()
+            .join(" ")
+            .to_owned();
+        let other = O::from_html(src, nav)?;
         Ok(Self { name, desc, other })
     }
 }
@@ -108,23 +119,35 @@ struct AttrOther {
 }
 
 impl FromHtml for AttrOther {
-    fn from_html(src: &Html) -> Result<Self> {
+    fn from_html(src: &Html, nav: &str) -> Result<Self> {
         let access = extract_text(
             src,
-            r"#bundle\:ni-visa\/enus\/ni-visa\/vi_attr_4882_compliant\.html > article > table > tbody > tr:nth-child(2) > td:nth-child(1) > p",
-        )?;
+            r"article >  article > table > tbody > tr:nth-child(2) > td:nth-child(1) > *",
+            nav,
+        )?
+        .join(" ")
+        .to_owned();
         let ty = extract_text(
             src,
-            r"#bundle\:ni-visa\/enus\/ni-visa\/vi_attr_4882_compliant\.html > article > table > tbody > tr:nth-child(2) > td:nth-child(2) > p",
-        )?;
+            r"article >  article > table > tbody > tr:nth-child(2) > td:nth-child(2) > *",
+            nav,
+        )?
+        .join(" ")
+        .to_owned();
         let range = extract_text(
             src,
-            r"#bundle\:ni-visa\/enus\/ni-visa\/vi_attr_4882_compliant\.html > article > table > tbody > tr:nth-child(2) > td:nth-child(3) > p",
-        )?;
+            r"article >  article > table > tbody > tr:nth-child(2) > td:nth-child(3) > *",
+            nav,
+        )?
+        .join(" ")
+        .to_owned();
         let default = extract_text(
             src,
-            r"#bundle\:ni-visa\/enus\/ni-visa\/vi_attr_4882_compliant\.html > article > table > tbody > tr:nth-child(2) > td:nth-child(4) > p",
-        )?;
+            r"article >  article > table > tbody > tr:nth-child(2) > td:nth-child(4) > *",
+            nav,
+        )?
+        .join(" ")
+        .to_owned();
         Ok(Self {
             access,
             ty,
@@ -134,24 +157,36 @@ impl FromHtml for AttrOther {
     }
 }
 
-fn extract_text(src: &Html, selector: &str) -> Result<String> {
-    let selector = Selector::parse(selector).unwrap();
-    Ok(src.select(&selector).next().unwrap().text().collect())
+fn extract_text(src: &Html, selector: &str, nav: &str) -> Result<Vec<String>> {
+    let s = Selector::parse(selector).unwrap();
+    let node = src.select(&s);
+    let ret: Vec<_> = node
+        .map(|x| x.text().collect::<Vec<_>>().join(" "))
+        .collect();
+    if ret.is_empty() {
+        let message = format!("failed select '{}' in '{}'", selector, nav);
+        eprintln!("{}", message);
+        return Ok(vec![message]);
+    }
+    Ok(ret)
 }
 impl<O: ToString> ToString for DocItem<O> {
     fn to_string(&self) -> String {
-        [self.name.clone(), self.desc.clone(), self.other.to_string()].join("\t")
+        format!(
+            "const {}: \"{}\"\n{}\n",
+            self.name,
+            self.desc,
+            self.other.to_string(),
+        )
     }
 }
+
 impl ToString for AttrOther {
     fn to_string(&self) -> String {
-        [
-            self.clone().access,
-            self.clone().ty,
-            self.clone().range,
-            self.clone().default,
-        ]
-        .join("\t")
+        format!(
+            "({}) ({})::<{}> = {}",
+            self.access, self.ty, self.range, self.default,
+        )
     }
 }
 #[tokio::main]
@@ -163,18 +198,23 @@ async fn extract_attr_info_to(file: &str) -> Result<()> {
     //https://docs-be.ni.com/api/bundle/ni-visa/toc?language=enus
     const INDEX_URL: &str = "https://docs-be.ni.com/api/bundle/ni-visa/toc?language=enus";
     let fetcher = DocIndex::new(INDEX_URL).await?;
-    println!("{}", serde_json::to_string(&fetcher.items)?);
     let fetch_list = fetcher.fetch_list("Attributes").unwrap();
-    let ret: Vec<_> = fetch_list.map(|url| DocFetcher::new(url)).collect();
+    let ret: Vec<_> = fetch_list
+        .map(|path| {
+            let path = path.to_owned();
+            tokio::spawn(async move {
+                eprintln!("fetching {}", path);
+                let url = format!("https://docs-be.ni.com/api/bundle/ni-visa/page/{}", path);
+                let ret = DocFetcher::new(&url).await?;
+                eprintln!("finished fetching {}", path);
+                ret.fetch_current::<DocItem<AttrOther>>()
+            })
+        })
+        .collect();
     let mut file = std::fs::File::create(file)?;
     for doc in ret {
-        write!(
-            file,
-            "{}\n",
-            doc.await?
-                .fetch_current::<DocItem<AttrOther>>()?
-                .to_string()
-        )?;
+        let content = doc.await??.to_string();
+        write!(file, "{}\n", content)?;
     }
     Ok(())
 }
