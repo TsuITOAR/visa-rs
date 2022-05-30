@@ -1,13 +1,19 @@
+#![feature(is_some_with)]
+use std::str::FromStr;
+
 use proc_macro::TokenStream;
 use proc_macro2::{Delimiter, TokenStream as TokenStream2, TokenTree};
 use quote::{quote, ToTokens};
 use syn::{
+    parenthesized,
     parse::{Parse, ParseStream},
     parse_macro_input,
     spanned::Spanned,
-    Ident, Result, Token,
+    Error, Ident, LitInt, LitStr, Result, Token,
 };
 
+mod range;
+use range::Range;
 struct Macros {
     inner: Vec<MacroInside>,
 }
@@ -108,4 +114,170 @@ fn subst_ident(t: TokenTree) -> TokenStream2 {
 pub fn rusty_ident(input: TokenStream) -> TokenStream {
     let macros = parse_macro_input!(input as Macros);
     quote! {#macros}.into()
+}
+
+fn get_visa_num(input: TokenTree) -> TokenTree {
+    fn parse_to_u32(s: &str) -> std::result::Result<u32, std::num::ParseIntError> {
+        u32::from_str_radix(s, 16)
+    }
+    fn u32_to_lit(n: u32) -> String {
+        format!("{:#010X}", n)
+    }
+    match input {
+        TokenTree::Group(g) => {
+            let mut ret = proc_macro2::Group::new(
+                g.delimiter(),
+                g.stream().into_iter().map(get_visa_num).collect(),
+            );
+            ret.set_span(g.span());
+            TokenTree::Group(ret)
+        }
+        TokenTree::Ident(id) => {
+            if let Some(Ok(d)) = id.to_string().strip_suffix('h').map(parse_to_u32) {
+                let mut ret = proc_macro2::Literal::from_str(&u32_to_lit(d)).unwrap();
+                ret.set_span(id.span());
+                TokenTree::Literal(ret)
+            } else {
+                TokenTree::Ident(id)
+            }
+        }
+        TokenTree::Literal(lit) => {
+            if let Some(Ok(d)) = lit.to_string().strip_suffix('h').map(parse_to_u32) {
+                let mut ret = proc_macro2::Literal::from_str(&u32_to_lit(d)).unwrap();
+                ret.set_span(lit.span());
+                TokenTree::Literal(ret)
+            } else {
+                TokenTree::Literal(lit)
+            }
+        }
+        _ => input,
+    }
+}
+
+#[test]
+fn test_visa_num() {
+    let stream = TokenStream2::from_str(r#"FFFFFFFFh,{Ah,0h,-1},0000001h"#).unwrap();
+    let stream: TokenStream2 = stream.into_iter().map(get_visa_num).collect();
+    assert_eq!(
+        stream.to_string(),
+        r#"0xFFFFFFFF , { 0x0000000A , 0x00000000 ,- 1 } , 0x00000001"#
+    );
+}
+
+struct Attributes {
+    attrs: Vec<Attr>,
+}
+
+impl Parse for Attributes {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let mut attrs = Vec::new();
+        while !input.is_empty() {
+            attrs.push(input.parse()?);
+        }
+        Ok(Attributes { attrs })
+    }
+}
+
+struct Attr {
+    id: Ident,
+    desc: LitStr,
+    vis: TokenStream2,
+    ty: Ident,
+    range: Range,
+    default: DefaultValue,
+}
+
+impl Parse for Attr {
+    fn parse(input: ParseStream) -> Result<Self> {
+        input.parse::<Token![const]>()?;
+        let id = input.parse()?;
+        input.parse::<Token![:]>()?;
+        let desc = input.parse()?;
+        let vis;
+        parenthesized!(vis in input);
+        let vis = vis.parse()?;
+        let ty;
+        parenthesized!(ty in input);
+        let ty = ty.parse()?;
+        input.parse::<Token![::]>()?;
+        input.parse::<Token![<]>()?;
+        let range = input.parse()?;
+        input.parse::<Token![>]>()?;
+        input.parse::<Token![=]>()?;
+        let default = input.parse()?;
+        Ok(Self {
+            id,
+            desc,
+            vis,
+            ty,
+            range,
+            default,
+        })
+    }
+}
+
+enum DefaultValue {
+    Num(LitInt),
+    Ident(Ident),
+    Key {
+        key_name: Vec<TokenTree>,
+        char: LitInt,
+    },
+    NA,
+}
+
+fn is_na(input: ParseStream) -> bool {
+    let fork = input.fork();
+    if !fork.parse::<Ident>().is_ok_and(|n| n == "N") {
+        return false;
+    }
+    if !fork.parse::<Token![/]>().is_ok() {
+        return false;
+    }
+    if !fork.parse::<Ident>().is_ok_and(|a| a == "A") {
+        return false;
+    }
+    input.parse::<Ident>().unwrap();
+    input.parse::<Token![/]>().unwrap();
+    input.parse::<Ident>().unwrap();
+    true
+}
+
+impl Parse for DefaultValue {
+    fn parse(input: ParseStream) -> Result<Self> {
+        if is_na(input) {
+            Ok(Self::NA)
+        } else {
+            let look = input.lookahead1();
+            if look.peek(LitInt) {
+                Ok(Self::Num(input.parse()?))
+            } else if look.peek(Ident) {
+                Ok(Self::Ident(input.parse()?))
+            } else if look.peek(Token![<]) {
+                input.parse::<Token![<]>()?;
+                let mut key_name = Vec::new();
+                while !input.peek(Token![>]) {
+                    key_name.push(input.parse()?);
+                }
+                input.parse::<Token![>]>()?;
+                let char;
+                parenthesized!(char in input);
+                Ok(Self::Key {
+                    key_name,
+                    char: char.parse()?,
+                })
+            } else {
+                Err(look.error())
+            }
+        }
+    }
+}
+
+#[proc_macro]
+pub fn visa_attrs(input: TokenStream) -> TokenStream {
+    let input: TokenStream2 = input.into();
+    let input: TokenStream2 = input.into_iter().map(get_visa_num).collect();
+    let input: TokenStream = input.into();
+    let macros = parse_macro_input!(input as Attributes);
+    quote! {}.into()
 }
