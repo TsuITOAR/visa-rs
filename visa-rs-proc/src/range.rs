@@ -39,12 +39,12 @@ pub struct ArchRaStm {
     arch: LitInt,
 }
 
-enum RangeTree {
+pub enum RangeTree {
     Single(Bound),
     Bounded((Bound, Bound)),
 }
 
-enum Bound {
+pub enum Bound {
     Ident { id: Ident, value: LitInt },
     Num(LitInt),
 }

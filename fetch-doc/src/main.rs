@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::{collections::HashMap, fmt::Display, io::Write};
 
 use scraper::{Html, Selector};
 use serde::Deserialize;
@@ -70,19 +70,19 @@ impl DocFetcher {
     async fn new(url: &str) -> Result<Self> {
         let data = reqwest::get(url).await?.text().await?;
         let response: serde_json::Value = serde_json::from_str(&data)?;
-        let html = Html::parse_fragment(&response["topic_html"].to_string());
+        let html = Html::parse_fragment(&response["topic_html"].as_str().unwrap());
         return Ok(Self {
             url: url.to_owned(),
             content: html,
         });
     }
-    fn fetch_current<Item: FromHtml>(&self) -> Result<Item> {
+    fn fetch_current<Item: FromHtml>(&self) -> Result<Vec<Item>> {
         Item::from_html(&self.content, &self.url)
     }
 }
 
 trait FromHtml: Sized {
-    fn from_html(src: &Html, nav: &str) -> Result<Self>;
+    fn from_html(src: &Html, nav: &str) -> Result<Vec<Self>>;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -93,11 +93,11 @@ struct DocItem<Other> {
 }
 
 impl<O: FromHtml> FromHtml for DocItem<O> {
-    fn from_html(src: &Html, nav: &str) -> Result<Self> {
+    fn from_html(src: &Html, nav: &str) -> Result<Vec<Self>> {
         let name = extract_text(src, r"article >  article > h1:first-child", nav)?
             .join(" ")
             .to_owned();
-        let desc = extract_text(src, r"article >  article > *", nav)?
+        let desc = extract_text(src, r"article >  article > h2 ,article >  article > p", nav)?
             .into_iter()
             .skip_while(|x| !x.contains("Description"))
             .skip(1)
@@ -106,89 +106,218 @@ impl<O: FromHtml> FromHtml for DocItem<O> {
             .join(" ")
             .to_owned();
         let other = O::from_html(src, nav)?;
-        Ok(Self { name, desc, other })
+        let ret = name
+            .split("/")
+            .zip(other.into_iter())
+            .map(|(name, other)| Self {
+                name: name.to_owned(),
+                desc: desc.clone(),
+                other,
+            })
+            .collect();
+        Ok(ret)
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct AttrOther {
     access: String,
     ty: String,
+    ranges: ProtocolRange,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct Range {
     range: String,
     default: String,
 }
 
+impl Display for Range {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "static as {} in {}", self.default, self.range)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum ProtocolRange {
+    General(Range),
+    Specific(HashMap<String, Range>),
+}
+
+impl Display for ProtocolRange {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::General(g) => write!(f, "[{}]", g),
+            Self::Specific(s) => write!(
+                f,
+                "\n[{}\n]",
+                s.into_iter()
+                    .map(|(p, r)| format!("\n\twhile {} {{{}}}", p, r))
+                    .collect::<String>(),
+            ),
+        }
+    }
+}
+
+fn split_to_protocol(ranges: Vec<String>, defaults: Vec<String>) -> ProtocolRange {
+    const PROTOCOL: [&str; 6] = ["GPIB", "VXI", "Serial", "TCPIP", "USB RAW", "USB INSTR"];
+    const SEPARATORS: [char; 3] = [' ', ':', ','];
+    if ranges.iter().any(|x| {
+        PROTOCOL.iter().any(|y| {
+            x.contains(&format!("{} ", y).as_str()) || x.contains(&format!("{}:", y).as_str())
+        })
+    }) {
+        let mut ret = HashMap::new();
+        let mut default = if defaults.len() == 1 {
+            vec![defaults[0].clone(); ranges.len()].into_iter()
+        } else {
+            defaults.into_iter()
+        };
+        for r in ranges {
+            let def = default.next().unwrap();
+            let mut word = r.trim();
+            let mut pro = Vec::new();
+            'strip: loop {
+                word = word.trim_matches(SEPARATORS.as_slice());
+                for p in PROTOCOL {
+                    if let Some(d) = word.strip_prefix(p) {
+                        pro.push((p, def.clone()));
+                        word = d;
+                        continue 'strip;
+                    }
+                }
+                break 'strip;
+            }
+            word = word.trim_matches(SEPARATORS.as_slice());
+            for (p, d) in pro {
+                assert!(ret
+                    .insert(
+                        p.to_owned(),
+                        Range {
+                            range: word.to_owned(),
+                            default: d
+                        }
+                    )
+                    .is_none())
+            }
+        }
+        ProtocolRange::Specific(ret)
+    } else {
+        ProtocolRange::General(Range {
+            range: ranges.join(" ").to_owned(),
+            default: defaults.join(" "),
+        })
+    }
+}
+
+fn split_to_items(s: String) -> Vec<String> {
+    let mut ret = Vec::new();
+    let mut cur = String::new();
+    for word in s.split_ascii_whitespace() {
+        if word.starts_with("VI_") && word.ends_with(':') {
+            if !cur.is_empty() {
+                ret.push(cur);
+            }
+            cur = word.to_owned();
+        } else {
+            cur = cur + " " + word;
+        }
+    }
+    if !cur.is_empty() {
+        ret.push(cur);
+    }
+    ret
+}
+
 impl FromHtml for AttrOther {
-    fn from_html(src: &Html, nav: &str) -> Result<Self> {
+    fn from_html(src: &Html, nav: &str) -> Result<Vec<Self>> {
         let access = extract_text(
             src,
-            r"article >  article > table > tbody > tr:nth-child(2) > td:nth-child(1) > *",
+            r"article >  article > h2 + table > tbody > tr > td:nth-child(1) > p",
             nav,
-        )?
-        .join(" ")
-        .to_owned();
+        )?;
         let ty = extract_text(
             src,
-            r"article >  article > table > tbody > tr:nth-child(2) > td:nth-child(2) > *",
+            r"article >  article > h2 + table > tbody > tr > td:nth-child(2) > p",
             nav,
-        )?
-        .join(" ")
-        .to_owned();
+        )?;
         let range = extract_text(
             src,
-            r"article >  article > table > tbody > tr:nth-child(2) > td:nth-child(3) > *",
+            r"article >  article > h2 + table > tbody > tr > td:nth-child(3)",
             nav,
-        )?
-        .join(" ")
-        .to_owned();
+        )?;
         let default = extract_text(
             src,
-            r"article >  article > table > tbody > tr:nth-child(2) > td:nth-child(4) > *",
+            r"article >  article > h2 + table > tbody > tr > td:nth-child(4) > p",
             nav,
-        )?
-        .join(" ")
-        .to_owned();
-        Ok(Self {
-            access,
-            ty,
-            range,
-            default,
-        })
+        )?;
+        let ty = split_to_items(ty.join(" "));
+        if ty.len() == 1 {
+            Ok(vec![Self {
+                access: access.into_iter().next().unwrap(),
+                ty: ty.into_iter().next().unwrap(),
+                ranges: split_to_protocol(range, default),
+            }])
+        } else {
+            // if mulitple items, none is protocol specific
+            Ok(access
+                .into_iter()
+                .cycle()
+                .zip(ty.into_iter())
+                .zip(
+                    split_to_items(range.join(" "))
+                        .into_iter()
+                        .cycle()
+                        .zip(split_to_items(default.join(" ")).into_iter().cycle()),
+                )
+                .map(|((a, t), (r, d))| Self {
+                    access: a,
+                    ty: t,
+                    ranges: ProtocolRange::General(Range {
+                        range: r,
+                        default: d,
+                    }),
+                })
+                .collect())
+        }
     }
 }
 
 fn extract_text(src: &Html, selector: &str, nav: &str) -> Result<Vec<String>> {
     let s = Selector::parse(selector).unwrap();
     let node = src.select(&s);
+    //.unwrap_or_else(|| panic!("failed select '{}' in '{}'", selector, nav));
     let ret: Vec<_> = node
-        .map(|x| x.text().collect::<Vec<_>>().join(" "))
+        .map(|x| {
+            x.text()
+                .map(|x| x.trim().replace(['\u{2013}', '\u{2011}'], "-"))
+                .filter(|x| !x.is_empty() && x.is_ascii())
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+        .filter(|x| !x.is_empty())
         .collect();
     if ret.is_empty() {
-        let message = format!("failed select '{}' in '{}'", selector, nav);
-        eprintln!("{}", message);
-        return Ok(vec![message]);
+        return Ok(vec![format!("failed select '{}' in '{}'", selector, nav)]);
     }
     Ok(ret)
 }
-impl<O: ToString> ToString for DocItem<O> {
-    fn to_string(&self) -> String {
-        format!(
+impl<O: Display> Display for DocItem<O> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
             "const {}: r#\"{}\"#\n{}\n",
-            self.name,
-            self.desc,
-            self.other.to_string(),
+            self.name, self.desc, self.other
         )
     }
 }
 
-impl ToString for AttrOther {
-    fn to_string(&self) -> String {
-        format!(
-            "({}) ({})::<{}> = {}",
-            self.access, self.ty, self.range, self.default,
-        )
+impl Display for AttrOther {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}) ({}) {}", self.access, self.ty, self.ranges,)
     }
 }
+
 #[tokio::main]
 async fn main() -> Result<()> {
     extract_attr_info_to("attr.txt").await
@@ -213,7 +342,12 @@ async fn extract_attr_info_to(file: &str) -> Result<()> {
         .collect();
     let mut file = std::fs::File::create(file)?;
     for doc in ret {
-        let content = doc.await??.to_string();
+        let content = doc
+            .await??
+            .into_iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>()
+            .join("\n");
         write!(file, "{}\n", content)?;
     }
     Ok(())
