@@ -372,9 +372,7 @@ mod attributes {
         (Read Only Global) ( ViUInt16) [static as 0 in 0h to FFFFh]
 
         const VI_ATTR_INTF_TYPE: r#"VI_ATTR_INTF_TYPE specifies the interface type of the given session."#
-        (Read Only Global) ( ViUInt16) 
-        [
-        ]
+        (Read Only Global) ( ViUInt16) [static as N/A in VI_INTF_GPIB (1) VI_INTF_VXI (2) VI_INTF_GPIB_VXI (3) VI_INTF_ASRL (4) VI_INTF_PXI (5) VI_INTF_TCPIP (6) VI_INTF_USB (7)]
 
         const VI_ATTR_INTR_STATUS_ID: r#"VI_ATTR_INTR_STATUS_ID specifies the 32-bit status/ID retrieved during the IACK cycle."#
         (Read Only Global) ( ViUInt32) [static as N/A in 0 to FFFFFFFFh]
@@ -382,11 +380,11 @@ mod attributes {
         const VI_ATTR_IO_PROT: r#"VI_ATTR_IO_PROT specifies which protocol to use. In VXI, you can choose normal word serial or fast data channel (FDC). In GPIB, you can choose normal or high-speed (HS-488) transfers. In serial, TCPIP, or USB RAW, you can choose normal transfers or 488.2-defined strings. In USB INSTR, you can choose normal or vendor-specific transfers. In previous versions of VISA, VI_PROT_NORMAL was known as VI_NORMAL , VI_PROT_FDC was known as VI_FDC , VI_PROT_HS488 was known as VI_HS488 , and VI_PROT_4882_STRS was known as VI_ASRL488 ."#
         (Read/Write Local) ( ViUInt16) 
         [
-            while GPIB {static as VI_PROT_NORMAL in VI_PROT_NORMAL (1) VI_PROT_HS488 (3)}
-            while TCPIP {static as VI_PROT_NORMAL in VI_PROT_NORMAL (1) VI_PROT_4882_STRS (4)}
-            while VXI {static as VI_PROT_NORMAL in VI_PROT_NORMAL (1) VI_PROT_FDC (2)}
-            while Serial {static as VI_PROT_NORMAL in VI_PROT_NORMAL (1) VI_PROT_4882_STRS (4)}
             while USB RAW {static as VI_PROT_NORMAL in VI_PROT_NORMAL (1) VI_PROT_4882_STRS (4)}
+            while VXI {static as VI_PROT_NORMAL in VI_PROT_NORMAL (1) VI_PROT_FDC (2)}
+            while GPIB {static as VI_PROT_NORMAL in VI_PROT_NORMAL (1) VI_PROT_HS488 (3)}
+            while Serial {static as VI_PROT_NORMAL in VI_PROT_NORMAL (1) VI_PROT_4882_STRS (4)}
+            while TCPIP {static as VI_PROT_NORMAL in VI_PROT_NORMAL (1) VI_PROT_4882_STRS (4)}
             while USB INSTR {static as VI_PROT_NORMAL in VI_PROT_NORMAL (1) VI_PROT_USBTMC_VENDOR (5)}
         ]
 
@@ -606,10 +604,11 @@ mod attributes {
         const VI_ATTR_TRIG_ID: r#"VI_ATTR_TRIG_ID is the identifier for the current triggering mechanism. VI_ATTR_TRIG_ID is Read/Write when the corresponding session is not enabled to receive trigger events. When the session is enabled to receive trigger events, the attribute VI_ATTR_TRIG_ID is Read Only."#
         (Read/Write Local) ( ViInt16) 
         [
-            while GPIB {static as VI_TRIG_SW in VI_TRIG_SW (-1)}
-            while TCPIP {static as VI_TRIG_SW in VI_TRIG_SW (-1)}
-            while VXI {static as VI_TRIG_SW in VI_TRIG_SW (-1); VI_TRIG_TTL0 (0) to VI_TRIG_TTL7 (7); VI_TRIG_ECL0 (8) to VI_TRIG_ECL1 (9)}
+            while PXI {static as VI_TRIG_SW in INSTR, PXI BACKPLANE: VI_TRIG_SW (-1) VI_TRIG_TTLO (0) to VI_TRIG_TTL7 (7)}
             while Serial {static as VI_TRIG_SW in VI_TRIG_SW (-1)}
+            while GPIB {static as VI_TRIG_SW in VI_TRIG_SW (-1)}
+            while VXI {static as VI_TRIG_SW in VI_TRIG_SW (-1); VI_TRIG_TTL0 (0) to VI_TRIG_TTL7 (7); VI_TRIG_ECL0 (8) to VI_TRIG_ECL1 (9)}
+            while TCPIP {static as VI_TRIG_SW in VI_TRIG_SW (-1)}
         ]
 
         const VI_ATTR_USB_ALT_SETTING: r#"VI_ATTR_USB_ALT_SETTING specifies the USB alternate setting used by this USB interface. VI_ATTR_USB_ALT_SETTING is Read/Write when the corresponding session is not enabled to receive USB interrupt events. If the session is enabled to receive USB interrupt events or if there are any other sessions to this resource, the attribute VI_ATTR_USB_ALT_SETTING is Read Only."#

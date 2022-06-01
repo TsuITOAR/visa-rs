@@ -160,11 +160,24 @@ impl Display for ProtocolRange {
 }
 
 fn split_to_protocol(ranges: Vec<String>, defaults: Vec<String>) -> ProtocolRange {
-    const PROTOCOL: [&str; 6] = ["GPIB", "VXI", "Serial", "TCPIP", "USB RAW", "USB INSTR"];
+    const PROTOCOL: [&str; 7] = [
+        "GPIB",
+        "VXI",
+        "PXI",
+        "Serial",
+        "TCPIP",
+        "USB RAW",
+        "USB INSTR",
+    ];
     const SEPARATORS: [char; 3] = [' ', ':', ','];
     if ranges.iter().any(|x| {
         PROTOCOL.iter().any(|y| {
-            x.contains(&format!("{} ", y).as_str()) || x.contains(&format!("{}:", y).as_str())
+            x.find(y)
+                .map(|i| {
+                    (i == 0 || (x.as_bytes()[i - 1] != b'_'))
+                        && (i == x.as_bytes().len() || x.as_bytes()[i + 1] != b'_')
+                })
+                .unwrap_or(false)
         })
     }) {
         let mut ret = HashMap::new();
@@ -233,22 +246,22 @@ impl FromHtml for AttrOther {
     fn from_html(src: &Html, nav: &str) -> Result<Vec<Self>> {
         let access = extract_text(
             src,
-            r"article >  article > h2 + table > tbody > tr > td:nth-child(1) > p",
+            r#"article >  article > table[align="center"] > tbody > tr > td:nth-child(1) > p"#,
             nav,
         )?;
         let ty = extract_text(
             src,
-            r"article >  article > h2 + table > tbody > tr > td:nth-child(2) > p",
+            r#"article >  article > table[align="center"] > tbody > tr > td:nth-child(2) > p"#,
             nav,
         )?;
         let range = extract_text(
             src,
-            r"article >  article > h2 + table > tbody > tr > td:nth-child(3)",
+            r#"article >  article > table[align="center"] > tbody > tr > td:nth-child(3)"#,
             nav,
         )?;
         let default = extract_text(
             src,
-            r"article >  article > h2 + table > tbody > tr > td:nth-child(4) > p",
+            r#"article >  article > table[align="center"] > tbody > tr > td:nth-child(4) > p"#,
             nav,
         )?;
         let ty = split_to_items(ty.join(" "));
