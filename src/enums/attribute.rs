@@ -214,7 +214,7 @@ mod attributes {
             VI_ATTR_PXI_ALLOW_WRITE_COMBINE	0x3FFF0246
         }
     }
-    visa_rs_proc::visa_attrs!{
+    visa_rs_proc::visa_attrs! {
         const VI_ATTR_4882_COMPLIANT: r#"VI_ATTR_4882_COMPLIANT specifies whether the device is 488.2 compliant."#
         (Read Only Global) ( ViBoolean) [static as N/A in VI_TRUE (1) VI_FALSE (0)]
 
@@ -378,7 +378,7 @@ mod attributes {
         (Read Only Global) ( ViUInt32) [static as N/A in 0 to FFFFFFFFh]
 
         const VI_ATTR_IO_PROT: r#"VI_ATTR_IO_PROT specifies which protocol to use. In VXI, you can choose normal word serial or fast data channel (FDC). In GPIB, you can choose normal or high-speed (HS-488) transfers. In serial, TCPIP, or USB RAW, you can choose normal transfers or 488.2-defined strings. In USB INSTR, you can choose normal or vendor-specific transfers. In previous versions of VISA, VI_PROT_NORMAL was known as VI_NORMAL , VI_PROT_FDC was known as VI_FDC , VI_PROT_HS488 was known as VI_HS488 , and VI_PROT_4882_STRS was known as VI_ASRL488 ."#
-        (Read/Write Local) ( ViUInt16) 
+        (Read/Write Local) ( ViUInt16)
         [
             while USB RAW {static as VI_PROT_NORMAL in VI_PROT_NORMAL (1) VI_PROT_4882_STRS (4)}
             while VXI {static as VI_PROT_NORMAL in VI_PROT_NORMAL (1) VI_PROT_FDC (2)}
@@ -442,8 +442,8 @@ mod attributes {
         const VI_ATTR_PXI_CHASSIS: r#"VI_ATTR_PXI_CHASSIS specifies the PXI chassis number of this device. A value of -1 means the chassis number is unknown."#
         (Read Only Global) ( ViInt16) [static as N/A in -1, 0 to 255]
 
-        const VI_ATTR_PXI_DEST_TRIG_BUS: r#"VI_ATTR_PXI_DEST_TRIG_BUS specifies the segment to use to qualify trigDest in viMapTrigger . * You can determine the number of segments from MAX (in the trigger reservation panel), from the chassis documentation, and by looking at the dividing lines on the physical front panel of the chassis itself."#
-        (Read/Write Local) ( ViInt16) [static as -1 in Single-Segment Chassis (8 Slots or Less): N/A Multisegment Chassis (More than 8 Slots): 1...number of chassis segments *]
+        const VI_ATTR_PXI_DEST_TRIG_BUS: r#"VI_ATTR_PXI_DEST_TRIG_BUS specifies the segment to use to qualify trigDest in viMapTrigger . * You can determine the number of segments from MAX (in the trigger reservation panel), from the chassis documentation, and by looking at the dividing lines on the physical front panel of the chassis itself. Range: Single-Segment Chassis (8 Slots or Less): N/A, Multisegment Chassis (More than 8 Slots): 1...number of chassis segments"#
+        (Read/Write Local) ( ViInt16) [static as -1 in N/A]
 
         const VI_ATTR_PXI_DEV_NUM: r#"This is the PXI device number."#
         (Read Only Global) ( ViUInt16) [static as N/A in 0 to 31]
@@ -490,8 +490,8 @@ mod attributes {
         const VI_ATTR_PXI_SLOTPATH: r#"VI_ATTR_PXI_SLOTPATH specifies the slot path of this device. The purpose of a PXI slot path is to describe the PCI bus hierarchy in a manner independent of the PCI bus number. PXI slot paths are a sequence of values representing the PCI device number and function number of a PCI module and each parent PCI bridge that routes the module to the host PCI bridge (bus 0). Each value is represented as " dev[.func] ", where the function number is listed only if it is non-zero. When a PXI slot path includes multiple values, the values are comma-separated. The string format of the attribute value looks like this: device1[.function1][,device2[.function2]][,...] An example string is " 5.1,12,8 ". In this case, there is a PCI-to-PCI bridge on device 8 on the root bus. On its secondary bus, there is another PCI-to-PCI bridge on device 12. On its secondary bus, there is an instrument on device 5, function 1. The example string value describes this instrument's slot path."#
         (Read Only Global) ( ViString) [static as N/A in N/A]
 
-        const VI_ATTR_PXI_SRC_TRIG_BUS: r#"VI_ATTR_PXI_SRC_TRIG_BUS specifies the segment to use to qualify trigSrc in viMapTrigger . * You can determine the number of segments from MAX (in the trigger reservation panel), from the chassis documentation, and by looking at the dividing lines on the physical front panel of the chassis itself."#
-        (Read/Write Local) ( ViInt16) [static as -1 in Single-Segment Chassis (8 Slots or Less): N/A Multisegment Chassis (More than 8 Slots): 1...number of chassis segments *]
+        const VI_ATTR_PXI_SRC_TRIG_BUS: r#"VI_ATTR_PXI_SRC_TRIG_BUS specifies the segment to use to qualify trigSrc in viMapTrigger . * You can determine the number of segments from MAX (in the trigger reservation panel), from the chassis documentation, and by looking at the dividing lines on the physical front panel of the chassis itself. Range: Single-Segment Chassis (8 Slots or Less): N/A Multisegment Chassis (More than 8 Slots): 1...number of chassis segments"#
+        (Read/Write Local) ( ViInt16) [static as -1 in N/A]
 
         const VI_ATTR_PXI_STAR_TRIG_BUS: r#"VI_ATTR_PXI_STAR_TRIG_BUS specifies the star trigger bus number of this device."#
         (Read Only Global) ( ViInt16) [static as N/A in N/A]
@@ -554,9 +554,10 @@ mod attributes {
         (Read Only) ( ViUInt16) [static as N/A in 0h to FFFFh]
 
         const VI_ATTR_SLOT: r#"VI_ATTR_SLOT specifies the physical slot location of the device. If the slot number is not known, VI_UNKNOWN_SLOT is returned."#
-        (Read Only Global) ( ViInt16) 
+        (Read Only Global) ( ViInt16)
         [
             while VXI {static as N/A in 0 to 12 VI_UNKNOWN_SLOT (-1) PXI 1 to 18 VI_UNKNOWN_SLOT (-1)}
+            while PXI {static as N/A in 0 to 12 VI_UNKNOWN_SLOT (-1) PXI 1 to 18 VI_UNKNOWN_SLOT (-1)}
         ]
 
         const VI_ATTR_SRC_ACCESS_PRIV: r#"VI_ATTR_SRC_ACCESS_PRIV specifies the address modifier to be used in high-level access operations, such as viIn XX () and viMoveIn XX () , when reading from the source."#
@@ -602,9 +603,9 @@ mod attributes {
         (Read/Write Local) ( ViUInt32) [static as 2000 in VI_TMO_IMMEDIATE (0) ; 1 to FFFFFFFEh; VI_TMO_INFINITE (FFFFFFFFh)]
 
         const VI_ATTR_TRIG_ID: r#"VI_ATTR_TRIG_ID is the identifier for the current triggering mechanism. VI_ATTR_TRIG_ID is Read/Write when the corresponding session is not enabled to receive trigger events. When the session is enabled to receive trigger events, the attribute VI_ATTR_TRIG_ID is Read Only."#
-        (Read/Write Local) ( ViInt16) 
+        (Read/Write Local) ( ViInt16)
         [
-            while PXI {static as VI_TRIG_SW in INSTR, PXI BACKPLANE: VI_TRIG_SW (-1) VI_TRIG_TTLO (0) to VI_TRIG_TTL7 (7)}
+            while PXI {static as VI_TRIG_SW in VI_TRIG_SW (-1) VI_TRIG_TTLO (0) to VI_TRIG_TTL7 (7)}
             while Serial {static as VI_TRIG_SW in VI_TRIG_SW (-1)}
             while GPIB {static as VI_TRIG_SW in VI_TRIG_SW (-1)}
             while VXI {static as VI_TRIG_SW in VI_TRIG_SW (-1); VI_TRIG_TTL0 (0) to VI_TRIG_TTL7 (7); VI_TRIG_ECL0 (8) to VI_TRIG_ECL1 (9)}

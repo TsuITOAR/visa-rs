@@ -5,7 +5,7 @@ use proc_macro::TokenStream;
 use proc_macro2::{Delimiter, TokenStream as TokenStream2, TokenTree};
 use quote::{quote, ToTokens};
 use syn::{
-    parenthesized,
+    bracketed, parenthesized,
     parse::{Parse, ParseStream},
     parse_macro_input,
     spanned::Spanned,
@@ -117,10 +117,10 @@ pub fn rusty_ident(input: TokenStream) -> TokenStream {
 }
 
 fn get_visa_num(input: TokenTree) -> TokenTree {
-    fn parse_to_u32(s: &str) -> std::result::Result<u32, std::num::ParseIntError> {
-        u32::from_str_radix(s, 16)
+    fn parse_to_u64(s: &str) -> std::result::Result<u64, std::num::ParseIntError> {
+        u64::from_str_radix(s, 16)
     }
-    fn u32_to_lit(n: u32) -> String {
+    fn u64_to_lit(n: u64) -> String {
         format!("{:#010X}", n)
     }
     match input {
@@ -133,8 +133,8 @@ fn get_visa_num(input: TokenTree) -> TokenTree {
             TokenTree::Group(ret)
         }
         TokenTree::Ident(id) => {
-            if let Some(Ok(d)) = id.to_string().strip_suffix('h').map(parse_to_u32) {
-                let mut ret = proc_macro2::Literal::from_str(&u32_to_lit(d)).unwrap();
+            if let Some(Ok(d)) = id.to_string().strip_suffix('h').map(parse_to_u64) {
+                let mut ret = proc_macro2::Literal::from_str(&u64_to_lit(d)).unwrap();
                 ret.set_span(id.span());
                 TokenTree::Literal(ret)
             } else {
@@ -142,8 +142,8 @@ fn get_visa_num(input: TokenTree) -> TokenTree {
             }
         }
         TokenTree::Literal(lit) => {
-            if let Some(Ok(d)) = lit.to_string().strip_suffix('h').map(parse_to_u32) {
-                let mut ret = proc_macro2::Literal::from_str(&u32_to_lit(d)).unwrap();
+            if let Some(Ok(d)) = lit.to_string().strip_suffix('h').map(parse_to_u64) {
+                let mut ret = proc_macro2::Literal::from_str(&u64_to_lit(d)).unwrap();
                 ret.set_span(lit.span());
                 TokenTree::Literal(ret)
             } else {
@@ -164,6 +164,19 @@ fn test_visa_num() {
     );
 }
 
+fn match_tokens(input: ParseStream, str: &str) -> bool {
+    let stream: TokenStream2 = syn::parse_str(str).unwrap();
+    let fork = input.fork();
+    for token in stream {
+        if token.to_string() != fork.parse::<TokenTree>().unwrap().to_string() {
+            return false;
+        }
+    }
+    use syn::parse::discouraged::Speculative;
+    input.advance_to(&fork);
+    return true;
+}
+
 struct Attributes {
     attrs: Vec<Attr>,
 }
@@ -182,9 +195,67 @@ struct Attr {
     id: Ident,
     desc: LitStr,
     vis: TokenStream2,
-    ty: Ident,
+    ty: Type,
     range: Range,
-    default: DefaultValue,
+}
+
+struct Type {
+    attr_name: Option<Ident>,
+    core: TypeCore,
+}
+
+impl Parse for Type {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let attr_name;
+        if input.peek2(Token![:]) {
+            attr_name = Some(input.parse()?);
+            input.parse::<Token![:]>()?;
+        } else {
+            attr_name = None;
+        }
+        Ok(Type {
+            attr_name,
+            core: input.parse()?,
+        })
+    }
+}
+
+enum TypeCore {
+    Arch(Vec<ArchType>),
+    UnArch(Ident),
+}
+
+impl Parse for TypeCore {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let core = input.parse()?;
+        if input.peek(Token![for]) {
+            input.parse::<Token![for]>()?;
+            let arch: LitInt = input.parse()?;
+            if !match_tokens(input, "-bit applications") {
+                return Err(input.error("expected '-bit applications' after architecture"));
+            }
+            let mut ret = vec![ArchType { arch, core: core }];
+            while !input.is_empty() {
+                let core = input.parse()?;
+                input.parse::<Token![for]>()?;
+                ret.push(ArchType {
+                    core,
+                    arch: input.parse()?,
+                });
+                if !match_tokens(input, "-bit applications") {
+                    return Err(input.error("expected '-bit applications' after architecture"));
+                }
+            }
+            return Ok(TypeCore::Arch(ret));
+        } else {
+            return Ok(TypeCore::UnArch(core));
+        }
+    }
+}
+
+struct ArchType {
+    arch: LitInt,
+    core: Ident,
 }
 
 impl Parse for Attr {
@@ -199,77 +270,16 @@ impl Parse for Attr {
         let ty;
         parenthesized!(ty in input);
         let ty = ty.parse()?;
-        input.parse::<Token![::]>()?;
-        input.parse::<Token![<]>()?;
-        let range = input.parse()?;
-        input.parse::<Token![>]>()?;
-        input.parse::<Token![=]>()?;
-        let default = input.parse()?;
+        let range;
+        bracketed!(range in input);
+        let range = range.parse()?;
         Ok(Self {
             id,
             desc,
             vis,
             ty,
             range,
-            default,
         })
-    }
-}
-
-enum DefaultValue {
-    Num(LitInt),
-    Ident(Ident),
-    Key {
-        key_name: Vec<TokenTree>,
-        char: LitInt,
-    },
-    NA,
-}
-
-fn is_na(input: ParseStream) -> bool {
-    let fork = input.fork();
-    if !fork.parse::<Ident>().is_ok_and(|n| n == "N") {
-        return false;
-    }
-    if !fork.parse::<Token![/]>().is_ok() {
-        return false;
-    }
-    if !fork.parse::<Ident>().is_ok_and(|a| a == "A") {
-        return false;
-    }
-    input.parse::<Ident>().unwrap();
-    input.parse::<Token![/]>().unwrap();
-    input.parse::<Ident>().unwrap();
-    true
-}
-
-impl Parse for DefaultValue {
-    fn parse(input: ParseStream) -> Result<Self> {
-        if is_na(input) {
-            Ok(Self::NA)
-        } else {
-            let look = input.lookahead1();
-            if look.peek(LitInt) {
-                Ok(Self::Num(input.parse()?))
-            } else if look.peek(Ident) {
-                Ok(Self::Ident(input.parse()?))
-            } else if look.peek(Token![<]) {
-                input.parse::<Token![<]>()?;
-                let mut key_name = Vec::new();
-                while !input.peek(Token![>]) {
-                    key_name.push(input.parse()?);
-                }
-                input.parse::<Token![>]>()?;
-                let char;
-                parenthesized!(char in input);
-                Ok(Self::Key {
-                    key_name,
-                    char: char.parse()?,
-                })
-            } else {
-                Err(look.error())
-            }
-        }
     }
 }
 
