@@ -6,9 +6,44 @@ pub mod enums;
 pub mod event;
 pub mod flags;
 pub mod handler;
-mod session;
+pub mod session;
+
+use session::{AsRawSs, AsSs, FromRawSs, IntoRawSs, OwnedSs};
+
 pub const TIMEOUT_IMMEDIATE: Duration = Duration::from_millis(vs::VI_TMO_IMMEDIATE as _);
 pub const TIMEOUT_INFINITE: Duration = Duration::from_micros(vs::VI_TMO_INFINITE as _);
+
+macro_rules! impl_session_traits {
+    ($($id:ident),* $(,)?) => {
+        $(
+            impl IntoRawSs for $id {
+                fn into_raw_ss(self) -> session::RawSs {
+                    self.0.into_raw_ss()
+                }
+            }
+
+            impl AsRawSs for $id {
+                fn as_raw_ss(&self) -> session::RawSs {
+                    self.0.as_raw_ss()
+                }
+            }
+
+            impl AsSs for $id {
+                fn as_ss(&self) -> session::BorrowedSs<'_> {
+                    self.0.as_ss()
+                }
+            }
+
+            impl FromRawSs for $id {
+                unsafe fn from_raw_ss(s: session::RawSs) -> Self {
+                    Self(FromRawSs::from_raw_ss(s))
+                }
+            }
+        )*
+    };
+}
+
+impl_session_traits! { DefaultRM, Instrument}
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct Error(enums::ErrorCode);
@@ -60,21 +95,13 @@ macro_rules! wrap_raw_error_in_unsafe {
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
-pub struct DefaultRM(vs::ViSession);
-
-impl Drop for DefaultRM {
-    fn drop(&mut self) {
-        unsafe {
-            vs::viClose(self.0);
-        }
-    }
-}
+pub struct DefaultRM(session::OwnedSs);
 
 impl DefaultRM {
     pub fn new() -> Result<Self> {
         let mut new: vs::ViSession = 0;
         wrap_raw_error_in_unsafe!(vs::viOpenDefaultRM(&mut new as _))?;
-        return Ok(Self(new));
+        return Ok(Self(unsafe { OwnedSs::from_raw_ss(new) }));
     }
     pub fn find_res(&self, expr: &ResID) -> Result<ResList> {
         let mut list: vs::ViFindList = 0;
@@ -82,7 +109,7 @@ impl DefaultRM {
         let mut instr_desc: [vs::ViChar; vs::VI_FIND_BUFLEN as usize] =
             [0; vs::VI_FIND_BUFLEN as _];
         wrap_raw_error_in_unsafe!(vs::viFindRsrc(
-            self.0,
+            self.as_raw_ss(),
             expr.as_vi_const_string(),
             &mut list,
             &mut cnt,
@@ -102,13 +129,13 @@ impl DefaultRM {
     ) -> Result<Instrument> {
         let mut instr: vs::ViSession = 0;
         wrap_raw_error_in_unsafe!(vs::viOpen(
-            self.0,
+            self.as_raw_ss(),
             res_name.as_vi_const_string(),
             access_mode.bits(),
             open_timeout.as_millis() as _,
             &mut instr as _,
         ))?;
-        Ok(Instrument(instr))
+        Ok(unsafe { Instrument::from_raw_ss(instr) })
     }
 }
 
@@ -171,15 +198,7 @@ impl Display for ResID {
 }
 
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
-pub struct Instrument(vs::ViSession);
-
-impl Drop for Instrument {
-    fn drop(&mut self) {
-        unsafe {
-            vs::viClose(self.0);
-        }
-    }
-}
+pub struct Instrument(OwnedSs);
 
 fn map_to_io_err(err: Error) -> std::io::Error {
     use enums::ErrorCode::*;
@@ -211,7 +230,7 @@ impl std::io::Write for Instrument {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         let mut ret_cnt: vs::ViUInt32 = 0;
         wrap_raw_error_in_unsafe!(vs::viWrite(
-            self.0,
+            self.as_raw_ss(),
             buf.as_ptr(),
             buf.len() as _,
             &mut ret_cnt as _
@@ -232,7 +251,7 @@ impl std::io::Read for Instrument {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         let mut ret_cnt: vs::ViUInt32 = 0;
         wrap_raw_error_in_unsafe!(vs::viRead(
-            self.0,
+            self.as_raw_ss(),
             buf.as_mut_ptr(),
             buf.len() as _,
             &mut ret_cnt as _
@@ -244,7 +263,7 @@ impl std::io::Read for Instrument {
 
 impl Instrument {
     pub fn raw_flush(&mut self, mode: flags::FlushMode) -> Result<()> {
-        wrap_raw_error_in_unsafe!(vs::viFlush(self.0, mode.bits()))?;
+        wrap_raw_error_in_unsafe!(vs::viFlush(self.as_raw_ss(), mode.bits()))?;
         Ok(())
     }
     pub fn get_attr(&self, attr_kind: enums::AttrKind) -> enums::Attribute {
@@ -268,7 +287,7 @@ impl Instrument {
         todo!()
     }
     pub fn unlock(&mut self) -> Result<()> {
-        wrap_raw_error_in_unsafe!(vs::viUnlock(self.0))?;
+        wrap_raw_error_in_unsafe!(vs::viUnlock(self.as_raw_ss()))?;
         Ok(())
     }
     pub fn enable_event(
@@ -278,7 +297,7 @@ impl Instrument {
         filter: event::EventFilter,
     ) -> Result<()> {
         wrap_raw_error_in_unsafe!(vs::viEnableEvent(
-            self.0,
+            self.as_raw_ss(),
             event_kind as _,
             mechanism as _,
             filter as _
@@ -290,7 +309,11 @@ impl Instrument {
         event_kind: event::EventKind,
         mechanism: event::Mechanism,
     ) -> Result<()> {
-        wrap_raw_error_in_unsafe!(vs::viDisableEvent(self.0, event_kind as _, mechanism as _,))?;
+        wrap_raw_error_in_unsafe!(vs::viDisableEvent(
+            self.as_raw_ss(),
+            event_kind as _,
+            mechanism as _,
+        ))?;
         Ok(())
     }
     pub fn discard_events(
@@ -298,7 +321,11 @@ impl Instrument {
         event: event::EventKind,
         mechanism: event::Mechanism,
     ) -> Result<()> {
-        wrap_raw_error_in_unsafe!(vs::viDiscardEvents(self.0, event as _, mechanism as _,))?;
+        wrap_raw_error_in_unsafe!(vs::viDiscardEvents(
+            self.as_raw_ss(),
+            event as _,
+            mechanism as _,
+        ))?;
         Ok(())
     }
     pub fn wait_on_event(
@@ -309,7 +336,7 @@ impl Instrument {
         let mut handler: vs::ViEvent = 0;
         let mut out_kind: vs::ViEventType = 0;
         wrap_raw_error_in_unsafe!(vs::viWaitOnEvent(
-            self.0,
+            self.as_raw_ss(),
             event_kind as _,
             timeout.as_millis() as _,
             &mut out_kind as _,
@@ -339,13 +366,17 @@ impl Instrument {
         let (p_f, p_c, call) = split_closure(closure);
 
         wrap_raw_error_in_unsafe!(vs::viInstallHandler(
-            self.0,
+            self.as_raw_ss(),
             event_kind as _,
             Some(call),
             p_c
         ))?;
         Ok(handler::Handler::new(
-            self.0, receiver, event_kind, call, p_f,
+            self.as_raw_ss(),
+            receiver,
+            event_kind,
+            call,
+            p_f,
         ))
     }
 }
@@ -377,9 +408,10 @@ where
         T: FnMut(&mut Instrument, event::Event) -> vs::ViStatus,
     {
         let closure: &mut T = &mut *(user_data as *mut T);
-        let mut instr = Instrument(instr);
+        let mut instr = Instrument::from_raw_ss(instr);
         let ret = closure(&mut instr, event::Event::new(event, event_type));
-        std::mem::forget(instr); // ? no sure yet, in official example session not closed
+        std::mem::forget(instr); 
+        // ? no sure yet, in official example session not closed
         ret
     }
 

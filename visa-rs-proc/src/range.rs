@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use proc_macro2::{TokenStream, TokenTree};
+use proc_macro2::TokenTree;
 use syn::{
     braced, parenthesized,
     parse::{Parse, ParseStream, Result},
@@ -322,7 +322,7 @@ impl Parse for BoundToken {
                 let value;
                 parenthesized!(value in input);
                 Some(value.parse()?)
-            } else if id == "ViTrue" || id == "ViFalse" {
+            } else if id == "VI_TRUE" || id == "VI_FALSE" {
                 None
             } else {
                 return Err(look.error());
