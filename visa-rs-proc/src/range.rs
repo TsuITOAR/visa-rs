@@ -10,7 +10,6 @@ use syn::{
 
 use crate::match_tokens;
 
-
 fn is_na(input: ParseStream) -> bool {
     match_tokens(input, "N/A")
 }
@@ -276,15 +275,16 @@ impl Parse for BoundItem {
                 Ok(BoundItem::Single(s))
             }
         } else if look.peek(Ident) {
-            let n: Ident = input.parse()?;
-            if input.peek(Paren) {
+            let id: Ident = input.parse()?;
+            let look = input.lookahead1();
+            if look.peek(Paren) {
                 let c;
                 parenthesized!(c in input);
                 if c.peek2(kw::to) {
                     let b = c.parse()?;
                     c.parse::<kw::to>()?;
                     return Ok(BoundItem::NamedRange {
-                        name: n,
+                        name: id,
                         range: (b, c.parse()?),
                     });
                 } else {
@@ -293,14 +293,13 @@ impl Parse for BoundItem {
                         input.parse::<kw::to>()?;
                         return Ok(BoundItem::Range((BoundToken::Num(b), input.parse()?)));
                     } else {
-                        return Ok(BoundItem::Single(BoundToken::Ident {
-                            id: n,
-                            value: Some(b),
-                        }));
+                        return Ok(BoundItem::Single(BoundToken::Ident { id, value: Some(b) }));
                     }
                 }
+            } else if id == "VI_TRUE" || id == "VI_FALSE" {
+                return Ok(BoundItem::Single(BoundToken::Ident { id, value: None }));
             } else {
-                return Ok(BoundItem::Single(BoundToken::Ident { id: n, value: None }));
+                Err(look.error())
             }
         } else {
             Err(look.error())

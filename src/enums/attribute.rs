@@ -479,10 +479,10 @@ mod attributes {
         (Read Only) ( ViInt16) [static as N/A in N/A]
 
         const VI_ATTR_PXI_SLOT_LBUS_LEFT: r#"VI_ATTR_PXI_SLOT_LBUS_LEFT specifies the slot number or special feature connected to the local bus left lines of this device."#
-        (Read Only Global) ( ViInt16) [static as N/A in VI_PXI_LBUS_UNKNOWN (-1) ; VI_PXI_LBUS_NONE (0) ; Normal slots (1 to 18); VI_PXI_LBUS_STAR_TRIG_BUS_0 (1000) to VI_PXI_LBUS_STAR_TRIG_BUS_9 (1009) ; VI_PXI_STAR_TRIG_CONTROLLER (1413) ; VI_PXI_LBUS_SCXI (2000)]
+        (Read Only Global) ( ViInt16) [static as N/A in VI_PXI_LBUS_UNKNOWN (-1) ; VI_PXI_LBUS_NONE (0) ; NormalSlots (1 to 18); VI_PXI_LBUS_STAR_TRIG_BUS_0 (1000) to VI_PXI_LBUS_STAR_TRIG_BUS_9 (1009) ; VI_PXI_STAR_TRIG_CONTROLLER (1413) ; VI_PXI_LBUS_SCXI (2000)]
 
         const VI_ATTR_PXI_SLOT_LBUS_RIGHT: r#"VI_ATTR_PXI_SLOT_LBUS_RIGHT specifies the slot number or special feature connected to the local bus right lines of this device."#
-        (Read Only Global) ( ViInt16) [static as N/A in VI_PXI_LBUS_UNKNOWN (-1) ; VI_PXI_LBUS_NONE (0) ; Normal slots (1 to 18); VI_PXI_LBUS_STAR_TRIG_BUS_0 (1000) to VI_PXI_LBUS_STAR_TRIG_BUS_9 (1009) ; VI_PXI_STAR_TRIG_CONTROLLER (1413) ; VI_PXI_LBUS_SCXI (2000)]
+        (Read Only Global) ( ViInt16) [static as N/A in VI_PXI_LBUS_UNKNOWN (-1) ; VI_PXI_LBUS_NONE (0) ; NormalSlots (1 to 18); VI_PXI_LBUS_STAR_TRIG_BUS_0 (1000) to VI_PXI_LBUS_STAR_TRIG_BUS_9 (1009) ; VI_PXI_STAR_TRIG_CONTROLLER (1413) ; VI_PXI_LBUS_SCXI (2000)]
 
         const VI_ATTR_PXI_SLOT_LWIDTH: r#"VI_ATTR_PXI_SLOT_LWIDTH specifies the PCI Express link width of the PXI Express peripheral slot in which the device resides. A value of -1 indicates that the device is not a PXI Express device."#
         (Read Only Global) ( ViInt16) [static as N/A in -1, 1, 4, 8]
@@ -556,8 +556,8 @@ mod attributes {
         const VI_ATTR_SLOT: r#"VI_ATTR_SLOT specifies the physical slot location of the device. If the slot number is not known, VI_UNKNOWN_SLOT is returned."#
         (Read Only Global) ( ViInt16)
         [
-            while VXI {static as N/A in 0 to 12 VI_UNKNOWN_SLOT (-1) PXI 1 to 18 VI_UNKNOWN_SLOT (-1)}
-            while PXI {static as N/A in 0 to 12 VI_UNKNOWN_SLOT (-1) PXI 1 to 18 VI_UNKNOWN_SLOT (-1)}
+            while VXI {static as N/A in 0 to 12 VI_UNKNOWN_SLOT (-1)}
+            while PXI {static as N/A in 1 to 18 VI_UNKNOWN_SLOT (-1)}
         ]
 
         const VI_ATTR_SRC_ACCESS_PRIV: r#"VI_ATTR_SRC_ACCESS_PRIV specifies the address modifier to be used in high-level access operations, such as viIn XX () and viMoveIn XX () , when reading from the source."#
