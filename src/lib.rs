@@ -12,7 +12,6 @@ use session::{AsRawSs, AsSs, FromRawSs, IntoRawSs, OwnedSs};
 
 pub const TIMEOUT_IMMEDIATE: Duration = Duration::from_millis(vs::VI_TMO_IMMEDIATE as _);
 pub const TIMEOUT_INFINITE: Duration = Duration::from_micros(vs::VI_TMO_INFINITE as _);
-
 macro_rules! impl_session_traits {
     ($($id:ident),* $(,)?) => {
         $(
@@ -83,13 +82,14 @@ impl TryFrom<vs::ViStatus> for Error {
 pub type Result<T> = std::result::Result<T, Error>;
 const SUCCESS: vs::ViStatus = vs::VI_SUCCESS as _;
 
+#[macro_export]
 macro_rules! wrap_raw_error_in_unsafe {
     ($s:expr) => {
         match unsafe { $s } {
             state if state >= SUCCESS => {
-                Result::<enums::CompletionCode>::Ok(state.try_into().unwrap())
+                Result::<$crate::enums::CompletionCode>::Ok(state.try_into().unwrap())
             }
-            e => Result::<enums::CompletionCode>::Err(e.try_into().unwrap()),
+            e => Result::<$crate::enums::CompletionCode>::Err(e.try_into().unwrap()),
         }
     };
 }
@@ -241,7 +241,7 @@ impl std::io::Write for Instrument {
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
-        self.raw_flush(flags::FlushMode::WRITE_BUF)
+        self.visa_flush(flags::FlushMode::WRITE_BUF)
             .map_err(map_to_io_err)
         // ? should call flags::FlushMODE::IO_OUT_BUF
     }
@@ -262,24 +262,24 @@ impl std::io::Read for Instrument {
 }
 
 impl Instrument {
-    pub fn raw_flush(&mut self, mode: flags::FlushMode) -> Result<()> {
+    pub fn visa_flush(&self, mode: flags::FlushMode) -> Result<()> {
         wrap_raw_error_in_unsafe!(vs::viFlush(self.as_raw_ss(), mode.bits()))?;
         Ok(())
     }
     pub fn get_attr(&self, attr_kind: enums::AttrKind) -> enums::Attribute {
         todo!()
     }
-    pub fn set_attr(&mut self, attr: enums::Attribute) {
+    pub fn set_attr(&self, attr: enums::Attribute) {
         todo!()
     }
-    pub fn status_desc(&mut self, error: Error) -> Result<String> {
+    pub fn status_desc(&self, error: Error) -> Result<String> {
         todo!()
     }
-    pub fn term(&mut self, job: JobID) -> Result<()> {
+    pub fn term(&self, job: JobID) -> Result<()> {
         todo!()
     }
     pub fn lock(
-        &mut self,
+        &self,
         mode: flags::AccessMode,
         timeout: Duration,
         key: KeyID,
@@ -291,7 +291,7 @@ impl Instrument {
         Ok(())
     }
     pub fn enable_event(
-        &mut self,
+        &self,
         event_kind: event::EventKind,
         mechanism: event::Mechanism,
         filter: event::EventFilter,
@@ -305,7 +305,7 @@ impl Instrument {
         Ok(())
     }
     pub fn disable_event(
-        &mut self,
+        &self,
         event_kind: event::EventKind,
         mechanism: event::Mechanism,
     ) -> Result<()> {
@@ -317,7 +317,7 @@ impl Instrument {
         Ok(())
     }
     pub fn discard_events(
-        &mut self,
+        &self,
         event: event::EventKind,
         mechanism: event::Mechanism,
     ) -> Result<()> {
@@ -329,7 +329,7 @@ impl Instrument {
         Ok(())
     }
     pub fn wait_on_event(
-        &mut self,
+        &self,
         event_kind: event::EventKind,
         timeout: Duration,
     ) -> Result<event::Event> {
@@ -345,81 +345,13 @@ impl Instrument {
         let kind = event::EventKind::try_from(out_kind).expect("should be valid event type");
         Ok(event::Event { handler, kind })
     }
-    pub fn install_handler<F, Out>(
-        &mut self,
+    pub fn install_handler<F: handler::Callback>(
+        &self,
         event_kind: event::EventKind,
-        ops: impl FnMut(&mut Instrument, event::Event) -> Result<Out>,
-    ) -> Result<handler::Handler<Out, impl FnMut(&mut Instrument, event::Event) -> vs::ViStatus>>
-    {
-        let (sender, receiver) = std::sync::mpsc::channel();
-        let mut ops = ops;
-        let closure = move |instr: &mut Instrument, event: event::Event| -> vs::ViStatus {
-            let ret = ops(instr, event);
-            match ret {
-                Err(e) => e.into(),
-                Ok(r) => {
-                    sender.send(r).expect("receiver side should be valid");
-                    SUCCESS
-                }
-            }
-        };
-        let (p_f, p_c, call) = split_closure(closure);
-
-        wrap_raw_error_in_unsafe!(vs::viInstallHandler(
-            self.as_raw_ss(),
-            event_kind as _,
-            Some(call),
-            p_c
-        ))?;
-        Ok(handler::Handler::new(
-            self.as_raw_ss(),
-            receiver,
-            event_kind,
-            call,
-            p_f,
-        ))
+        callback: F,
+    ) -> Result<handler::Handler<'_, F>> {
+        handler::Handler::new((*self).as_ss(), event_kind, callback)
     }
-}
-
-fn split_closure<F>(
-    closure: F,
-) -> (
-    std::ptr::NonNull<F>,
-    *mut std::ffi::c_void,
-    unsafe extern "C" fn(
-        vs::ViSession,
-        vs::ViEventType,
-        vs::ViEvent,
-        *mut std::ffi::c_void,
-    ) -> vs::ViStatus,
-)
-where
-    F: FnMut(&mut Instrument, event::Event) -> vs::ViStatus,
-{
-    use std::ffi::c_void;
-    let data = Box::into_raw(Box::new(closure));
-    unsafe extern "C" fn trampoline<T>(
-        instr: vs::ViSession,
-        event_type: vs::ViEventType,
-        event: vs::ViEvent,
-        user_data: *mut c_void,
-    ) -> vs::ViStatus
-    where
-        T: FnMut(&mut Instrument, event::Event) -> vs::ViStatus,
-    {
-        let closure: &mut T = &mut *(user_data as *mut T);
-        let mut instr = Instrument::from_raw_ss(instr);
-        let ret = closure(&mut instr, event::Event::new(event, event_type));
-        std::mem::forget(instr); 
-        // ? no sure yet, in official example session not closed
-        ret
-    }
-
-    (
-        NonNull::new(data).expect("impossible to pass in a null ptr"),
-        data as *mut c_void,
-        trampoline::<F>,
-    )
 }
 
 pub struct JobID(vs::ViJobId);
