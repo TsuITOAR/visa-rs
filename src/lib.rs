@@ -1,4 +1,4 @@
-use std::{borrow::Cow, ffi::CString, fmt::Display, ptr::NonNull, time::Duration};
+use std::{borrow::Cow, ffi::CString, fmt::Display, time::Duration};
 
 use visa_sys as vs;
 

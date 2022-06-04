@@ -108,5 +108,3 @@ impl AsSs for OwnedSs {
         unsafe { BorrowedSs::borrow_raw(self.s) }
     }
 }
-
-use std::fs::File;

@@ -77,10 +77,6 @@ macro_rules! consts_to_enum {
     }
 }
 
-macro_rules! pass_compile {
-    ($($anything:tt)*) => {};
-}
-
 mod attribute;
 mod status;
 
