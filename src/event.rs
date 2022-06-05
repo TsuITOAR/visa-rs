@@ -4,6 +4,7 @@ use visa_sys as vs;
 #[derive(num_enum::TryFromPrimitive, Debug, PartialEq, PartialOrd, Eq, Ord, Hash, Clone, Copy)]
 pub enum EventKind {
     IoCompletion = vs::VI_EVENT_IO_COMPLETION,
+    Trig = vs::VI_EVENT_TRIG,
 }
 
 #[repr(i16)]

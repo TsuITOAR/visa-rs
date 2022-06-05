@@ -228,6 +228,22 @@ fn map_to_io_err(err: Error) -> std::io::Error {
 
 impl std::io::Write for Instrument {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        <&Instrument>::write(&mut &*self, buf)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        <&Instrument>::flush(&mut &*self)
+    }
+}
+
+impl std::io::Read for Instrument {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        <&Instrument>::read(&mut &*self, buf)
+    }
+}
+
+impl std::io::Write for &Instrument {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         let mut ret_cnt: vs::ViUInt32 = 0;
         wrap_raw_error_in_unsafe!(vs::viWrite(
             self.as_raw_ss(),
@@ -247,7 +263,7 @@ impl std::io::Write for Instrument {
     }
 }
 
-impl std::io::Read for Instrument {
+impl std::io::Read for &Instrument {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         let mut ret_cnt: vs::ViUInt32 = 0;
         wrap_raw_error_in_unsafe!(vs::viRead(
@@ -273,7 +289,15 @@ impl Instrument {
         todo!()
     }
     pub fn status_desc(&self, error: Error) -> Result<String> {
-        todo!()
+        static mut DESC: [u8; 256] = [0; 256];
+        wrap_raw_error_in_unsafe!(vs::viStatusDesc(
+            self.as_raw_ss(),
+            error.into(),
+            DESC.as_mut_ptr() as _
+        ))?;
+        Ok(String::from_iter(unsafe {
+            DESC.into_iter().map(|x| x as char)
+        }))
     }
     pub fn term(&self, job: JobID) -> Result<()> {
         todo!()
@@ -345,12 +369,42 @@ impl Instrument {
         let kind = event::EventKind::try_from(out_kind).expect("should be valid event type");
         Ok(event::Event { handler, kind })
     }
+
+    ///
+    /// Note: for some reason pass a closure with signature `|instr, event|{...}`
+    /// may get `error[E0478]: lifetime bound not satisfied`.
+    /// Instead, use `|instr: & Instrument, event|{}`.
+    ///
+
     pub fn install_handler<F: handler::Callback>(
         &self,
         event_kind: event::EventKind,
         callback: F,
     ) -> Result<handler::Handler<'_, F>> {
-        handler::Handler::new((*self).as_ss(), event_kind, callback)
+        handler::Handler::new(self.as_ss(), event_kind, callback)
+    }
+}
+
+impl Instrument {
+    pub fn read_async(&self, buf: &mut [u8]) -> Result<JobID> {
+        let mut id: vs::ViJobId = 0;
+        wrap_raw_error_in_unsafe!(vs::viReadAsync(
+            self.as_raw_ss(),
+            buf.as_mut_ptr(),
+            buf.len() as _,
+            &mut id as _
+        ))?;
+        Ok(JobID(id))
+    }
+    pub fn write_async(&self, buf: &[u8]) -> Result<JobID> {
+        let mut id: vs::ViJobId = 0;
+        wrap_raw_error_in_unsafe!(vs::viWriteAsync(
+            self.as_raw_ss(),
+            buf.as_ptr(),
+            buf.len() as _,
+            &mut id as _
+        ))?;
+        Ok(JobID(id))
     }
 }
 

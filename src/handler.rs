@@ -10,17 +10,17 @@ use crate::{
     Instrument, Result, SUCCESS,
 };
 
-pub trait Callback: Sized {
+pub trait Callback {
     type Output;
-    fn call(&mut self, instr: &mut Instrument, event: event::Event) -> Result<Self::Output>;
+    fn call(&mut self, instr: &Instrument, event: event::Event) -> Result<Self::Output>;
 }
 
 impl<F, Out> Callback for F
 where
-    F: FnMut(&mut Instrument, event::Event) -> Result<Out>,
+    F: FnMut(&Instrument, event::Event) -> Result<Out>,
 {
     type Output = Out;
-    fn call(&mut self, instr: &mut Instrument, event: event::Event) -> Result<Self::Output> {
+    fn call(&mut self, instr: &Instrument, event: event::Event) -> Result<Self::Output> {
         self(instr, event)
     }
 }
@@ -35,7 +35,7 @@ impl<F: Callback> CallbackPack<F> {
         let (sender, receiver) = std::sync::mpsc::channel();
         (Self { sender, core: f }, receiver)
     }
-    fn call(&mut self, instr: &mut Instrument, event: event::Event) -> vs::ViStatus {
+    fn call(&mut self, instr: &Instrument, event: event::Event) -> vs::ViStatus {
         let ret = self.core.call(instr, event);
         match ret {
             Err(e) => e.into(),
@@ -79,8 +79,7 @@ fn split_pack<C: Callback>(
         let pack: &mut CallbackPack<T> = &mut *(user_data as *mut CallbackPack<T>);
         let mut instr = Instrument::from_raw_ss(instr);
         let ret = pack.call(&mut instr, event::Event::new(event, event_type));
-        std::mem::forget(instr);
-        // ? no sure yet, in official example session not closed
+        std::mem::forget(instr); // ? no sure yet, in official example session not closed
         ret
     }
 

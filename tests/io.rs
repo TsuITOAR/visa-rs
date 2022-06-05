@@ -3,7 +3,8 @@ use std::{
     io::{BufRead, BufReader, Write},
 };
 
-use visa_rs::{flags::AccessMode, *};
+use anyhow::Result;
+use visa_rs::{event, flags::AccessMode, DefaultRM, Instrument, TIMEOUT_IMMEDIATE};
 
 #[test]
 fn list_instr() -> Result<()> {
@@ -26,6 +27,31 @@ fn send_idn() -> Result<()> {
         let mut buf = String::new();
         buf_reader.read_line(&mut buf).unwrap();
         eprintln!("{}", buf);
+    }
+    Ok(())
+}
+
+#[test]
+fn handler() -> Result<()> {
+    // tried EventKind::Trig, but not supported by my keysight osc :(
+    let rm = DefaultRM::new()?;
+    let mut list = rm.find_res(&CString::new("?*KEYSIGH?*INSTR").unwrap().into())?;
+    if let Some(n) = list.find_next()? {
+        let instr = rm.open(&n, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
+        let call_back = |ins: &Instrument, t| -> visa_rs::Result<()> {
+            println!("{:?} {:?}", ins, t);
+            Ok(())
+        };
+        let event = event::EventKind::IoCompletion;
+        let h = instr.install_handler(event, call_back)?;
+        instr.enable_event(event, event::Mechanism::Handler, event::EventFilter::Null)?;
+        (&instr).write_async(b"*IDN?\n")?;
+        h.receiver().recv()?;
+        let mut v = vec![0u8; 256];
+        (&instr).read_async(&mut v[..])?;
+        eprintln!("{}", String::from_utf8_lossy(v.as_ref()));
+        h.receiver().recv()?;
+        eprintln!("{}", String::from_utf8_lossy(v.as_ref()))
     }
     Ok(())
 }

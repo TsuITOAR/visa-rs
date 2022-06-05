@@ -12,6 +12,8 @@ enum-kinds = "^0.5"
 num_enum = "^0.5"
 visa-rs-proc = { path = "./visa-rs-proc" }
 
+[dev-dependencies]
+anyhow="*"
 
 [patch.crates-io]
 visa-sys = { path = "../visa-sys" }
