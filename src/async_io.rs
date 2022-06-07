@@ -20,7 +20,7 @@ fn assign_waker(job_id: JobID, waker: Waker) {
 
 // if called multiple times, might re wake a future
 // add a called history check, but might hit reused id
-//  better should only be installed once, including input and output
+// better should only be installed once, including input and output
 fn call_back(s: &Instrument, t: &Event) -> Result<usize> {
     // check job id, result status, and call corresponding waker
     todo!()

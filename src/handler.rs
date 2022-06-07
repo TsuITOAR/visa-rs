@@ -74,9 +74,9 @@ fn split_pack<C: Callback>(
         user_data: *mut c_void,
     ) -> vs::ViStatus {
         let pack: &mut CallbackPack<T> = &mut *(user_data as *mut CallbackPack<T>);
-        let mut instr = Instrument::from_raw_ss(instr);
+        let instr = Instrument::from_raw_ss(instr);
         let event = event::Event::new(event, event_type);
-        let ret = pack.call(&mut instr, &event);
+        let ret = pack.call(&instr, &event);
         std::mem::forget(event); // The VISA system automatically invokes the viClose() operation on the event context when a user handler returns. Because the event context must still be valid after the user handler returns (so that VISA can free it up), an application should not invoke the viClose() operation on an event context passed to a user handler.
         std::mem::forget(instr); // ? no sure yet, in official example session not closed
 

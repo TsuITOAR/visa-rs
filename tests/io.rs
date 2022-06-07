@@ -40,7 +40,7 @@ fn handler() -> Result<()> {
     // tried EventKind::Trig, but not supported by my keysight osc :(
     let rm = DefaultRM::new()?;
     let mut list = rm.find_res(
-        &CString::new("TCPIP0::192.168.3.96::hislip0::INSTR")
+        &CString::new("?*KEYSIGH?*INSTR")
             .unwrap()
             .into(),
     )?;

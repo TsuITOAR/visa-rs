@@ -288,6 +288,6 @@ pub fn visa_attrs(input: TokenStream) -> TokenStream {
     let input: TokenStream2 = input.into();
     let input: TokenStream2 = input.into_iter().map(get_visa_num).collect();
     let input: TokenStream = input.into();
-    let macros = parse_macro_input!(input as Attributes);
+    let attrs = parse_macro_input!(input as Attributes);
     quote! {}.into()
 }
