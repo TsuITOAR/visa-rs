@@ -12,15 +12,15 @@ use crate::{
 
 pub trait Callback {
     type Output;
-    fn call(&mut self, instr: &Instrument, event: event::Event) -> Result<Self::Output>;
+    fn call(&mut self, instr: &Instrument, event: &event::Event) -> Self::Output;
 }
 
 impl<F, Out> Callback for F
 where
-    F: FnMut(&Instrument, event::Event) -> Result<Out>,
+    F: FnMut(&Instrument, &event::Event) -> Out,
 {
     type Output = Out;
-    fn call(&mut self, instr: &Instrument, event: event::Event) -> Result<Self::Output> {
+    fn call(&mut self, instr: &Instrument, event: &event::Event) -> Self::Output {
         self(instr, event)
     }
 }
@@ -35,15 +35,12 @@ impl<F: Callback> CallbackPack<F> {
         let (sender, receiver) = std::sync::mpsc::channel();
         (Self { sender, core: f }, receiver)
     }
-    fn call(&mut self, instr: &Instrument, event: event::Event) -> vs::ViStatus {
-        let ret = self.core.call(instr, event);
-        match ret {
-            Err(e) => e.into(),
-            Ok(r) => {
-                self.sender.send(r).expect("receiver side should be valid");
-                SUCCESS
-            }
-        }
+    fn call(&mut self, instr: &Instrument, event: &event::Event) -> vs::ViStatus {
+        //Normally, an application should always return VI_SUCCESS from all callback handlers. If a specific handler does not want other handlers to be invoked for the given event for the given session, it should return VI_SUCCESS_NCHAIN. No return value from a handler on one session will affect callbacks on other sessions. Future versions of VISA (or specific implementations of VISA) may take actions based on other return values, so a user should return VI_SUCCESS from handlers unless there is a specific reason to do otherwise.
+        self.sender
+            .send(self.core.call(instr, event))
+            .expect("receiver side should be valid");
+        SUCCESS
     }
 }
 
@@ -78,8 +75,11 @@ fn split_pack<C: Callback>(
     ) -> vs::ViStatus {
         let pack: &mut CallbackPack<T> = &mut *(user_data as *mut CallbackPack<T>);
         let mut instr = Instrument::from_raw_ss(instr);
-        let ret = pack.call(&mut instr, event::Event::new(event, event_type));
+        let event = event::Event::new(event, event_type);
+        let ret = pack.call(&mut instr, &event);
+        std::mem::forget(event); // The VISA system automatically invokes the viClose() operation on the event context when a user handler returns. Because the event context must still be valid after the user handler returns (so that VISA can free it up), an application should not invoke the viClose() operation on an event context passed to a user handler.
         std::mem::forget(instr); // ? no sure yet, in official example session not closed
+
         ret
     }
 

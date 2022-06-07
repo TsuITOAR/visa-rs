@@ -86,7 +86,7 @@ const SUCCESS: vs::ViStatus = vs::VI_SUCCESS as _;
 macro_rules! wrap_raw_error_in_unsafe {
     ($s:expr) => {
         match unsafe { $s } {
-            state if state >= SUCCESS => {
+            state if state >= $crate::SUCCESS => {
                 Result::<$crate::enums::CompletionCode>::Ok(state.try_into().unwrap())
             }
             e => Result::<$crate::enums::CompletionCode>::Err(e.try_into().unwrap()),
@@ -282,12 +282,7 @@ impl Instrument {
         wrap_raw_error_in_unsafe!(vs::viFlush(self.as_raw_ss(), mode.bits()))?;
         Ok(())
     }
-    pub fn get_attr(&self, attr_kind: enums::AttrKind) -> enums::Attribute {
-        todo!()
-    }
-    pub fn set_attr(&self, attr: enums::Attribute) {
-        todo!()
-    }
+    
     pub fn status_desc(&self, error: Error) -> Result<String> {
         static mut DESC: [u8; 256] = [0; 256];
         wrap_raw_error_in_unsafe!(vs::viStatusDesc(
@@ -298,9 +293,6 @@ impl Instrument {
         Ok(String::from_iter(unsafe {
             DESC.into_iter().map(|x| x as char)
         }))
-    }
-    pub fn term(&self, job: JobID) -> Result<()> {
-        todo!()
     }
     pub fn lock(
         &self,
@@ -372,8 +364,7 @@ impl Instrument {
 
     ///
     /// Note: for some reason pass a closure with signature `|instr, event|{...}`
-    /// may get `error[E0478]: lifetime bound not satisfied`.
-    /// Instead, use `|instr: & Instrument, event|{}`.
+    /// may get error. Instead, use `|instr: & Instrument, event: & Event|{...}`.
     ///
 
     pub fn install_handler<F: handler::Callback>(
@@ -384,6 +375,8 @@ impl Instrument {
         handler::Handler::new(self.as_ss(), event_kind, callback)
     }
 }
+
+mod async_io;
 
 impl Instrument {
     pub fn read_async(&self, buf: &mut [u8]) -> Result<JobID> {
@@ -408,4 +401,5 @@ impl Instrument {
     }
 }
 
+#[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash, Clone, Copy)]
 pub struct JobID(vs::ViJobId);

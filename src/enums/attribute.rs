@@ -1,3 +1,18 @@
+use crate::{wrap_raw_error_in_unsafe, Result};
+
+pub trait HasAttribute: crate::session::AsRawSs {
+    fn get_attr(&self, attr_kind: AttrKind) -> Result<Attribute> {
+        todo!()
+    }
+    fn set_attr(&self, attr: Attribute) -> Result<()> {
+        todo!()
+    }
+}
+
+impl HasAttribute for crate::event::Event {}
+impl HasAttribute for crate::Instrument {}
+impl HasAttribute for crate::DefaultRM {}
+
 pub struct Attribute {
     kind: AttrKind,
     value: visa_sys::ViUInt16,

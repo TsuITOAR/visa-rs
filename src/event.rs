@@ -53,3 +53,9 @@ impl PartialEq<EventKind> for Event {
         self.kind.eq(other)
     }
 }
+
+impl crate::session::AsRawSs for Event {
+    fn as_raw_ss(&self) -> crate::session::RawSs {
+        self.handler
+    }
+}

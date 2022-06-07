@@ -4,7 +4,11 @@ use std::{
 };
 
 use anyhow::Result;
-use visa_rs::{event, flags::AccessMode, DefaultRM, Instrument, TIMEOUT_IMMEDIATE};
+use visa_rs::{
+    event::{self, Event},
+    flags::AccessMode,
+    DefaultRM, Instrument, TIMEOUT_IMMEDIATE,
+};
 
 #[test]
 fn list_instr() -> Result<()> {
@@ -35,12 +39,15 @@ fn send_idn() -> Result<()> {
 fn handler() -> Result<()> {
     // tried EventKind::Trig, but not supported by my keysight osc :(
     let rm = DefaultRM::new()?;
-    let mut list = rm.find_res(&CString::new("?*KEYSIGH?*INSTR").unwrap().into())?;
+    let mut list = rm.find_res(
+        &CString::new("TCPIP0::192.168.3.96::hislip0::INSTR")
+            .unwrap()
+            .into(),
+    )?;
     if let Some(n) = list.find_next()? {
         let instr = rm.open(&n, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
-        let call_back = |ins: &Instrument, t| -> visa_rs::Result<()> {
+        let call_back = |ins: &Instrument, t: &Event| -> () {
             println!("{:?} {:?}", ins, t);
-            Ok(())
         };
         let event = event::EventKind::IoCompletion;
         let h = instr.install_handler(event, call_back)?;
@@ -48,7 +55,7 @@ fn handler() -> Result<()> {
         (&instr).write_async(b"*IDN?\n")?;
         h.receiver().recv()?;
         let mut v = vec![0u8; 256];
-        (&instr).read_async(&mut v[..])?;
+        (&instr).read_async(&mut v)?;
         eprintln!("{}", String::from_utf8_lossy(v.as_ref()));
         h.receiver().recv()?;
         eprintln!("{}", String::from_utf8_lossy(v.as_ref()))
