@@ -39,25 +39,27 @@ fn send_idn() -> Result<()> {
 fn handler() -> Result<()> {
     // tried EventKind::Trig, but not supported by my keysight osc :(
     let rm = DefaultRM::new()?;
-    let mut list = rm.find_res(
-        &CString::new("?*KEYSIGH?*INSTR")
-            .unwrap()
-            .into(),
-    )?;
+    let mut list = rm.find_res(&CString::new("?*KEYSIGH?*INSTR").unwrap().into())?;
     if let Some(n) = list.find_next()? {
         let instr = rm.open(&n, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
-        let call_back = |ins: &Instrument, t: &Event| -> () {
-            println!("{:?} {:?}", ins, t);
+        let call_back1 = |ins: &Instrument, t: &Event| -> () {
+            println!("call1: {:?} {:?}", ins, t);
+        };
+        let call_back2 = |ins: &Instrument, t: &Event| -> () {
+            println!("call2: {:?} {:?}", ins, t);
         };
         let event = event::EventKind::IoCompletion;
-        let h = instr.install_handler(event, call_back)?;
+        let h1 = instr.install_handler(event, call_back1)?;
+        let h2 = instr.install_handler(event, call_back2)?;
         instr.enable_event(event, event::Mechanism::Handler, event::EventFilter::Null)?;
         (&instr).write_async(b"*IDN?\n")?;
-        h.receiver().recv()?;
+        h1.receiver().recv()?;
+        h2.receiver().recv()?;
+        h1.uninstall();
         let mut v = vec![0u8; 256];
         (&instr).read_async(&mut v)?;
         eprintln!("{}", String::from_utf8_lossy(v.as_ref()));
-        h.receiver().recv()?;
+        h2.receiver().recv()?;
         eprintln!("{}", String::from_utf8_lossy(v.as_ref()))
     }
     Ok(())
