@@ -2,7 +2,6 @@ use proc_macro2::{Delimiter, TokenStream as TokenStream2, TokenTree};
 use quote::ToTokens;
 use syn::{
     parse::{Parse, ParseStream},
-    spanned::Spanned,
     Ident, Result, Token,
 };
 

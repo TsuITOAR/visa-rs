@@ -1,29 +1,33 @@
-use std::str::FromStr;
+use std::{hash::Hash, str::FromStr};
 
-use proc_macro2::TokenTree;
+use proc_macro2::{Span, TokenStream as TokenStream2, TokenTree};
+use quote::{quote, quote_spanned, ToTokens};
 use syn::{
     braced, parenthesized,
     parse::{Parse, ParseStream, Result},
+    spanned::Spanned,
     token::Paren,
     Ident, LitInt, Token,
 };
 
 use crate::match_tokens;
 
-fn is_na(input: ParseStream) -> bool {
+use super::Type;
+
+fn is_na(input: ParseStream) -> Option<Span> {
     match_tokens(input, "N/A")
 }
-fn is_not_specified(input: ParseStream) -> bool {
+fn is_not_specified(input: ParseStream) -> Option<Span> {
     match_tokens(input, "Not specified")
 }
-
 
 mod kw {
     use syn::custom_keyword;
     custom_keyword!(to);
 }
 
-enum DefaultValue {
+#[derive(Clone)]
+pub enum DefaultValue {
     Num(LitInt),
     Ident(Ident),
     Key {
@@ -34,13 +38,62 @@ enum DefaultValue {
         num: LitInt,
         desc: TokenTree,
     },
-    NA,
+    NA(Span),
+}
+
+impl DefaultValue {
+    pub fn default_expr(&self) -> Option<TokenStream2> {
+        match self {
+            DefaultValue::Num(n) => n.to_token_stream(),
+            DefaultValue::Ident(i) => quote!(Self::#i.value),
+            DefaultValue::Key { char, .. } => char.to_token_stream(),
+            DefaultValue::NumDesc { num, .. } => num.to_token_stream(),
+            DefaultValue::NA(_) => return None,
+        }
+        .into()
+    }
+}
+
+impl PartialEq for DefaultValue {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (DefaultValue::Num(a), DefaultValue::Num(b)) => a.base10_digits() == b.base10_digits(),
+
+            (DefaultValue::Ident(a), DefaultValue::Ident(b)) => a == b,
+
+            (DefaultValue::Key { char: ca, .. }, DefaultValue::Key { char: cb, .. }) => {
+                ca.base10_digits() == cb.base10_digits()
+            }
+
+            (
+                DefaultValue::NumDesc { num: na, desc: da },
+                DefaultValue::NumDesc { num: nb, desc: db },
+            ) => na.base10_digits() == nb.base10_digits() && da.to_string() == db.to_string(),
+
+            (DefaultValue::NA(_), DefaultValue::NA(_)) => true,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for DefaultValue {}
+
+impl DefaultValue {
+    fn source_span(&self) -> Span {
+        match self {
+            DefaultValue::Num(n) => n.span(),
+            DefaultValue::Ident(n) => n.span(),
+            DefaultValue::Key { char, .. } => char.span(),
+            DefaultValue::NumDesc { num, .. } => num.span(),
+            DefaultValue::NA(s) => s.clone(),
+        }
+    }
 }
 
 impl Parse for DefaultValue {
     fn parse(input: ParseStream) -> Result<Self> {
-        if is_na(input) {
-            Ok(Self::NA)
+        if let Some(span) = is_na(input) {
+            Ok(Self::NA(span))
         } else {
             let look = input.lookahead1();
             if look.peek(LitInt) {
@@ -116,7 +169,7 @@ impl Parse for Port {
             "USB INSTR",
         ];
         for p in PORT.iter() {
-            if match_tokens(input, *p) {
+            if match_tokens(input, *p).is_some() {
                 return Ok(Self::from_str(*p).unwrap());
             }
         }
@@ -147,8 +200,8 @@ impl Parse for Range {
 }
 
 pub struct PortRange {
-    core: RangeCore,
-    port: Port,
+    pub(crate) core: RangeCore,
+    pub(crate) _port: Port,
 }
 
 impl Parse for PortRange {
@@ -158,16 +211,102 @@ impl Parse for PortRange {
         let c;
         braced!(c in input);
         Ok(Self {
-            port,
+            _port: port,
             core: c.parse()?,
         })
     }
 }
 
 pub struct RangeCore {
-    default: DefaultValue,
-    attr_name: Option<Ident>,
-    bound: Bound,
+    pub(crate) default: DefaultValue,
+    pub(crate) attr_name: Option<Ident>,
+    pub(crate) bound: Bound,
+}
+
+impl RangeCore {
+    pub fn merge_ranges<'a>(ranges: impl Iterator<Item = &'a Self>) -> Self {
+        let (ranges, default) = ranges.fold(
+            (std::collections::HashSet::new(), None),
+            |mut init, item| {
+                if let Bound::NoArch(ref n) = item.bound {
+                    if let BoundCore::Stream(bounds) = n {
+                        init.0.extend(bounds.into_iter());
+                        if init.1.as_ref().map(|x| x != &item.default).unwrap_or(false) {
+                            item.default
+                                .source_span()
+                                .unwrap()
+                                .error("defaults of different protocols should be same")
+                                .emit();
+                        }
+                        init.1.replace(item.default.clone());
+                    } else {
+                        unreachable!()
+                    }
+                    init
+                } else {
+                    unreachable!()
+                }
+            },
+        );
+        let ranges: Vec<_> = ranges.into_iter().cloned().collect();
+        let default = default.unwrap();
+        Self {
+            default,
+            attr_name: None,
+            bound: Bound::NoArch(BoundCore::Stream(ranges)),
+        }
+    }
+    pub fn check_attr_name(&self, tar: &Ident) {
+        self.attr_name.as_ref().map(|n| super::match_ident(tar, n));
+    }
+}
+
+impl RangeCore {
+    pub fn to_constructor(&self, ty: &Type, tokens: &mut proc_macro2::TokenStream) {
+        match self.bound {
+            Bound::Arch(ref arch_bound) => match ty.core {
+                super::TypeCore::Arch(ref arch_ty) => {
+                    arch_bound
+                        .iter()
+                        .zip(arch_ty.iter())
+                        .for_each(|(bound, tya)| {
+                            assert!(
+                                tya.arch.base10_parse::<u8>().unwrap()
+                                    == bound.arch.base10_parse::<u8>().unwrap()
+                            );
+                            if let Ok(64) = bound.arch.base10_parse() {
+                                let cfg = quote!(#[cfg(target_arch = "x86_64")]);
+                                bound.core.to_constructor(&tya.core, &cfg.into(), tokens);
+                            } else if let Ok(32) = bound.arch.base10_parse() {
+                                let cfg = quote!(#[cfg(target_arch = "x86")]);
+                                bound.core.to_constructor(&tya.core, &cfg.into(), tokens);
+                            }
+                        });
+                }
+                super::TypeCore::UnArch(ref tyu) => arch_bound.iter().for_each(|bound| {
+                    if let Ok(64) = bound.arch.base10_parse() {
+                        let cfg = quote!(#[cfg(target_arch = "x86_64")]);
+                        bound.core.to_constructor(&tyu, &cfg.into(), tokens);
+                    } else if let Ok(32) = bound.arch.base10_parse() {
+                        let cfg = quote!(#[cfg(target_arch = "x86")]);
+                        bound.core.to_constructor(&tyu, &cfg.into(), tokens);
+                    }
+                }),
+            },
+            Bound::NoArch(ref n) => match ty.core {
+                super::TypeCore::Arch(ref arch_ty) => arch_ty.iter().for_each(|tya| {
+                    if let Ok(64) = tya.arch.base10_parse() {
+                        let cfg = quote!(#[cfg(target_arch = "x86_64")]);
+                        n.to_constructor(&tya.core, &cfg.into(), tokens);
+                    } else if let Ok(32) = tya.arch.base10_parse() {
+                        let cfg = quote!(#[cfg(target_arch = "x86")]);
+                        n.to_constructor(&tya.core, &cfg.into(), tokens);
+                    }
+                }),
+                super::TypeCore::UnArch(ref u) => n.to_constructor(u, &None, tokens),
+            },
+        }
+    }
 }
 
 impl Parse for RangeCore {
@@ -202,7 +341,7 @@ impl Parse for Bound {
         if input.peek(Token![for]) {
             input.parse::<Token![for]>()?;
             let arch: LitInt = input.parse()?;
-            if !match_tokens(input, "-bit applications") {
+            if match_tokens(input, "-bit applications").is_none() {
                 return Err(input.error("expected '-bit applications' after architecture"));
             }
             let mut ret = vec![ArchBound { arch, core }];
@@ -213,7 +352,7 @@ impl Parse for Bound {
                     core,
                     arch: input.parse()?,
                 });
-                if !match_tokens(input, "-bit applications") {
+                if match_tokens(input, "-bit applications").is_none() {
                     return Err(input.error("expected '-bit applications' after architecture"));
                 }
             }
@@ -230,17 +369,72 @@ pub struct ArchBound {
 }
 
 pub enum BoundCore {
-    NA,
-    Unreachable,
+    NA(Span),
+    Unreachable(Span),
     Stream(Vec<BoundItem>),
+}
+
+impl BoundCore {
+    fn to_constructor(&self, ty: &Ident, cfg: &Option<TokenStream2>, tokens: &mut TokenStream2) {
+        let new_uncheck = quote_spanned!( ty.span()=>
+            #cfg
+            pub unsafe fn new_unchecked(value:vs::#ty)->Self{
+                Self{value}
+            }
+        );
+        let mut new = None;
+        let mut new_check = None;
+        match self {
+            BoundCore::NA(_) => {
+                new = quote_spanned!(ty.span()=>
+                    #cfg
+                    pub fn new(value:vs::#ty)->Self{
+                        Self{value}
+                    }
+                )
+                .into();
+                new_check = quote_spanned!(ty.span()=>
+                    #cfg
+                    pub fn new_checked(value:vs::#ty)->Option<Self>{
+                        Some(Self{value})
+                    }
+                )
+                .into();
+            }
+            BoundCore::Unreachable(_) => (),
+            BoundCore::Stream(s) => {
+                s.iter()
+                    .for_each(|x| x.sub_constructor(ty, cfg).to_tokens(tokens));
+                let checks = s.iter().map(|x| x.check_range(ty));
+                new_check = quote_spanned!(ty.span()=>
+                    #cfg
+                    #[allow(unused_parens)]
+                    pub fn new_checked(value:vs::#ty)->Option<Self>{
+                        if #(#checks)||*{
+                            Some(Self{value})
+                        }else{
+                            None
+                        }
+                    }
+                )
+                .into()
+            }
+        }
+        quote!(
+            #new
+            #new_uncheck
+            #new_check
+        )
+        .to_tokens(tokens);
+    }
 }
 
 impl Parse for BoundCore {
     fn parse(input: ParseStream) -> Result<Self> {
-        if is_na(input) {
-            Ok(Self::NA)
-        } else if is_not_specified(input) {
-            Ok(Self::Unreachable)
+        if let Some(span) = is_na(input) {
+            Ok(Self::NA(span))
+        } else if let Some(span) = is_not_specified(input) {
+            Ok(Self::Unreachable(span))
         } else {
             let mut ret = Vec::new();
             while !input.is_empty() && !input.peek(Token![for]) {
@@ -255,6 +449,7 @@ impl Parse for BoundCore {
     }
 }
 
+#[derive(PartialEq, Eq, Hash, Clone)]
 pub enum BoundItem {
     Single(BoundToken),
     Range((BoundToken, BoundToken)),
@@ -262,6 +457,116 @@ pub enum BoundItem {
         name: Ident,
         range: (BoundToken, BoundToken),
     },
+}
+
+impl BoundItem {
+    fn check_range(&self, ty: &Ident) -> TokenStream2 {
+        match self {
+            BoundItem::Single(s) => quote_spanned!(s.span()=>#s as vs::#ty == value),
+            BoundItem::Range((l, h)) => {
+                quote_spanned!(
+                    l.span().join(h.span()).unwrap()=>
+                    (#l as vs::#ty <= value && value <= #h as vs::#ty)
+                )
+            }
+            BoundItem::NamedRange {
+                range: (l, h),
+                name,
+            } => {
+                quote_spanned!(
+                        name.span().join(l.span().join(h.span()).unwrap()).unwrap()=>
+                    (#l as vs::#ty<=value && value<=#h as vs::#ty)
+                )
+            }
+        }
+    }
+    fn sub_constructor(&self, ty: &Ident, cfg: &Option<TokenStream2>) -> Option<TokenStream2> {
+        match self {
+            BoundItem::Single(s @ BoundToken::Ident { id, .. }) => quote!(
+                #cfg
+                pub const #id: Self = Self { value: #s as _};
+            )
+            .into(),
+            BoundItem::NamedRange { name, .. } => {
+                let method_name = Ident::new(
+                    &name.to_string().chars().fold(String::new(), |mut i, x| {
+                        if x.is_ascii_uppercase() && !i.is_empty() {
+                            i.push('_');
+                            i.push(x.to_ascii_lowercase());
+                        } else {
+                            i.push(x.to_ascii_lowercase());
+                        }
+                        i
+                    }),
+                    name.span(),
+                );
+                let check = self.check_range(ty);
+                quote!(
+                    #cfg
+                    #[allow(unused_parens)]
+                    pub fn #method_name(value:vs::#ty)->Option<Self>{
+                        if #check{
+                            Some(Self{value})
+                        }else{None}
+                    }
+                )
+                .into()
+            }
+            BoundItem::Range(r) => match r {
+                (BoundToken::Ident { id: id_l, .. }, BoundToken::Ident { id: id_h, .. })
+                    if id_l.to_string().ends_with(char::is_numeric)
+                        && id_h.to_string().ends_with(char::is_numeric)
+                        && id_l.to_string().trim_end_matches(char::is_numeric)
+                            == id_h.to_string().trim_end_matches(char::is_numeric) =>
+                {
+                    let span = id_h.span();
+                    let id_h = id_h.to_string();
+                    let id_l = id_l.to_string();
+                    let const_prefix = id_h.trim_end_matches(char::is_numeric).to_ascii_lowercase();
+                    let range = (id_l
+                        .rmatches(char::is_numeric)
+                        .next()
+                        .unwrap()
+                        .parse::<u8>()
+                        .unwrap())
+                        ..(id_h
+                            .rmatches(char::is_numeric)
+                            .next()
+                            .unwrap()
+                            .parse()
+                            .unwrap());
+                    let range = range
+                        .into_iter()
+                        .map(|x| Ident::new(&format!("{}{:1}", const_prefix, x), span));
+                    let method_name = Ident::new(&const_prefix.to_ascii_lowercase(), span);
+                    let check = self.check_range(ty);
+                    quote!(
+
+                        #(
+                            #cfg
+                            pub const #range:Self = Self { value: vs::#range as _};
+                        )*
+                        #cfg
+                        fn #method_name(value:vs::#ty)->Option<Self>{
+                            if #check{
+                                Some(Self{value})
+                            }else{
+                                None
+                            }
+                        }
+                    )
+                    .into()
+                }
+                (BoundToken::Num(_), BoundToken::Num(_)) => None,
+                other => {
+                    other.0.span().unwrap().note("unexpected pattern").emit();
+                    other.1.span().unwrap().note("unexpected pattern").emit();
+                    None
+                }
+            },
+            _ => None,
+        }
+    }
 }
 
 impl Parse for BoundItem {
@@ -307,10 +612,64 @@ impl Parse for BoundItem {
         }
     }
 }
-
+#[derive(Clone)]
 pub enum BoundToken {
     Ident { id: Ident, value: Option<LitInt> },
     Num(LitInt),
+}
+
+impl PartialEq for BoundToken {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (
+                BoundToken::Ident {
+                    id: id1,
+                    value: value1,
+                },
+                BoundToken::Ident {
+                    id: id2,
+                    value: value2,
+                },
+            ) => {
+                id1 == id2
+                    && value1.as_ref().map(|x| x.base10_digits())
+                        == value2.as_ref().map(|x| x.base10_digits())
+            }
+
+            (BoundToken::Num(a), BoundToken::Num(b)) => a.base10_digits() == b.base10_digits(),
+            _ => false,
+        }
+    }
+}
+
+impl Eq for BoundToken {}
+
+impl Hash for BoundToken {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        match self {
+            BoundToken::Ident { id, value } => {
+                id.hash(state);
+                value.as_ref().map(|x| x.base10_digits()).hash(state);
+            }
+            BoundToken::Num(n) => n.base10_digits().hash(state),
+        }
+    }
+}
+
+impl ToTokens for BoundToken {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
+        match self {
+            BoundToken::Ident { id, value } => {
+                let span = id.span().join(value.span()).unwrap();
+                value
+                    .as_ref()
+                    .map(|x| quote_spanned!(span=> #x))
+                    .unwrap_or(quote_spanned!(span=> vs::#id))
+            }
+            .to_tokens(tokens),
+            BoundToken::Num(v) => quote_spanned!(v.span()=>#v).to_tokens(tokens),
+        }
+    }
 }
 
 impl Parse for BoundToken {

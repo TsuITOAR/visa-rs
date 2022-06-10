@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream as TokenStream2;
-use quote::{quote, ToTokens};
+use quote::{quote, quote_spanned, ToTokens};
 use range::Range;
 use syn::{
     braced, bracketed, parenthesized,
@@ -8,11 +8,11 @@ use syn::{
     Ident, LitInt, LitStr, Result, Token,
 };
 
-use crate::{match_tokens, subst_ident};
+use crate::{attrs::range::RangeCore, match_tokens, subst_ident};
 mod range;
 pub struct Attributes {
-    vis: Token![pub],
-    struct_token: Token![struct],
+    _vis: Token![pub],
+    _struct_token: Token![struct],
     ident: Ident,
     attrs: Vec<Attr>,
 }
@@ -29,8 +29,8 @@ impl Parse for Attributes {
             attrs.push(attrs_input.parse()?);
         }
         Ok(Attributes {
-            vis,
-            struct_token,
+            _vis: vis,
+            _struct_token: struct_token,
             ident,
             attrs,
         })
@@ -50,6 +50,7 @@ impl ToTokens for Attributes {
         let docs = self.attrs.iter().map(|x| &x.desc);
         let enum_name = &self.ident;
         quote!(
+            #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
             pub enum #enum_name{
                 #(
                     #[doc=#docs]
@@ -69,6 +70,36 @@ impl ToTokens for Attributes {
             )*
         )
         .to_tokens(tokens);
+
+        let fields1 = self.attrs.iter().map(|x| x.struct_name());
+        let fields2 = self.attrs.iter().map(|x| x.struct_name());
+        quote!(
+            impl #enum_name{
+                pub(crate) unsafe fn from_kind(kind:AttrKind) -> Self{
+                    match kind{
+                        #(AttrKind::#fields1=>Self::from(#fields1::zero())),*
+                    }
+                }
+
+                pub fn kind(&self)-> AttrKind{
+                    match self{
+                        #(Self::#fields2(s)=>super::AttrInner::kind(s)),*
+                    }
+                }
+            }
+        )
+        .to_tokens(tokens);
+    }
+}
+
+fn match_ident(tar: &Ident, check: &Ident) {
+    if check != tar {
+        tar.span().unwrap().help("attribute name must match").emit();
+        check
+            .span()
+            .unwrap()
+            .error("attribute name must match")
+            .emit();
     }
 }
 
@@ -85,12 +116,17 @@ impl Attr {
         subst_ident(self.id.clone())
     }
     fn struct_def(&self, tokens: &mut TokenStream2) {
+        self.ty
+            .attr_name
+            .as_ref()
+            .map(|n| match_ident(&self.id, &n));
         let Self { desc, ty, .. } = self;
         let id = self.struct_name();
         match ty.core {
             TypeCore::UnArch(ref ty) => {
                 quote!(
                     #[doc= #desc]
+                    #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
                     pub struct #id{
                         value:vs::#ty
                     }
@@ -120,25 +156,46 @@ impl Attr {
                     #(
                         #[cfg(target_arch = #arch)]
                         #[doc= #desc]
+                        #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
                         pub struct #id{
                             value:vs::#ty
                         }
                         #[cfg(target_arch = #arch)]
                         impl #id{
-                        pub(crate) fn inner_mut(&mut self) -> &mut vs::#ty{
-                            &mut self.value
+                            pub(crate) fn inner_mut(&mut self) -> &mut vs::#ty{
+                                &mut self.value
+                            }
+                            pub(crate) fn inner_c_void(&mut self) -> *mut ::std::ffi::c_void{
+                                self.inner_mut() as *mut _ as _
+                            }
                         }
-                        pub(crate) fn inner_c_void(&mut self) -> *mut ::std::ffi::c_void{
-                            self.inner_mut() as *mut _ as _
-                        }
-                    }
                     )*
                 )
                 .to_tokens(tokens);
             }
         }
     }
-    fn constructors(&self, tokens: &mut TokenStream2) {}
+    fn constructors(&self, tokens: &mut TokenStream2) {
+        let mut c = |n: &RangeCore| {
+            n.check_attr_name(&self.id);
+            let mut constructors = TokenStream2::new();
+            n.to_constructor(&self.ty, &mut constructors);
+            let struct_name = self.struct_name();
+            quote!(
+                impl #struct_name{
+                    #constructors
+                }
+            )
+            .to_tokens(tokens);
+        };
+        match self.range {
+            Range::NoPort(ref n) => c(n),
+            Range::Port(ref p) => {
+                let n = RangeCore::merge_ranges(p.iter().map(|x| &x.core));
+                c(&n);
+            }
+        }
+    }
     fn kind_impl(&self, tokens: &mut TokenStream2) {
         let struct_id = self.struct_name();
         let kind_id = &self.id;
@@ -189,11 +246,43 @@ impl Attr {
             .to_tokens(tokens);
         }
     }
-    fn default_impl(&self, tokens: &mut TokenStream2) {}
-    fn empty_instance(&self, tokens: &mut TokenStream2) {}
+    fn default_impl(&self, tokens: &mut TokenStream2) {
+        let struct_name = self.struct_name();
+        let mut c = |n: &RangeCore| {
+            if let Some(def) = n.default.default_expr() {
+                quote!(
+                    impl ::std::default::Default for #struct_name{
+                        fn default() -> Self {
+                             Self{value:#def}
+                        }
+                    }
+                )
+                .to_tokens(tokens);
+            }
+        };
+        match self.range {
+            Range::NoPort(ref n) => c(n),
+            Range::Port(ref p) => {
+                let n = RangeCore::merge_ranges(p.iter().map(|x| &x.core));
+                c(&n);
+            }
+        }
+    }
+    fn empty_instance(&self, tokens: &mut TokenStream2) {
+        let struct_name = self.struct_name();
+        quote_spanned!(
+            self.id.span()=>
+            impl #struct_name{
+                unsafe fn zero() -> Self {
+                     Self{value:0 as _}
+                }
+            }
+        )
+        .to_tokens(tokens);
+    }
 }
 
-struct Type {
+pub struct Type {
     attr_name: Option<Ident>,
     core: TypeCore,
 }
@@ -225,7 +314,7 @@ impl Parse for TypeCore {
         if input.peek(Token![for]) {
             input.parse::<Token![for]>()?;
             let arch: LitInt = input.parse()?;
-            if !match_tokens(input, "-bit applications") {
+            if match_tokens(input, "-bit applications").is_none() {
                 return Err(input.error("expected '-bit applications' after architecture"));
             }
             let mut ret = vec![ArchType { arch, core: core }];
@@ -236,7 +325,7 @@ impl Parse for TypeCore {
                     core,
                     arch: input.parse()?,
                 });
-                if !match_tokens(input, "-bit applications") {
+                if match_tokens(input, "-bit applications").is_none() {
                     return Err(input.error("expected '-bit applications' after architecture"));
                 }
             }

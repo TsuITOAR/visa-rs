@@ -1,4 +1,4 @@
-#![feature(is_some_with)]
+#![feature(proc_macro_diagnostic)]
 use std::str::FromStr;
 
 use proc_macro::TokenStream;
@@ -76,17 +76,20 @@ fn test_visa_num() {
     );
 }
 
-fn match_tokens(input: ParseStream, str: &str) -> bool {
+fn match_tokens(input: ParseStream, str: &str) -> Option<proc_macro2::Span> {
     let stream: TokenStream2 = syn::parse_str(str).unwrap();
     let fork = input.fork();
     for token in stream {
         if token.to_string() != fork.parse::<TokenTree>().unwrap().to_string() {
-            return false;
+            return None;
         }
     }
     use syn::parse::discouraged::Speculative;
+    let start = input.span();
     input.advance_to(&fork);
-    return true;
+    let end = input.span();
+
+    return Some(start.join(end).unwrap());
 }
 mod attrs;
 
