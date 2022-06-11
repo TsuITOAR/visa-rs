@@ -71,19 +71,50 @@ impl ToTokens for Attributes {
         )
         .to_tokens(tokens);
 
+        let field_name = self.attrs.iter().map(|x| x.struct_name());
+
+        let type_name = self.attrs.iter().map(|x| struct_name_to_kind_name(&x.id));
+
+        let match_field = field_name
+            .zip(type_name)
+            .map(|(f, t)| {
+                let f = f.clone();
+                t.into_iter().map(move |(ty, cfg)| {
+                    quote!(
+                            #cfg
+                            AttrKind::#ty => Self::from(#f::zero())
+                    )
+                })
+            })
+            .flatten();
         let fields1 = self.attrs.iter().map(|x| x.struct_name());
-        let fields2 = self.attrs.iter().map(|x| x.struct_name());
+        let fields2 = self.attrs.iter().map(|x| x.struct_name());let fields3 = self.attrs.iter().map(|x| x.struct_name());
         quote!(
             impl #enum_name{
                 pub(crate) unsafe fn from_kind(kind:AttrKind) -> Self{
                     match kind{
-                        #(AttrKind::#fields1=>Self::from(#fields1::zero())),*
+                        #(
+                            #match_field
+                        ,)*
+                        s=>unimplemented!("attribute '{:?}' not listed in NI-VISA document, so not supported yet",s)
                     }
                 }
 
+                pub(crate) fn inner_c_void(&mut self)->*mut ::std::ffi::c_void{
+                    match self{
+                        #(Self::#fields1(s)=>s.inner_c_void()),*
+                    }
+                }
+                
                 pub fn kind(&self)-> AttrKind{
                     match self{
                         #(Self::#fields2(s)=>super::AttrInner::kind(s)),*
+                    }
+                }
+
+                pub(crate) fn as_u64(&self)-> u64{
+                    match self{
+                        #(Self::#fields3(s)=>s.value as _),*
                     }
                 }
             }
@@ -198,54 +229,20 @@ impl Attr {
     }
     fn kind_impl(&self, tokens: &mut TokenStream2) {
         let struct_id = self.struct_name();
-        let kind_id = &self.id;
-        let kind_id_str = kind_id.to_string();
-        if kind_id_str.starts_with("VI_ATTR_PXI_MEM_BASE")
-            || kind_id_str.starts_with("VI_ATTR_PXI_MEM_SIZE")
-        {
-            let kind_id_x64 = subst_ident(Ident::new(
-                &format!("{}_32", kind_id_str),
-                kind_id_str.span(),
-            ));
-            let kind_id_x32 = subst_ident(Ident::new(
-                &format!("{}_64", kind_id_str),
-                kind_id_str.span(),
-            ));
-            quote!(
-                #[cfg(target_arch = "x86")]
-                impl super::AttrInner for #struct_id{
-                    fn kind(&self)->AttrKind{
-                        AttrKind::#kind_id_x32
-                    }
-                }
-                #[cfg(target_arch = "x86_64")]
-                impl super::AttrInner for #struct_id{
-                    fn kind(&self)->AttrKind{
-                        AttrKind::#kind_id_x64
-                    }
-                }
-            )
-            .to_tokens(tokens);
-        } else {
-            let kind_id = if let Some(new_id) = kind_id_str.strip_suffix("_32") {
-                Ident::new(new_id, kind_id.span())
-            } else if let Some(new_id) = kind_id_str.strip_suffix("_64") {
-                Ident::new(new_id, kind_id.span())
-            } else {
-                kind_id.clone()
-            };
+        struct_name_to_kind_name(&self.id).for_each(|(kind_id, cfg)| {
             let kind_id = subst_ident(kind_id);
-
             quote!(
-                impl super::AttrInner for #struct_id{
-                    fn kind(&self)->AttrKind{
-                        AttrKind::#kind_id
+                    #cfg
+                    impl super::AttrInner for #struct_id{
+                        fn kind(&self)->AttrKind{
+                            AttrKind::#kind_id
+                        }
                     }
-                }
             )
-            .to_tokens(tokens);
-        }
+            .to_tokens(tokens)
+        });
     }
+
     fn default_impl(&self, tokens: &mut TokenStream2) {
         let struct_name = self.struct_name();
         let mut c = |n: &RangeCore| {
@@ -279,6 +276,39 @@ impl Attr {
             }
         )
         .to_tokens(tokens);
+    }
+}
+
+fn struct_name_to_kind_name(id: &Ident) -> impl Iterator<Item = (Ident, TokenStream2)> {
+    let kind_id = id;
+    let kind_id_str = kind_id.to_string();
+    if kind_id_str.starts_with("VI_ATTR_PXI_MEM_BASE")
+        || kind_id_str.starts_with("VI_ATTR_PXI_MEM_SIZE")
+    {
+        let kind_id_x64 = subst_ident(Ident::new(
+            &format!("{}_32", kind_id_str),
+            kind_id_str.span(),
+        ));
+        let kind_id_x32 = subst_ident(Ident::new(
+            &format!("{}_64", kind_id_str),
+            kind_id_str.span(),
+        ));
+
+        return vec![
+            (kind_id_x64, quote!(#[cfg(target_arch = "x86_64")])),
+            (kind_id_x32, quote!(#[cfg(target_arch = "x86")])),
+        ]
+        .into_iter();
+    } else {
+        let kind_id = if let Some(new_id) = kind_id_str.strip_suffix("_32") {
+            Ident::new(new_id, kind_id.span())
+        } else if let Some(new_id) = kind_id_str.strip_suffix("_64") {
+            Ident::new(new_id, kind_id.span())
+        } else {
+            kind_id.clone()
+        };
+        let kind_id = subst_ident(kind_id);
+        return vec![(kind_id, TokenStream2::new())].into_iter();
     }
 }
 

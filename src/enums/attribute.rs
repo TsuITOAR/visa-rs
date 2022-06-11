@@ -1,19 +1,31 @@
 use crate::{wrap_raw_error_in_unsafe, Result};
 
 pub use attributes::{AttrKind, Attribute};
+use visa_sys as vs;
 pub trait HasAttribute: crate::session::AsRawSs {
     fn get_attr(&self, attr_kind: AttrKind) -> Result<Attribute> {
-        todo!()
+        let mut attr = unsafe { Attribute::from_kind(attr_kind) };
+        wrap_raw_error_in_unsafe!(vs::viGetAttribute(
+            self.as_raw_ss(),
+            attr_kind as _,
+            attr.inner_c_void()
+        ))?;
+        Ok(attr)
     }
     fn set_attr(&self, attr: impl Into<Attribute>) -> Result<()> {
-        todo!()
+        let attr: Attribute = attr.into();
+        wrap_raw_error_in_unsafe!(vs::viSetAttribute(
+            self.as_raw_ss(),
+            attr.kind() as _,
+            attr.as_u64()
+        ))?;
+        Ok(())
     }
 }
 
 impl HasAttribute for crate::event::Event {}
 impl HasAttribute for crate::Instrument {}
 impl HasAttribute for crate::DefaultRM {}
-
 
 pub trait AttrInner {
     fn kind(&self) -> AttrKind;
@@ -633,7 +645,7 @@ mod attributes {
             const VI_ATTR_TRIG_ID: r#"VI_ATTR_TRIG_ID is the identifier for the current triggering mechanism. VI_ATTR_TRIG_ID is Read/Write when the corresponding session is not enabled to receive trigger events. When the session is enabled to receive trigger events, the attribute VI_ATTR_TRIG_ID is Read Only."#
             (Read/Write Local) ( ViInt16)
             [
-                while PXI {static as VI_TRIG_SW in VI_TRIG_SW (-1) VI_TRIG_TTLO (0) to VI_TRIG_TTL7 (7)}
+                while PXI {static as VI_TRIG_SW in VI_TRIG_SW (-1) VI_TRIG_TTL0 (0) to VI_TRIG_TTL7 (7)}
                 while Serial {static as VI_TRIG_SW in VI_TRIG_SW (-1)}
                 while GPIB {static as VI_TRIG_SW in VI_TRIG_SW (-1)}
                 while VXI {static as VI_TRIG_SW in VI_TRIG_SW (-1); VI_TRIG_TTL0 (0) to VI_TRIG_TTL7 (7); VI_TRIG_ECL0 (8) to VI_TRIG_ECL1 (9)}

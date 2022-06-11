@@ -522,7 +522,7 @@ impl BoundItem {
                     let span = id_h.span();
                     let id_h = id_h.to_string();
                     let id_l = id_l.to_string();
-                    let const_prefix = id_h.trim_end_matches(char::is_numeric).to_ascii_lowercase();
+                    let const_prefix = id_h.trim_end_matches(char::is_numeric);
                     let range = (id_l
                         .rmatches(char::is_numeric)
                         .next()
@@ -547,6 +547,7 @@ impl BoundItem {
                             pub const #range:Self = Self { value: vs::#range as _};
                         )*
                         #cfg
+                        #[allow(unused_parens)]
                         fn #method_name(value:vs::#ty)->Option<Self>{
                             if #check{
                                 Some(Self{value})
@@ -559,8 +560,15 @@ impl BoundItem {
                 }
                 (BoundToken::Num(_), BoundToken::Num(_)) => None,
                 other => {
-                    other.0.span().unwrap().note("unexpected pattern").emit();
-                    other.1.span().unwrap().note("unexpected pattern").emit();
+                    other
+                        .0
+                        .span()
+                        .join(other.1.span())
+                        .unwrap()
+                        .unwrap()
+                        .note(format!("inner error: unexpected pattern: {:?}", other))
+                        .emit();
+
                     None
                 }
             },
@@ -597,7 +605,10 @@ impl Parse for BoundItem {
                     let b: LitInt = c.parse()?;
                     if input.peek(kw::to) {
                         input.parse::<kw::to>()?;
-                        return Ok(BoundItem::Range((BoundToken::Num(b), input.parse()?)));
+                        return Ok(BoundItem::Range((
+                            BoundToken::Ident { id, value: Some(b) },
+                            input.parse()?,
+                        )));
                     } else {
                         return Ok(BoundItem::Single(BoundToken::Ident { id, value: Some(b) }));
                     }
@@ -616,6 +627,19 @@ impl Parse for BoundItem {
 pub enum BoundToken {
     Ident { id: Ident, value: Option<LitInt> },
     Num(LitInt),
+}
+
+impl std::fmt::Debug for BoundToken {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Ident { id, value } => f
+                .debug_struct("Ident")
+                .field("id", id)
+                .field("value", &value.as_ref().map(|x| x.base10_digits()))
+                .finish(),
+            Self::Num(arg0) => f.debug_tuple("Num").field(&arg0.base10_digits()).finish(),
+        }
+    }
 }
 
 impl PartialEq for BoundToken {
@@ -677,15 +701,15 @@ impl Parse for BoundToken {
         let look = input.lookahead1();
         if look.peek(Ident) {
             let id = input.parse()?;
-            let look = input.lookahead1();
-            let value = if look.peek(Paren) {
+            let lookin = input.lookahead1();
+            let value = if lookin.peek(Paren) {
                 let value;
                 parenthesized!(value in input);
                 Some(value.parse()?)
             } else if id == "VI_TRUE" || id == "VI_FALSE" {
                 None
             } else {
-                return Err(look.error());
+                return Err(lookin.error());
             };
             Ok(Self::Ident { id, value })
         } else if look.peek(LitInt) {

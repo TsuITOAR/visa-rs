@@ -6,14 +6,8 @@ macro_rules! consts_to_enum {
     } => {
         visa_rs_proc::rusty_ident!{
             consts_to_enum!{
-                @enum
-                pub enum $enum_id $(:$align)?{
-                    $($status $value)*
-                }
-            }
-            consts_to_enum!{
                 @fmt
-                pub enum $enum_id{
+                pub enum $enum_id $(:$align)?{
                     $($status $value $des)*
                 }
             }
@@ -40,8 +34,8 @@ macro_rules! consts_to_enum {
             $($status:tt $value:literal $($des:literal)?)*
         }
     } => {
-         $(#[repr($align)])?
-        #[derive(num_enum::TryFromPrimitive,num_enum::IntoPrimitive, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
+        $(#[repr($align)])?
+        #[derive(num_enum::TryFromPrimitive,num_enum::IntoPrimitive, Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
         pub enum $enum_id{
             $(
                 $(#[doc=$des])?
@@ -56,6 +50,14 @@ macro_rules! consts_to_enum {
             $($status:tt $value:literal $des:literal)*
         }
     } => {
+        $(#[repr($align)])?
+        #[derive(num_enum::TryFromPrimitive,num_enum::IntoPrimitive, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
+        pub enum $enum_id{
+            $(
+                #[doc=$des]
+                $status=$value as _
+            ),*
+        }
         impl ::std::fmt::Display for $enum_id{
             fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
                 write!(
