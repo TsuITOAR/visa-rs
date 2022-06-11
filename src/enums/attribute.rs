@@ -1,3 +1,86 @@
+//! samples of expanded macros
+//! 
+//! ```
+//! #[repr(u32)]
+//! pub enum AttrKind {
+//!     AttrRsrcClass = 0xBFFF0001 as _,
+//! }
+//! 
+//! #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+//! pub enum Attribute {
+//!     ///VI_ATTR_4882_COMPLIANT specifies whether the device is 488.2 compliant.
+//!     Attr4882Compliant(Attr4882Compliant),
+//! }
+//! 
+//! impl Attribute {
+//!     pub(crate) unsafe fn from_kind(kind: AttrKind) -> Self {
+//!         match kind {
+//!             AttrKind::Attr4882Compliant => Self::from(Attr4882Compliant::zero()),
+//!         }
+//!     }
+//! 
+//!     pub(crate) fn inner_c_void(&mut self) -> *mut ::std::ffi::c_void {
+//!         match self {
+//!             Self::Attr4882Compliant(s) => s.inner_c_void(),
+//!         }
+//!     }
+//! 
+//!     pub fn kind(&self) -> AttrKind {
+//!         match self {
+//!             Self::Attr4882Compliant(s) => super::AttrInner::kind(s),
+//!         }
+//!     }
+//! 
+//!     pub(crate) fn as_u64(&self) -> u64 {
+//!         match self {
+//!             Self::Attr4882Compliant(s) => s.value as _,
+//!         }
+//!     }
+//! }
+//! 
+//! ///VI_ATTR_4882_COMPLIANT specifies whether the device is 488.2 compliant.
+//! pub struct Attr4882Compliant {
+//!     value: vs::ViBoolean,
+//! }
+//! 
+//! impl Attr4882Compliant {
+//!     pub(crate) fn inner_mut(&mut self) -> &mut vs::ViBoolean {
+//!         &mut self.value
+//!     }
+//!     pub(crate) fn inner_c_void(&mut self) -> *mut ::std::ffi::c_void {
+//!         self.inner_mut() as *mut _ as _
+//!     }
+//! }
+//! impl Attr4882Compliant {
+//!     pub const VI_TRUE: Self = Self { value: 1 as _ };
+//!     pub const VI_FALSE: Self = Self { value: 0 as _ };
+//!     pub unsafe fn new_unchecked(value: vs::ViBoolean) -> Self {
+//!         Self { value }
+//!     }
+//!     #[allow(unused_parens)]
+//!     pub fn new_checked(value: vs::ViBoolean) -> Option<Self> {
+//!         if 1 as vs::ViBoolean == value || 0 as vs::ViBoolean == value {
+//!             Some(Self { value })
+//!         } else {
+//!             None
+//!         }
+//!     }
+//! }
+//! impl super::AttrInner for Attr4882Compliant {
+//!     fn kind(&self) -> AttrKind {
+//!         AttrKind::Attr4882Compliant
+//!     }
+//! }
+//! impl Attr4882Compliant {
+//!     unsafe fn zero() -> Self {
+//!         Self { value: 0 as _ }
+//!     }
+//! }
+//! ```
+
+
+
+
 use crate::{wrap_raw_error_in_unsafe, Result};
 
 pub use attributes::{AttrKind, Attribute};
