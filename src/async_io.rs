@@ -146,6 +146,16 @@ pub struct AsyncRead<'a> {
     buf: &'a mut [u8],
 }
 
+impl<'a> AsyncRead<'a> {
+    pub(crate) fn new(ss: &'a Instrument, buf: &'a mut [u8]) -> Self {
+        Self {
+            ss,
+            buf,
+            handler: None,
+        }
+    }
+}
+
 impl<'a> Future for AsyncRead<'a> {
     type Output = Result<usize>;
 
@@ -159,7 +169,7 @@ impl<'a> Future for AsyncRead<'a> {
                 a @ None => {
                     let handler = AsyncIoHandler::new(
                         self_mut.ss.as_ss(),
-                        self_mut.ss.read_async(self_mut.buf)?,
+                        self_mut.ss.visa_read_async(self_mut.buf)?,
                         Arc::new(Mutex::new(cx.waker().clone())),
                     )?;
                     *a = Some(handler);
@@ -185,6 +195,16 @@ pub struct AsyncWrite<'a> {
     buf: &'a [u8],
 }
 
+impl<'a> AsyncWrite<'a> {
+    pub(crate) fn new(ss: &'a Instrument, buf: &'a [u8]) -> Self {
+        Self {
+            ss,
+            buf,
+            handler: None,
+        }
+    }
+}
+
 impl<'a> Future for AsyncWrite<'a> {
     type Output = Result<usize>;
 
@@ -198,7 +218,7 @@ impl<'a> Future for AsyncWrite<'a> {
                 a @ None => {
                     let handler = AsyncIoHandler::new(
                         self_mut.ss.as_ss(),
-                        self_mut.ss.write_async(self_mut.buf)?,
+                        self_mut.ss.visa_write_async(self_mut.buf)?,
                         Arc::new(Mutex::new(cx.waker().clone())),
                     )?;
                     *a = Some(handler);

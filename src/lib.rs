@@ -1,3 +1,5 @@
+#![feature(cstr_from_bytes_until_nul)]
+use std::ffi::CStr;
 use std::{borrow::Cow, ffi::CString, fmt::Display, time::Duration};
 
 use visa_sys as vs;
@@ -173,12 +175,24 @@ impl ResList {
 pub struct VisaString(CString);
 
 pub type ResID = VisaString;
-pub type KeyID = VisaString;
 pub type AccessKey = VisaString;
 
 impl From<CString> for VisaString {
     fn from(c: CString) -> Self {
         Self(c)
+    }
+}
+
+type VisaBuf = [u8; vs::VI_FIND_BUFLEN as _];
+
+fn new_visa_buf() -> VisaBuf {
+    [0; vs::VI_FIND_BUFLEN as _]
+}
+
+impl TryFrom<[u8; vs::VI_FIND_BUFLEN as _]> for VisaString {
+    type Error = core::ffi::FromBytesUntilNulError;
+    fn try_from(f: [u8; vs::VI_FIND_BUFLEN as _]) -> std::result::Result<Self, Self::Error> {
+        Ok(Self(CStr::from_bytes_until_nul(f.as_slice())?.to_owned()))
     }
 }
 
@@ -191,7 +205,7 @@ impl VisaString {
     }
 }
 
-impl Display for ResID {
+impl Display for VisaString {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.to_string_lossy().fmt(f)
     }
@@ -282,26 +296,81 @@ impl Instrument {
         wrap_raw_error_in_unsafe!(vs::viFlush(self.as_raw_ss(), mode.bits()))?;
         Ok(())
     }
-    
-    pub fn status_desc(&self, error: Error) -> Result<String> {
-        static mut DESC: [u8; 256] = [0; 256];
+
+    pub fn status_desc(&self, error: Error) -> Result<VisaString> {
+        let mut desc: VisaBuf = new_visa_buf();
         wrap_raw_error_in_unsafe!(vs::viStatusDesc(
             self.as_raw_ss(),
             error.into(),
-            DESC.as_mut_ptr() as _
+            desc.as_mut_ptr() as _
         ))?;
-        Ok(String::from_iter(unsafe {
-            DESC.into_iter().map(|x| x as char)
-        }))
+        Ok(desc.try_into().unwrap())
     }
+
     pub fn lock(
         &self,
         mode: flags::AccessMode,
         timeout: Duration,
-        key: KeyID,
-    ) -> Result<AccessKey> {
-        todo!()
+        key: Option<AccessKey>,
+    ) -> Result<Option<AccessKey>> {
+        if (mode & flags::AccessMode::SHARED_LOCK).is_empty() {
+            wrap_raw_error_in_unsafe!(vs::viLock(
+                self.as_raw_ss(),
+                mode.bits(),
+                timeout.as_millis() as _,
+                vs::VI_NULL as _,
+                vs::VI_NULL as _
+            ))?;
+            Ok(None)
+        } else {
+            let mut ak = new_visa_buf();
+            wrap_raw_error_in_unsafe!(vs::viLock(
+                self.as_raw_ss(),
+                mode.bits(),
+                timeout.as_millis() as _,
+                key.map(|x| x.as_vi_const_string())
+                    .unwrap_or(vs::VI_NULL as _),
+                ak.as_mut_ptr() as _
+            ))?;
+            Ok(Some(ak.try_into().unwrap()))
+        }
     }
+
+    pub fn lock_exclusive(&self, timeout: Duration) -> Result<()> {
+        wrap_raw_error_in_unsafe!(vs::viLock(
+            self.as_raw_ss(),
+            flags::AccessMode::EXCLUSIVE_LOCK.bits(),
+            timeout.as_millis() as _,
+            vs::VI_NULL as _,
+            vs::VI_NULL as _
+        ))?;
+        Ok(())
+    }
+
+    pub fn lock_shared(&self, timeout: Duration) -> Result<AccessKey> {
+        let mut ak = new_visa_buf();
+        wrap_raw_error_in_unsafe!(vs::viLock(
+            self.as_raw_ss(),
+            flags::AccessMode::EXCLUSIVE_LOCK.bits(),
+            timeout.as_millis() as _,
+            vs::VI_NULL as _,
+            ak.as_mut_ptr() as _
+        ))?;
+        Ok(ak.try_into().unwrap())
+    }
+
+    pub fn lock_shared_with_key(&self, timeout: Duration, key: AccessKey) -> Result<AccessKey> {
+        let mut ak = new_visa_buf();
+        wrap_raw_error_in_unsafe!(vs::viLock(
+            self.as_raw_ss(),
+            flags::AccessMode::EXCLUSIVE_LOCK.bits(),
+            timeout.as_millis() as _,
+            key.as_vi_const_string() as _,
+            ak.as_mut_ptr() as _
+        ))?;
+        Ok(ak.try_into().unwrap())
+    }
+
     pub fn unlock(&mut self) -> Result<()> {
         wrap_raw_error_in_unsafe!(vs::viUnlock(self.as_raw_ss()))?;
         Ok(())
@@ -379,7 +448,7 @@ impl Instrument {
 mod async_io;
 
 impl Instrument {
-    pub fn read_async(&self, buf: &mut [u8]) -> Result<JobID> {
+    pub fn visa_read_async(&self, buf: &mut [u8]) -> Result<JobID> {
         let mut id: vs::ViJobId = 0;
         wrap_raw_error_in_unsafe!(vs::viReadAsync(
             self.as_raw_ss(),
@@ -389,7 +458,7 @@ impl Instrument {
         ))?;
         Ok(JobID(id))
     }
-    pub fn write_async(&self, buf: &[u8]) -> Result<JobID> {
+    pub fn visa_write_async(&self, buf: &[u8]) -> Result<JobID> {
         let mut id: vs::ViJobId = 0;
         wrap_raw_error_in_unsafe!(vs::viWriteAsync(
             self.as_raw_ss(),
@@ -398,6 +467,14 @@ impl Instrument {
             &mut id as _
         ))?;
         Ok(JobID(id))
+    }
+
+    pub async fn async_read(&self, buf: &mut [u8]) -> Result<usize> {
+        async_io::AsyncRead::new(self, buf).await
+    }
+
+    pub async fn async_write(&self, buf: &mut [u8]) -> Result<usize> {
+        async_io::AsyncWrite::new(self, buf).await
     }
 }
 
