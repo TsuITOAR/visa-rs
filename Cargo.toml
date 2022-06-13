@@ -15,6 +15,9 @@ log = "^0.4"
 
 [dev-dependencies]
 anyhow = "*"
+tokio = { version = "*", features = ["rt-multi-thread"] }
+env_logger = "*"
+
 
 [patch.crates-io]
 visa-sys = { path = "../visa-sys" }

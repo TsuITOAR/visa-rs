@@ -7,8 +7,14 @@ use anyhow::Result;
 use visa_rs::{
     event::{self, Event},
     flags::AccessMode,
-    DefaultRM, Instrument, TIMEOUT_IMMEDIATE,
+    DefaultRM, Instrument, VisaString, TIMEOUT_IMMEDIATE,
 };
+fn init_logger() {
+    let _ = env_logger::builder()
+        .filter_level(log::LevelFilter::Warn)
+        .is_test(true)
+        .try_init();
+}
 
 #[test]
 fn list_instr() -> Result<()> {
@@ -51,7 +57,7 @@ fn handler() -> Result<()> {
         let event = event::EventKind::IoCompletion;
         let h1 = instr.install_handler(event, call_back1)?;
         let h2 = instr.install_handler(event, call_back2)?;
-        instr.enable_event(event, event::Mechanism::Handler, event::EventFilter::Null)?;
+        instr.enable_event(event, event::Mechanism::Handler)?;
         (&instr).visa_write_async(b"*IDN?\n")?;
         h1.receiver().recv()?;
         h2.receiver().recv()?;
@@ -67,29 +73,27 @@ fn handler() -> Result<()> {
 
 #[test]
 fn async_io() -> Result<()> {
+    init_logger();
     let rm = DefaultRM::new()?;
     let mut list = rm.find_res(&CString::new("?*KEYSIGH?*INSTR").unwrap().into())?;
     if let Some(n) = list.find_next()? {
+        log::debug!("connecting to {}", n);
         let instr = rm.open(&n, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
-        let call_back1 = |ins: &Instrument, t: &Event| -> () {
-            println!("call1: {:?} {:?}", ins, t);
+        log::debug!("connected");
+        let task = async move {
+            instr.async_write(b"*IDN?\n").await?;
+            let mut buf = [0; 256];
+            instr.async_read(buf.as_mut_slice()).await?;
+            println!("get response: {}", VisaString::try_from(buf).unwrap());
+            Result::<()>::Ok(())
         };
-        let call_back2 = |ins: &Instrument, t: &Event| -> () {
-            println!("call2: {:?} {:?}", ins, t);
-        };
-        let event = event::EventKind::IoCompletion;
-        let h1 = instr.install_handler(event, call_back1)?;
-        let h2 = instr.install_handler(event, call_back2)?;
-        instr.enable_event(event, event::Mechanism::Handler, event::EventFilter::Null)?;
-        (&instr).visa_write_async(b"*IDN?\n")?;
-        h1.receiver().recv()?;
-        h2.receiver().recv()?;
-        h1.uninstall();
-        let mut v = vec![0u8; 256];
-        (&instr).visa_read_async(&mut v)?;
-        eprintln!("{}", String::from_utf8_lossy(v.as_ref()));
-        h2.receiver().recv()?;
-        eprintln!("{}", String::from_utf8_lossy(v.as_ref()))
+        use tokio::runtime::Builder;
+        let runtime = Builder::new_multi_thread()
+            .worker_threads(2)
+            .enable_all()
+            .build()
+            .unwrap();
+        runtime.block_on(task)?;
     }
     Ok(())
 }

@@ -379,13 +379,12 @@ impl Instrument {
         &self,
         event_kind: event::EventKind,
         mechanism: event::Mechanism,
-        filter: event::EventFilter,
     ) -> Result<()> {
         wrap_raw_error_in_unsafe!(vs::viEnableEvent(
             self.as_raw_ss(),
             event_kind as _,
             mechanism as _,
-            filter as _
+            event::EventFilter::Null as _
         ))?;
         Ok(())
     }
@@ -473,7 +472,7 @@ impl Instrument {
         async_io::AsyncRead::new(self, buf).await
     }
 
-    pub async fn async_write(&self, buf: &mut [u8]) -> Result<usize> {
+    pub async fn async_write(&self, buf: &[u8]) -> Result<usize> {
         async_io::AsyncWrite::new(self, buf).await
     }
 }
