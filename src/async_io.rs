@@ -58,6 +58,7 @@ impl<'b> AsyncIoHandler<'b> {
 
 impl<'b> Drop for AsyncIoHandler<'b> {
     fn drop(&mut self) {
+        #[allow(unused_unsafe)]
         unsafe {
             if let Err(e) = terminate_async(self.instr, self.job_id) {
                 log::warn!("terminating async io: {}", e)
@@ -111,7 +112,8 @@ impl AsyncIoCallbackPack {
         }
 
         fn get_ret(event: &event::Event) -> Result<usize> {
-            wrap_raw_error_in_unsafe!(event.get_attr(AttrKind::AttrStatus)?.as_u64() as i32);
+            #[allow(unused_unsafe)]
+            wrap_raw_error_in_unsafe!(event.get_attr(AttrKind::AttrStatus)?.as_u64() as i32)?;
             let ret: usize = event.get_attr(AttrKind::AttrRetCount)?.as_u64() as _;
             Ok(ret)
         }
