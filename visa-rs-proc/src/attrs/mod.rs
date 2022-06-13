@@ -168,6 +168,9 @@ impl Attr {
                         pub(crate) fn inner_c_void(&mut self) -> *mut ::std::ffi::c_void{
                             self.inner_mut() as *mut _ as _
                         }
+                        pub fn into_inner(self)->vs::#ty{
+                            self.value
+                        }
                     }
                 )
                 .to_tokens(tokens);
@@ -198,6 +201,9 @@ impl Attr {
                             }
                             pub(crate) fn inner_c_void(&mut self) -> *mut ::std::ffi::c_void{
                                 self.inner_mut() as *mut _ as _
+                            }
+                            pub fn into_inner(self)->vs::#ty{
+                                self.value
                             }
                         }
                     )*

@@ -44,7 +44,7 @@ impl<F: Callback> CallbackPack<F> {
     }
 }
 
-pub(crate) struct CallbackWrapper<F: Callback> {
+struct CallbackWrapper<F: Callback> {
     f: NonNull<CallbackPack<F>>,
     //? not sure if reproduce from F would get the same fn pointer, so better hold it
     hold: unsafe extern "C" fn(

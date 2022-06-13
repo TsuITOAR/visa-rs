@@ -1,48 +1,48 @@
 //! samples of expanded macros
-//! 
+//!
 //! ```
 //! #[repr(u32)]
 //! pub enum AttrKind {
 //!     AttrRsrcClass = 0xBFFF0001 as _,
 //! }
-//! 
+//!
 //! #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 //! pub enum Attribute {
 //!     ///VI_ATTR_4882_COMPLIANT specifies whether the device is 488.2 compliant.
 //!     Attr4882Compliant(Attr4882Compliant),
 //! }
-//! 
+//!
 //! impl Attribute {
 //!     pub(crate) unsafe fn from_kind(kind: AttrKind) -> Self {
 //!         match kind {
 //!             AttrKind::Attr4882Compliant => Self::from(Attr4882Compliant::zero()),
 //!         }
 //!     }
-//! 
+//!
 //!     pub(crate) fn inner_c_void(&mut self) -> *mut ::std::ffi::c_void {
 //!         match self {
 //!             Self::Attr4882Compliant(s) => s.inner_c_void(),
 //!         }
 //!     }
-//! 
+//!
 //!     pub fn kind(&self) -> AttrKind {
 //!         match self {
 //!             Self::Attr4882Compliant(s) => super::AttrInner::kind(s),
 //!         }
 //!     }
-//! 
+//!
 //!     pub(crate) fn as_u64(&self) -> u64 {
 //!         match self {
 //!             Self::Attr4882Compliant(s) => s.value as _,
 //!         }
 //!     }
 //! }
-//! 
+//!
 //! ///VI_ATTR_4882_COMPLIANT specifies whether the device is 488.2 compliant.
 //! pub struct Attr4882Compliant {
 //!     value: vs::ViBoolean,
 //! }
-//! 
+//!
 //! impl Attr4882Compliant {
 //!     pub(crate) fn inner_mut(&mut self) -> &mut vs::ViBoolean {
 //!         &mut self.value
@@ -77,9 +77,7 @@
 //!     }
 //! }
 //! ```
-
-
-
+//! TODO: ViString should be replaced by CString
 
 use crate::{wrap_raw_error_in_unsafe, Result};
 
