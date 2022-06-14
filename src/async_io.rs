@@ -1,6 +1,6 @@
 use crate::{
-    enums::{AttrKind, HasAttribute},
-    event::{self},
+    enums::attribute::{self, AttrInner},
+    event,
     session::{AsRawSs, AsSs, BorrowedSs, FromRawSs},
     JobID,
 };
@@ -116,13 +116,13 @@ impl AsyncIoCallbackPack {
         log::trace!("calling user data method");
         fn check_job_id(s: &mut AsyncIoCallbackPack, event: &event::Event) -> Result<bool> {
             debug_assert_eq!(
-                event.get_attr(AttrKind::AttrEventType)?.as_u64() as vs::ViEvent,
+                attribute::AttrEventType::get_from(event)?.into_inner(),
                 event::EventKind::IoCompletion as vs::ViEvent,
             );
             let waited_id = s.job_id.lock().unwrap();
             match *waited_id {
                 None => Ok(false),
-                Some(x) => Ok(x == JobID(event.get_attr(AttrKind::AttrJobId)?.as_u64() as _)),
+                Some(x) => Ok(x == JobID(attribute::AttrJobId::get_from(event)?.into_inner())),
             }
         }
 
@@ -134,8 +134,8 @@ impl AsyncIoCallbackPack {
         log::trace!("jod id matched, send result and wake");
         fn get_ret(event: &event::Event) -> Result<usize> {
             #[allow(unused_unsafe)]
-            wrap_raw_error_in_unsafe!(event.get_attr(AttrKind::AttrStatus)?.as_u64() as i32)?;
-            let ret: usize = event.get_attr(AttrKind::AttrRetCount)?.as_u64() as _;
+            wrap_raw_error_in_unsafe!(attribute::AttrStatus::get_from(event)?.into_inner())?;
+            let ret: usize = attribute::AttrRetCount::get_from(event)?.into_inner() as _;
             Ok(ret)
         }
         self.sender

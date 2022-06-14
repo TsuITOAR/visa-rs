@@ -44,7 +44,6 @@ impl ToTokens for Attributes {
             attr.constructors(tokens);
             attr.default_impl(tokens);
             attr.kind_impl(tokens);
-            attr.empty_instance(tokens);
         }
         let fields = self.attrs.iter().map(|x| x.struct_name());
         let docs = self.attrs.iter().map(|x| &x.desc);
@@ -82,7 +81,7 @@ impl ToTokens for Attributes {
                 t.into_iter().map(move |(ty, cfg)| {
                     quote!(
                             #cfg
-                            AttrKind::#ty => Self::from(#f::zero())
+                            AttrKind::#ty => Self::from(<#f as super::AttrInner>::zero())
                     )
                 })
             })
@@ -100,15 +99,17 @@ impl ToTokens for Attributes {
                     }
                 }
 
-                pub(crate) fn inner_c_void(&mut self)->*mut ::std::ffi::c_void{
+                pub(crate) fn mut_c_void(&mut self)->*mut ::std::ffi::c_void{
+                    use super::AttrInner;
                     match self{
-                        #(Self::#fields1(s)=>s.inner_c_void()),*
+                        #(Self::#fields1(s)=>s.mut_c_void()),*
                     }
                 }
                 
                 pub fn kind(&self)-> AttrKind{
+                    use super::AttrInner;
                     match self{
-                        #(Self::#fields2(s)=>super::AttrInner::kind(s)),*
+                        #(Self::#fields2(s)=>s.kind()),*
                     }
                 }
 
@@ -162,12 +163,6 @@ impl Attr {
                         value:vs::#ty
                     }
                     impl #id{
-                        pub(crate) fn inner_mut(&mut self) -> &mut vs::#ty{
-                            &mut self.value
-                        }
-                        pub(crate) fn inner_c_void(&mut self) -> *mut ::std::ffi::c_void{
-                            self.inner_mut() as *mut _ as _
-                        }
                         pub fn into_inner(self)->vs::#ty{
                             self.value
                         }
@@ -196,12 +191,6 @@ impl Attr {
                         }
                         #[cfg(target_arch = #arch)]
                         impl #id{
-                            pub(crate) fn inner_mut(&mut self) -> &mut vs::#ty{
-                                &mut self.value
-                            }
-                            pub(crate) fn inner_c_void(&mut self) -> *mut ::std::ffi::c_void{
-                                self.inner_mut() as *mut _ as _
-                            }
                             pub fn into_inner(self)->vs::#ty{
                                 self.value
                             }
@@ -237,11 +226,15 @@ impl Attr {
         let struct_id = self.struct_name();
         struct_name_to_kind_name(&self.id).for_each(|(kind_id, cfg)| {
             let kind_id = subst_ident(kind_id);
-            quote!(
+            quote_spanned!(self.id.span()=>
                     #cfg
                     impl super::AttrInner for #struct_id{
-                        fn kind(&self)->AttrKind{
-                            AttrKind::#kind_id
+                        const KIND:AttrKind=AttrKind::#kind_id;
+                        unsafe fn zero() -> Self {
+                            Self{value:0 as _}
+                        }
+                        fn mut_c_void(&mut self)->*mut ::std::ffi::c_void{
+                            &mut self.value as *mut _ as _
                         }
                     }
             )
@@ -270,18 +263,6 @@ impl Attr {
                 c(&n);
             }
         }
-    }
-    fn empty_instance(&self, tokens: &mut TokenStream2) {
-        let struct_name = self.struct_name();
-        quote_spanned!(
-            self.id.span()=>
-            impl #struct_name{
-                unsafe fn zero() -> Self {
-                     Self{value:0 as _}
-                }
-            }
-        )
-        .to_tokens(tokens);
     }
 }
 

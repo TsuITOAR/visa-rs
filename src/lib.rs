@@ -47,7 +47,7 @@ macro_rules! impl_session_traits {
 impl_session_traits! { DefaultRM, Instrument}
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
-pub struct Error(enums::ErrorCode);
+pub struct Error(enums::status::ErrorCode);
 
 impl std::error::Error for Error {}
 
@@ -57,14 +57,14 @@ impl std::fmt::Display for Error {
     }
 }
 
-impl From<enums::ErrorCode> for Error {
-    fn from(s: enums::ErrorCode) -> Self {
+impl From<enums::status::ErrorCode> for Error {
+    fn from(s: enums::status::ErrorCode) -> Self {
         Self(s)
     }
 }
 
-impl Into<enums::ErrorCode> for Error {
-    fn into(self) -> enums::ErrorCode {
+impl Into<enums::status::ErrorCode> for Error {
+    fn into(self) -> enums::status::ErrorCode {
         self.0
     }
 }
@@ -76,7 +76,7 @@ impl Into<vs::ViStatus> for Error {
 }
 
 impl TryFrom<vs::ViStatus> for Error {
-    type Error = <enums::ErrorCode as TryFrom<vs::ViStatus>>::Error;
+    type Error = <enums::status::ErrorCode as TryFrom<vs::ViStatus>>::Error;
     fn try_from(value: vs::ViStatus) -> std::result::Result<Self, Self::Error> {
         Ok(Self(value.try_into()?))
     }
@@ -89,9 +89,9 @@ macro_rules! wrap_raw_error_in_unsafe {
     ($s:expr) => {
         match unsafe { $s } {
             state if state >= $crate::SUCCESS => {
-                Result::<$crate::enums::CompletionCode>::Ok(state.try_into().unwrap())
+                Result::<$crate::enums::status::CompletionCode>::Ok(state.try_into().unwrap())
             }
-            e => Result::<$crate::enums::CompletionCode>::Err(e.try_into().unwrap()),
+            e => Result::<$crate::enums::status::CompletionCode>::Err(e.try_into().unwrap()),
         }
     };
 }
@@ -215,7 +215,7 @@ impl Display for VisaString {
 pub struct Instrument(OwnedSs);
 
 fn map_to_io_err(err: Error) -> std::io::Error {
-    use enums::ErrorCode::*;
+    use enums::status::ErrorCode::*;
     use std::io::ErrorKind::*;
     std::io::Error::new(
         match err.0 {

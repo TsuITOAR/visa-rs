@@ -19,9 +19,9 @@
 //!         }
 //!     }
 //!
-//!     pub(crate) fn inner_c_void(&mut self) -> *mut ::std::ffi::c_void {
+//!     pub(crate) fn mut_c_void(&mut self) -> *mut ::std::ffi::c_void {
 //!         match self {
-//!             Self::Attr4882Compliant(s) => s.inner_c_void(),
+//!             Self::Attr4882Compliant(s) => s.mut_c_void(),
 //!         }
 //!     }
 //!
@@ -44,11 +44,8 @@
 //! }
 //!
 //! impl Attr4882Compliant {
-//!     pub(crate) fn inner_mut(&mut self) -> &mut vs::ViBoolean {
-//!         &mut self.value
-//!     }
-//!     pub(crate) fn inner_c_void(&mut self) -> *mut ::std::ffi::c_void {
-//!         self.inner_mut() as *mut _ as _
+//!     pub(crate) fn into_inner(self) -> vs::ViBoolean {
+//!         self.value
 //!     }
 //! }
 //! impl Attr4882Compliant {
@@ -67,29 +64,32 @@
 //!     }
 //! }
 //! impl super::AttrInner for Attr4882Compliant {
-//!     fn kind(&self) -> AttrKind {
-//!         AttrKind::Attr4882Compliant
-//!     }
-//! }
-//! impl Attr4882Compliant {
+//!     const KIND: AttrKind = AttrKind::Attr4882Compliant
 //!     unsafe fn zero() -> Self {
 //!         Self { value: 0 as _ }
 //!     }
+//!     fn mut_c_void(&mut self) -> *mut ::std::ffi::c_void {
+//!         &mut self.value as *mut _ as _
+//!     }
+//! }
+//! impl Attr4882Compliant {
+//!     
 //! }
 //! ```
 //! TODO: ViString should be replaced by CString
 
 use crate::{wrap_raw_error_in_unsafe, Result};
 
-pub use attributes::{AttrKind, Attribute};
+pub use attributes::*;
 use visa_sys as vs;
 pub trait HasAttribute: crate::session::AsRawSs {
+    /// if want a specific attribute, use [`AttrInner::get_from`]
     fn get_attr(&self, attr_kind: AttrKind) -> Result<Attribute> {
         let mut attr = unsafe { Attribute::from_kind(attr_kind) };
         wrap_raw_error_in_unsafe!(vs::viGetAttribute(
             self.as_raw_ss(),
             attr_kind as _,
-            attr.inner_c_void()
+            attr.mut_c_void()
         ))?;
         Ok(attr)
     }
@@ -108,13 +108,27 @@ impl HasAttribute for crate::event::Event {}
 impl HasAttribute for crate::Instrument {}
 impl HasAttribute for crate::DefaultRM {}
 
-pub trait AttrInner {
-    fn kind(&self) -> AttrKind;
+pub trait AttrInner: Sized {
+    const KIND: AttrKind;
+    fn kind(&self) -> AttrKind {
+        Self::KIND
+    }
+    unsafe fn zero() -> Self;
+    fn mut_c_void(&mut self) -> *mut ::std::ffi::c_void;
+    fn get_from<S: HasAttribute>(s: &S) -> Result<Self> {
+        let mut ret = unsafe { Self::zero() };
+        wrap_raw_error_in_unsafe!(vs::viGetAttribute(
+            s.as_raw_ss(),
+            Self::KIND as _,
+            ret.mut_c_void()
+        ))?;
+        Ok(ret)
+    }
 }
 
 impl<T: AttrInner> PartialEq<T> for AttrKind {
-    fn eq(&self, other: &T) -> bool {
-        self.eq(&other.kind())
+    fn eq(&self, _: &T) -> bool {
+        self.eq(&T::KIND)
     }
 }
 

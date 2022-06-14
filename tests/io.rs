@@ -84,7 +84,7 @@ fn async_io() -> Result<()> {
             instr.async_write(b"*IDN?\n").await?;
             let mut buf = [0; 256];
             instr.async_read(buf.as_mut_slice()).await?;
-            println!("get response: {}", VisaString::try_from(buf).unwrap());
+            eprintln!("get response: {}", VisaString::try_from(buf).unwrap());
             Result::<()>::Ok(())
         };
         use tokio::runtime::Builder;
