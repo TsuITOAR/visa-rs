@@ -1,3 +1,8 @@
+//!
+//! high level bind to VISA(Virtual Instrument Software Architecture) library
+//! doc comes from [NI-VISA Product Documentation](https://www.ni.com/docs/en-US/bundle/ni-visa/page/ni-visa/events.html)
+//! 
+
 #![feature(cstr_from_bytes_until_nul)]
 use std::ffi::CStr;
 use std::{borrow::Cow, ffi::CString, fmt::Display, time::Duration};
