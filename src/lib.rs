@@ -281,7 +281,7 @@ impl DefaultRM {
     }
 }
 
-/// returned by ['DefaultRM::find_res_list'], handler to iterator over matched resources
+/// returned by [`DefaultRM::find_res_list`], handler to iterator over matched resources
 #[derive(Debug)]
 pub struct ResList {
     list: vs::ViFindList,
@@ -459,7 +459,7 @@ impl Instrument {
     ///
     ///The locking mechanism works for all processes and resources existing on the same computer. When using remote resources, however, the networking protocol may not provide the ability to pass lock requests to the remote device or resource. In this case, locks will behave as expected from multiple sessions on the same computer, but not necessarily on the remote device. For example, when using the VXI-11 protocol, exclusive lock requests can be sent to a device, but shared locks can only be handled locally.
     ///
-    /// see also [`Self::lock_exclusive()`], [`Self::lock_shared()`] and [`Self::lock_shared_with_key()`]
+    /// see also [`Self::lock_exclusive`], [`Self::lock_shared`] and [`Self::lock_shared_with_key`]
     ///
     pub fn lock(
         &self,
@@ -720,7 +720,7 @@ impl Instrument {
 pub struct JobID(vs::ViJobId);
 
 impl JobID {
-    ///create JobId with value null, used in ['Instrument::terminate()'] to abort all calls
+    ///create JobId with value null, used in [`Instrument::terminate`] to abort all calls
     pub fn null() -> Self {
         Self(vs::VI_NULL as _)
     }

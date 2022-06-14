@@ -1,4 +1,8 @@
-//! samples of expanded macros
+//! Attributes defined in NI-VISA product doc with NI-VISA specific attributes removed
+//! 
+//! auto fetched from NI-VISA doc web api and processed by macros
+//! 
+//! sample of expanded codes
 //!
 //! ```
 //! #[repr(u32)]
@@ -39,12 +43,13 @@
 //! }
 //!
 //! ///VI_ATTR_4882_COMPLIANT specifies whether the device is 488.2 compliant.
+//! #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 //! pub struct Attr4882Compliant {
 //!     value: vs::ViBoolean,
 //! }
 //!
 //! impl Attr4882Compliant {
-//!     pub(crate) fn into_inner(self) -> vs::ViBoolean {
+//!     pub fn into_inner(self) -> vs::ViBoolean {
 //!         self.value
 //!     }
 //! }

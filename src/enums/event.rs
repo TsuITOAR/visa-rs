@@ -1,6 +1,6 @@
 //!
 //! [EventKind] defined in VISA Library 7.1 specification,
-//! corresponding attributes defined in [attributes](super::attribute) mod,
+//! corresponding attributes defined in [attribute](super::attribute) mod,
 //! doc from [NI-VISA Product Documentation](https://www.ni.com/docs/en-US/bundle/ni-visa/page/ni-visa/events.html), 
 //! with some difference ignored
 //! 
