@@ -9,7 +9,7 @@ type Result<O> = std::result::Result<O, anyhow::Error>;
 struct DocIndex {
     items: Vec<DocIndexItem>,
 }
-
+use tokio::io::{AsyncRead, AsyncWrite};
 #[derive(Deserialize, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 struct DocIndexItem {
     url: Option<String>,

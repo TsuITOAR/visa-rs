@@ -80,4 +80,5 @@ macro_rules! consts_to_enum {
 }
 
 pub mod attribute;
+pub mod event;
 pub mod status;

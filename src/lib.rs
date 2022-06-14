@@ -2,10 +2,10 @@
 use std::ffi::CStr;
 use std::{borrow::Cow, ffi::CString, fmt::Display, time::Duration};
 
+use enums::event;
 use visa_sys as vs;
 
 pub mod enums;
-pub mod event;
 pub mod flags;
 pub mod handler;
 pub mod session;

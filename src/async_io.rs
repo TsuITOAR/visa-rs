@@ -1,6 +1,8 @@
 use crate::{
-    enums::attribute::{self, AttrInner},
-    event,
+    enums::{
+        attribute::{self, AttrInner},
+        event,
+    },
     session::{AsRawSs, AsSs, BorrowedSs, FromRawSs},
     JobID,
 };
@@ -41,11 +43,14 @@ impl<'b> AsyncIoHandler<'b> {
         let callback = NonNull::new(Box::into_raw(Box::new(callback))).unwrap();
         super::wrap_raw_error_in_unsafe!(vs::viInstallHandler(
             instr.as_raw_ss(),
-            event::EventKind::IoCompletion as _,
+            event::EventKind::EventIoCompletion as _,
             Some(AsyncIoCallbackPack::call_in_c),
             callback.as_ptr() as _
         ))?;
-        instr.enable_event(event::EventKind::IoCompletion, event::Mechanism::Handler)?;
+        instr.enable_event(
+            event::EventKind::EventIoCompletion,
+            event::Mechanism::Handler,
+        )?;
         Ok(Self {
             instr: instr.as_ss(),
             job_id,
@@ -83,7 +88,7 @@ impl<'b> Drop for AsyncIoHandler<'b> {
         unsafe {
             if let Err(e) = wrap_raw_error_in_unsafe!(vs::viUninstallHandler(
                 self.instr.as_raw_ss(),
-                event::EventKind::IoCompletion as _,
+                event::EventKind::EventIoCompletion as _,
                 Some(AsyncIoCallbackPack::call_in_c),
                 self.callback.as_ptr() as _,
             )) {
@@ -117,7 +122,7 @@ impl AsyncIoCallbackPack {
         fn check_job_id(s: &mut AsyncIoCallbackPack, event: &event::Event) -> Result<bool> {
             debug_assert_eq!(
                 attribute::AttrEventType::get_from(event)?.into_inner(),
-                event::EventKind::IoCompletion as vs::ViEvent,
+                event::EventKind::EventIoCompletion as vs::ViEvent,
             );
             let waited_id = s.job_id.lock().unwrap();
             match *waited_id {
@@ -128,10 +133,9 @@ impl AsyncIoCallbackPack {
 
         match check_job_id(self, event) {
             Ok(false) => return vs::VI_SUCCESS as _,
-            Err(e) => log::error!("error checking job id in async io callback:\n {}", e),
+            Err(e) => log::error!("error checking job id in async io callback: {}", e),
             Ok(true) => (),
         }
-        log::trace!("jod id matched, send result and wake");
         fn get_ret(event: &event::Event) -> Result<usize> {
             #[allow(unused_unsafe)]
             wrap_raw_error_in_unsafe!(attribute::AttrStatus::get_from(event)?.into_inner())?;
@@ -144,9 +148,8 @@ impl AsyncIoCallbackPack {
         log::trace!("sended results");
         self.waker.upgrade().expect("as long as handler not dropped, upgrade is successful, only when this function will be called").lock().unwrap().clone().wake();
         log::trace!("waked");
-        log::trace!("removing finished job id");
         *self.job_id.lock().unwrap() = None;
-        log::trace!("removed");
+        log::trace!("removed finished job id");
         vs::VI_SUCCESS_NCHAIN as _
         //Normally, an application should always return VI_SUCCESS from all callback handlers. If a specific handler does not want other handlers to be invoked for the given event for the given session, it should return VI_SUCCESS_NCHAIN. No return value from a handler on one session will affect callbacks on other sessions. Future versions of VISA (or specific implementations of VISA) may take actions based on other return values, so a user should return VI_SUCCESS from handlers unless there is a specific reason to do otherwise.
     }

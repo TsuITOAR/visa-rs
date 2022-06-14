@@ -5,7 +5,7 @@ use std::{
 use visa_sys as vs;
 
 use crate::{
-    event,
+    enums::event,
     session::{AsRawSs, BorrowedSs, FromRawSs},
     Instrument, Result, SUCCESS,
 };
@@ -99,14 +99,14 @@ impl<F: Callback> CallbackWrapper<F> {
 pub struct Handler<'b, F: Callback> {
     instr: BorrowedSs<'b>,
     rec: Receiver<F::Output>,
-    event_kind: super::event::EventKind,
+    event_kind: event::EventKind,
     callback: CallbackWrapper<F>,
 }
 
 impl<'b, F: Callback> Handler<'b, F> {
     pub(crate) fn new(
         instr: BorrowedSs<'b>,
-        event_kind: super::event::EventKind,
+        event_kind: event::EventKind,
         callback: F,
     ) -> Result<Self> {
         let (callback, rec) = CallbackWrapper::new(callback);

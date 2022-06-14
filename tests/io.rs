@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::Result;
 use visa_rs::{
-    event::{self, Event},
+    enums::event::{self, Event},
     flags::AccessMode,
     DefaultRM, Instrument, VisaString, TIMEOUT_IMMEDIATE,
 };
@@ -54,7 +54,7 @@ fn handler() -> Result<()> {
         let call_back2 = |ins: &Instrument, t: &Event| -> () {
             println!("call2: {:?} {:?}", ins, t);
         };
-        let event = event::EventKind::IoCompletion;
+        let event = event::EventKind::EventIoCompletion;
         let h1 = instr.install_handler(event, call_back1)?;
         let h2 = instr.install_handler(event, call_back2)?;
         instr.enable_event(event, event::Mechanism::Handler)?;

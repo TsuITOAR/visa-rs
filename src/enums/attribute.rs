@@ -104,7 +104,7 @@ pub trait HasAttribute: crate::session::AsRawSs {
     }
 }
 
-impl HasAttribute for crate::event::Event {}
+impl HasAttribute for super::event::Event {}
 impl HasAttribute for crate::Instrument {}
 impl HasAttribute for crate::DefaultRM {}
 
@@ -135,7 +135,6 @@ impl<T: AttrInner> PartialEq<T> for AttrKind {
 mod attributes {
     #![allow(overflowing_literals)]
     use visa_sys as vs;
-    // todo: add description and range check
     consts_to_enum! {
         pub enum AttrKind: u32 {
             VI_ATTR_RSRC_CLASS	0xBFFF0001
