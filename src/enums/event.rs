@@ -35,7 +35,7 @@ VI_ATTR_RECV_TRIG_ID| The identifier of the triggering mechanism on which the sp
 "#
             VI_EVENT_SERVICE_REQ        0x3FFF200B r#"
 This event notifies the application that a service request was received from the device or interface associated with the given session.
-Note: When you receive a VI_EVENT_SERVICE_REQ on an instrument session, you must call viReadSTB() to guarantee delivery of future service request events on the given session.
+*Note*: When you receive a VI_EVENT_SERVICE_REQ on an instrument session, you must call viReadSTB() to guarantee delivery of future service request events on the given session.
 Attribute Name      |	Description
 -------------       | ------------------------------------------
 VI_ATTR_EVENT_TYPE  | Unique logical identifier of the event. This attribute always has the value of VI_EVENT_SERVICE_REQ for this event type.
@@ -47,9 +47,11 @@ Attribute Name      |	Description
 VI_ATTR_EVENT_TYPE  | 	Unique logical identifier of the event.
 "#
             VI_EVENT_EXCEPTION          0xBFFF200E r#"
-This event notifies the application that an error condition has occurred during an operation invocation. In VISA, exceptions are defined as events. The exception-handling model follows the event-handling model for callbacks, and is like any other event in VISA, except that the queueing and suspended handler mechanisms are not allowed.
-A VISA operation generating an exception blocks until the exception handler execution is completed. However, an exception handler sometimes may prefer to terminate the program prematurely without returning the control to the operation generating the exception. VISA does not preclude an application from using a platform-specific or language-specific exception handling mechanism from within the VISA exception handler. For example, the C++ try/catch block can be used in an application in conjunction with the C++ throw mechanism from within the VISA exception handler.
-One situation in which an exception event will not be generated is in the case of asynchronous operations. If the error is detected after the operation is posted—once the asynchronous portion has begun—the status is returned normally via the I/O completion event. However, if an error occurs before the asynchronous portion begins—the error is returned from the asynchronous operation itself—then the exception event will still be raised. This deviation is due to the fact that asynchronous operations already raise an event when they complete, and this I/O completion event may occur in the context of a separate thread previously unknown to the application. In summary, a single application event handler can easily handle error conditions arising from both exception events and failed asynchronous operations.
+This event notifies the application that an error condition has occurred during an operation invocation. In VISA, exceptions are defined as events. The exception-handling model follows the event-handling model for callbacks, and is like any other event in VISA, except that the queueing and suspended handler mechanisms are not allowed.  
+
+A VISA operation generating an exception blocks until the exception handler execution is completed. However, an exception handler sometimes may prefer to terminate the program prematurely without returning the control to the operation generating the exception. VISA does not preclude an application from using a platform-specific or language-specific exception handling mechanism from within the VISA exception handler. For example, the C++ try/catch block can be used in an application in conjunction with the C++ throw mechanism from within the VISA exception handler.  
+
+One situation in which an exception event will not be generated is in the case of asynchronous operations. If the error is detected after the operation is posted—once the asynchronous portion has begun—the status is returned normally via the I/O completion event. However, if an error occurs before the asynchronous portion begins—the error is returned from the asynchronous operation itself—then the exception event will still be raised. This deviation is due to the fact that asynchronous operations already raise an event when they complete, and this I/O completion event may occur in the context of a separate thread previously unknown to the application. In summary, a single application event handler can easily handle error conditions arising from both exception events and failed asynchronous operations.  
 Attribute Name      |	Description
 -------------       | ------------------------------------------
 VI_ATTR_EVENT_TYPE  | 	Unique logical identifier of the event. This attribute always has the value of VI_EVENT_EXCEPTION for this event type.

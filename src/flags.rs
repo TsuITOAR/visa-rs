@@ -17,6 +17,11 @@ impl Default for AccessMode {
 }
 
 bitflags! {
+    ///It is possible to combine any of these read flags and write flags for different buffers by ORing the flags. However, combining two flags for the same buffer in the same call to viFlush() is illegal.  
+    /// 
+    ///Notice that when using formatted I/O operations with a session to a Serial device or Ethernet socket, a flush of the formatted I/O buffers also causes the corresponding I/O communication buffers to be flushed. For example, calling viFlush() with VI_WRITE_BUF also flushes the VI_IO_OUT_BUF.  
+    /// 
+    /// Although you can explicitly flush the buffers by making a call to viFlush(), the buffers are flushed implicitly under some conditions. These conditions vary for the viPrintf() and viScanf() operations.  
     pub struct FlushMode: vs::ViUInt16  {
         const READ_BUF = vs::VI_READ_BUF as _ ;
         const READ_BUF_DISCARD = vs::VI_READ_BUF_DISCARD as _ ;

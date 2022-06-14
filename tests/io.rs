@@ -19,7 +19,7 @@ fn init_logger() {
 #[test]
 fn list_instr() -> Result<()> {
     let rm = DefaultRM::new()?;
-    let mut list = rm.find_res(&CString::new("?*INSTR").unwrap().into())?;
+    let mut list = rm.find_res_list(&CString::new("?*INSTR").unwrap().into())?;
     while let Some(n) = list.find_next()? {
         eprintln!("{}", n);
     }
@@ -29,7 +29,7 @@ fn list_instr() -> Result<()> {
 #[test]
 fn send_idn() -> Result<()> {
     let rm = DefaultRM::new()?;
-    let mut list = rm.find_res(&CString::new("?*KEYSIGH?*INSTR").unwrap().into())?;
+    let mut list = rm.find_res_list(&CString::new("?*KEYSIGH?*INSTR").unwrap().into())?;
     if let Some(n) = list.find_next()? {
         let mut instr = rm.open(&n, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
         instr.write_all(b"*IDN?\n").unwrap();
@@ -45,7 +45,7 @@ fn send_idn() -> Result<()> {
 fn handler() -> Result<()> {
     // tried EventKind::Trig, but not supported by my keysight osc :(
     let rm = DefaultRM::new()?;
-    let mut list = rm.find_res(&CString::new("?*KEYSIGH?*INSTR").unwrap().into())?;
+    let mut list = rm.find_res_list(&CString::new("?*KEYSIGH?*INSTR").unwrap().into())?;
     if let Some(n) = list.find_next()? {
         let instr = rm.open(&n, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
         let call_back1 = |ins: &Instrument, t: &Event| -> () {
@@ -75,7 +75,7 @@ fn handler() -> Result<()> {
 fn async_io() -> Result<()> {
     init_logger();
     let rm = DefaultRM::new()?;
-    let mut list = rm.find_res(&CString::new("?*KEYSIGH?*INSTR").unwrap().into())?;
+    let mut list = rm.find_res_list(&CString::new("?*KEYSIGH?*INSTR").unwrap().into())?;
     if let Some(n) = list.find_next()? {
         log::debug!("connecting to {}", n);
         let instr = rm.open(&n, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;

@@ -19,11 +19,6 @@ use visa_sys as vs;
 
 use super::{Instrument, Result};
 
-fn terminate_async(ss: BorrowedSs<'_>, job_id: JobID) -> Result<()> {
-    wrap_raw_error_in_unsafe!(vs::viTerminate(ss.as_raw_ss(), vs::VI_NULL as _, job_id.0))?;
-    Ok(())
-}
-
 type SyncJobID = Arc<Mutex<Option<JobID>>>;
 
 struct AsyncIoHandler<'b> {
@@ -77,6 +72,10 @@ impl<'b> AsyncIoHandler<'b> {
 
 impl<'b> Drop for AsyncIoHandler<'b> {
     fn drop(&mut self) {
+        fn terminate_async(ss: BorrowedSs<'_>, job_id: JobID) -> Result<()> {
+            wrap_raw_error_in_unsafe!(vs::viTerminate(ss.as_raw_ss(), vs::VI_NULL as _, job_id.0))?;
+            Ok(())
+        }
         // None while not spawned and job finished
         if let Some(job_id) = self.job_id.lock().unwrap().clone() {
             log::info!("terminating unfinished async io, jod id = {}", job_id.0);
