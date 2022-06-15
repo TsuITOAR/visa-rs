@@ -79,6 +79,7 @@ impl PartialEq for DefaultValue {
 impl Eq for DefaultValue {}
 
 impl DefaultValue {
+    #[allow(dead_code)]
     fn source_span(&self) -> Span {
         match self {
             DefaultValue::Num(n) => n.span(),
@@ -232,11 +233,11 @@ impl RangeCore {
                     if let BoundCore::Stream(bounds) = n {
                         init.0.extend(bounds.into_iter());
                         if init.1.as_ref().map(|x| x != &item.default).unwrap_or(false) {
-                            item.default
-                                .source_span()
-                                .unwrap()
-                                .error("defaults of different protocols should be same")
-                                .emit();
+                            /* item.default
+                            .source_span()
+                            .unwrap()
+                            .error("defaults of different protocols should be same")
+                            .emit(); */
                         }
                         init.1.replace(item.default.clone());
                     } else {
@@ -465,7 +466,7 @@ impl BoundItem {
             BoundItem::Single(s) => quote_spanned!(s.span()=>#s as vs::#ty == value),
             BoundItem::Range((l, h)) => {
                 quote_spanned!(
-                    l.span().join(h.span()).unwrap()=>
+                    l.span().join(h.span()).unwrap_or(l.span())=>
                     (#l as vs::#ty <= value && value <= #h as vs::#ty)
                 )
             }
@@ -474,7 +475,7 @@ impl BoundItem {
                 name,
             } => {
                 quote_spanned!(
-                        name.span().join(l.span().join(h.span()).unwrap()).unwrap()=>
+                        name.span().join(l.span().join(h.span()).unwrap_or(l.span())).unwrap_or(name.span())=>
                     (#l as vs::#ty<=value && value<=#h as vs::#ty)
                 )
             }
@@ -559,15 +560,15 @@ impl BoundItem {
                     .into()
                 }
                 (BoundToken::Num(_), BoundToken::Num(_)) => None,
-                other => {
-                    other
-                        .0
-                        .span()
-                        .join(other.1.span())
-                        .unwrap()
-                        .unwrap()
-                        .note(format!("inner error: unexpected pattern: {:?}", other))
-                        .emit();
+                _other => {
+                    /* other
+                    .0
+                    .span()
+                    .join(other.1.span())
+                    .unwrap()
+                    .unwrap()
+                    .note(format!("inner error: unexpected pattern: {:?}", other))
+                    .emit(); */
 
                     None
                 }
@@ -684,7 +685,7 @@ impl ToTokens for BoundToken {
     fn to_tokens(&self, tokens: &mut TokenStream2) {
         match self {
             BoundToken::Ident { id, value } => {
-                let span = id.span().join(value.span()).unwrap();
+                let span = id.span().join(value.span()).unwrap_or(id.span());
                 value
                     .as_ref()
                     .map(|x| quote_spanned!(span=> #x))

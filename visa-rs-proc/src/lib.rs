@@ -1,4 +1,4 @@
-#![feature(proc_macro_diagnostic)]
+//#![feature(proc_macro_diagnostic)]
 use std::str::FromStr;
 
 use proc_macro::TokenStream;
@@ -89,7 +89,7 @@ fn match_tokens(input: ParseStream, str: &str) -> Option<proc_macro2::Span> {
     input.advance_to(&fork);
     let end = input.span();
 
-    return Some(start.join(end).unwrap());
+    return Some(start.join(end).unwrap_or(start));
 }
 mod attrs;
 

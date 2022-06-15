@@ -126,12 +126,12 @@ impl ToTokens for Attributes {
 
 fn match_ident(tar: &Ident, check: &Ident) {
     if check != tar {
-        tar.span().unwrap().help("attribute name must match").emit();
+        /* tar.span().unwrap().help("attribute name must match").emit();
         check
             .span()
             .unwrap()
             .error("attribute name must match")
-            .emit();
+            .emit(); */
     }
 }
 
