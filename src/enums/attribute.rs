@@ -1,7 +1,7 @@
 //! Attributes defined in NI-VISA product doc with NI-VISA specific attributes removed
-//! 
+//!
 //! auto fetched from NI-VISA doc web api and processed by macros
-//! 
+//!
 //! sample of expanded codes
 //!
 //! ```
@@ -141,6 +141,7 @@ mod attributes {
     #![allow(overflowing_literals)]
     use visa_sys as vs;
     consts_to_enum! {
+        #[format=dbg]
         pub enum AttrKind: u32 {
             VI_ATTR_RSRC_CLASS	0xBFFF0001
             VI_ATTR_RSRC_NAME	0xBFFF0002

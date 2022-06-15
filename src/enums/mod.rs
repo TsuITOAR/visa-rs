@@ -1,37 +1,25 @@
 macro_rules! consts_to_enum {
     {
+        #[format=$fmt:ident]
         pub enum $enum_id:ident $(:$align:ty)?{
-            $($status:ident $value:literal $des:literal)*
+            $($status:ident $value:literal $($des:literal)?)*
         }
     } => {
         visa_rs_proc::rusty_ident!{
             consts_to_enum!{
-                @fmt
+                $fmt
                 pub enum $enum_id $(:$align)?{
-                    $($status $value $des)*
+                    $($status $value $($des)?)*
                 }
             }
         }
 
     };
-    {
-        pub enum $enum_id:ident $(:$align:ty)?{
-            $($status:ident $value:literal)*
-        }
-    } => {
-        visa_rs_proc::rusty_ident!{
-            consts_to_enum!{
-                @enum
-                pub enum $enum_id $(:$align)?{
-                    $($status $value)*
-                }
-            }
-        }
-    };
+    
 
-    {   @enum
+    {   dbg
         pub enum $enum_id:ident $(:$align:ty)?{
-            $($status:tt $value:literal $($des:literal)?)*
+            $($status:ident $value:literal $($des:literal)?)*
         }
     } => {
         $(#[repr($align)])?
@@ -45,7 +33,7 @@ macro_rules! consts_to_enum {
 
     };
     {
-        @fmt
+        doc
         pub enum $enum_id:ident $(:$align:ty)?{
             $($status:tt $value:literal $des:literal)*
         }

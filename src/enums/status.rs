@@ -1,12 +1,12 @@
 //! Visa status code and corresponding meaning,
 //! comes from [official NI-visa document](https://www.ni.com/docs/en-US/bundle/ni-visa/page/ni-visa/completion_codes.html),
-//! pdf can download from [here](https://www.ni.com/pdf/manuals/370132c.pdf)
 //!
 pub use completion::CompletionCode;
 pub use error::ErrorCode;
 mod error {
     #![allow(overflowing_literals)]
     consts_to_enum! {
+        #[format=doc]
         pub enum ErrorCode: i32{
             //Completion Codes          Values	    Meaning
             VI_ERROR_SYSTEM_ERROR	    0xBFFF0000	"Unknown system error (miscellaneous error)."
@@ -94,6 +94,7 @@ mod error {
 }
 mod completion {
     consts_to_enum! {
+        #[format=doc]
         pub enum CompletionCode: i32{
             VI_SUCCESS	                0x00000000  "Operation completed successfully."
             VI_SUCCESS_EVENT_EN	        0x3FFF0002	"Specified event is already enabled for at least one of the specified mechanisms."

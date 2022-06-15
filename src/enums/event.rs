@@ -14,6 +14,7 @@ pub use event_kind::*;
 mod event_kind {
     #![allow(overflowing_literals)]
     consts_to_enum! {
+        #[format=dbg]
         pub enum EventKind:u32 {
             VI_EVENT_IO_COMPLETION      0x3FFF2009 r#"
 This event notifies the application that an asynchronous operation has completed.

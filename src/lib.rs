@@ -1,12 +1,11 @@
 //!
 //! high level bind to VISA(Virtual Instrument Software Architecture) library
-//! doc comes from [NI-VISA Product Documentation](https://www.ni.com/docs/en-US/bundle/ni-visa/page/ni-visa/events.html)
-//! 
+//! doc comes from [NI-VISA Product Documentation](https://www.ni.com/docs/en-US/bundle/ni-visa/page/ni-visa/events.html), manual pdf can download from [here](https://www.ni.com/pdf/manuals/370132c.pdf)
+//!
 
-#![feature(cstr_from_bytes_until_nul)]
+use enums::{attribute, event};
 use std::ffi::CStr;
 use std::{borrow::Cow, ffi::CString, fmt::Display, time::Duration};
-use enums::{attribute, event};
 use visa_sys as vs;
 
 pub mod enums;
@@ -51,7 +50,7 @@ macro_rules! impl_session_traits {
 impl_session_traits! { DefaultRM, Instrument}
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
-pub struct Error(enums::status::ErrorCode);
+pub struct Error(pub enums::status::ErrorCode);
 
 impl std::error::Error for Error {}
 
@@ -325,10 +324,19 @@ const fn new_visa_buf() -> VisaBuf {
     [0; vs::VI_FIND_BUFLEN as _]
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct FromBytesWithNulError;
+
 impl TryFrom<[u8; vs::VI_FIND_BUFLEN as _]> for VisaString {
-    type Error = core::ffi::FromBytesUntilNulError;
+    type Error = FromBytesWithNulError;
     fn try_from(f: [u8; vs::VI_FIND_BUFLEN as _]) -> std::result::Result<Self, Self::Error> {
-        Ok(Self(CStr::from_bytes_until_nul(f.as_slice())?.to_owned()))
+        let mut index = f.split_inclusive(|t| *t == b'\0');
+        let cstr = index.next().ok_or(FromBytesWithNulError)?;
+        Ok(Self(
+            CStr::from_bytes_with_nul(cstr)
+                .map_err(|_| FromBytesWithNulError)?
+                .to_owned(),
+        ))
     }
 }
 
@@ -350,7 +358,7 @@ impl Display for VisaString {
     }
 }
 
-///
+/// session to a specified resource
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct Instrument(OwnedSs);
 
