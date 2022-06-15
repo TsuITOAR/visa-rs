@@ -1,10 +1,10 @@
 [package]
 name = "visa-rs-proc"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/TsuITOAR/visa-sys"
-homepage = "https://github.com/TsuITOAR/visa-sys"
+repository = "https://github.com/TsuITOAR/visa-rs"
+homepage = "https://github.com/TsuITOAR/visa-rs"
 description = "procedural macros used in visa-rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
