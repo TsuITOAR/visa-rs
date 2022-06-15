@@ -140,7 +140,6 @@ impl<T: AttrInner> PartialEq<T> for AttrKind {
 mod attributes {
     #![allow(overflowing_literals)]
     use visa_sys as vs;
-    use visa_sys::ViAttr;
     consts_to_enum! {
         #[format=dbg]
         #[repr(ViAttr)]

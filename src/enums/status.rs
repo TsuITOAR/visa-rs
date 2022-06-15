@@ -5,7 +5,6 @@ pub use completion::CompletionCode;
 pub use error::ErrorCode;
 mod error {
     #![allow(overflowing_literals)]
-    use visa_sys::ViStatus;
     consts_to_enum! {
         #[format=doc]
         #[repr(ViStatus)]
@@ -95,7 +94,6 @@ mod error {
     }
 }
 mod completion {
-    use visa_sys::ViStatus;
     consts_to_enum! {
         #[format=doc]
         #[repr(ViStatus)]
