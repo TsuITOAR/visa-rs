@@ -17,9 +17,9 @@ visa-rs-proc = { version = "^0.1", path = "./visa-rs-proc" }
 log = "^0.4"
 
 [dev-dependencies]
-anyhow = "*"
-tokio = { version = "*", features = ["rt-multi-thread"] }
-env_logger = "*"
+anyhow = "^1"
+tokio = { version = "^1", features = ["rt-multi-thread"] }
+env_logger = "^0.9"
 
 
 [patch.crates-io]
