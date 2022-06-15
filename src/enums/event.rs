@@ -1,11 +1,10 @@
 //!
 //! [EventKind] defined in VISA Library 7.1 specification,
 //! corresponding attributes defined in [attribute](super::attribute) mod,
-//! doc from [NI-VISA Product Documentation](https://www.ni.com/docs/en-US/bundle/ni-visa/page/ni-visa/events.html), 
+//! doc from [NI-VISA Product Documentation](https://www.ni.com/docs/en-US/bundle/ni-visa/page/ni-visa/events.html),
 //! with some difference ignored
-//! 
 //!
-
+//!
 
 use visa_sys as vs;
 
@@ -15,7 +14,8 @@ mod event_kind {
     #![allow(overflowing_literals)]
     consts_to_enum! {
         #[format=dbg]
-        pub enum EventKind:u32 {
+        #[repr(ViEventType)]
+        pub enum EventKind {
             VI_EVENT_IO_COMPLETION      0x3FFF2009 r#"
 This event notifies the application that an asynchronous operation has completed.
 Attribute Name      |	Description

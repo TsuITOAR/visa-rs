@@ -2,10 +2,14 @@
 use std::str::FromStr;
 
 use proc_macro::TokenStream;
-use proc_macro2::{TokenStream as TokenStream2, TokenTree};
+use proc_macro2::{Delimiter, TokenStream as TokenStream2, TokenTree};
 use quote::quote;
-use syn::{parse::ParseStream, parse_macro_input, Ident};
+use syn::{
+    parse::{Parse, ParseStream},
+    parse_macro_input, Ident, Path, Result, Token,
+};
 
+mod repr;
 mod rusty_ident;
 
 fn screaming_snake_case_to_pascal_case(input: &str) -> String {
@@ -25,6 +29,12 @@ fn subst_ident(t: Ident) -> Ident {
 #[proc_macro]
 pub fn rusty_ident(input: TokenStream) -> TokenStream {
     let macros = parse_macro_input!(input as rusty_ident::Macros);
+    quote! {#macros}.into()
+}
+
+#[proc_macro]
+pub fn repr(input: TokenStream) -> TokenStream {
+    let macros = parse_macro_input!(input as repr::Input);
     quote! {#macros}.into()
 }
 
@@ -100,4 +110,35 @@ pub fn visa_attrs(input: TokenStream) -> TokenStream {
     let input: TokenStream = input.into();
     let attrs = parse_macro_input!(input as attrs::Attributes);
     quote! {#attrs}.into()
+}
+
+struct OneLayer {
+    mac: Path,
+    _exc: Token![!],
+    body: Body,
+}
+
+impl Parse for OneLayer {
+    fn parse(input: ParseStream) -> Result<Self> {
+        Ok(Self {
+            mac: input.call(Path::parse_mod_style)?,
+            _exc: input.parse()?,
+            body: input.parse()?,
+        })
+    }
+}
+
+struct Body {
+    _delim: Delimiter,
+    content: TokenStream2,
+}
+
+impl Parse for Body {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let g: proc_macro2::Group = input.parse()?;
+        Ok(Self {
+            _delim: g.delimiter(),
+            content: g.stream(),
+        })
+    }
 }

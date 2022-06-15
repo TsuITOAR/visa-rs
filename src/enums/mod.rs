@@ -1,28 +1,33 @@
 macro_rules! consts_to_enum {
     {
         #[format=$fmt:ident]
-        pub enum $enum_id:ident $(:$align:ty)?{
+        $(#[$metas:meta])*
+        pub enum $enum_id:ident{
             $($status:ident $value:literal $($des:literal)?)*
         }
     } => {
         visa_rs_proc::rusty_ident!{
-            consts_to_enum!{
-                $fmt
-                pub enum $enum_id $(:$align)?{
-                    $($status $value $($des)?)*
+            visa_rs_proc::repr!{
+                consts_to_enum!{
+                    $fmt
+                    $(#[$metas])*
+                    pub enum $enum_id{
+                        $($status $value $($des)?)*
+                    }
                 }
             }
         }
 
     };
-    
+
 
     {   dbg
-        pub enum $enum_id:ident $(:$align:ty)?{
+        $(#[$metas:meta])*
+        pub enum $enum_id:ident{
             $($status:ident $value:literal $($des:literal)?)*
         }
     } => {
-        $(#[repr($align)])?
+        $(#[$metas])*
         #[derive(num_enum::TryFromPrimitive,num_enum::IntoPrimitive, Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
         pub enum $enum_id{
             $(
@@ -34,11 +39,12 @@ macro_rules! consts_to_enum {
     };
     {
         doc
-        pub enum $enum_id:ident $(:$align:ty)?{
+        $(#[$metas:meta])*
+        pub enum $enum_id:ident{
             $($status:tt $value:literal $des:literal)*
         }
     } => {
-        $(#[repr($align)])?
+        $(#[$metas])*
         #[derive(num_enum::TryFromPrimitive,num_enum::IntoPrimitive, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
         pub enum $enum_id{
             $(

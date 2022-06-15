@@ -140,9 +140,11 @@ impl<T: AttrInner> PartialEq<T> for AttrKind {
 mod attributes {
     #![allow(overflowing_literals)]
     use visa_sys as vs;
+    use visa_sys::ViAttr;
     consts_to_enum! {
         #[format=dbg]
-        pub enum AttrKind: u32 {
+        #[repr(ViAttr)]
+        pub enum AttrKind{
             VI_ATTR_RSRC_CLASS	0xBFFF0001
             VI_ATTR_RSRC_NAME	0xBFFF0002
             VI_ATTR_RSRC_IMPL_VERSION	0x3FFF0003

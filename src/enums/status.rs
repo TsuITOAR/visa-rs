@@ -5,9 +5,11 @@ pub use completion::CompletionCode;
 pub use error::ErrorCode;
 mod error {
     #![allow(overflowing_literals)]
+    use visa_sys::ViStatus;
     consts_to_enum! {
         #[format=doc]
-        pub enum ErrorCode: i32{
+        #[repr(ViStatus)]
+        pub enum ErrorCode{
             //Completion Codes          Values	    Meaning
             VI_ERROR_SYSTEM_ERROR	    0xBFFF0000	"Unknown system error (miscellaneous error)."
             VI_ERROR_INV_OBJECT	        0xBFFF000E	"The given session or object reference is invalid."
@@ -93,9 +95,11 @@ mod error {
     }
 }
 mod completion {
+    use visa_sys::ViStatus;
     consts_to_enum! {
         #[format=doc]
-        pub enum CompletionCode: i32{
+        #[repr(ViStatus)]
+        pub enum CompletionCode{
             VI_SUCCESS	                0x00000000  "Operation completed successfully."
             VI_SUCCESS_EVENT_EN	        0x3FFF0002	"Specified event is already enabled for at least one of the specified mechanisms."
             VI_SUCCESS_EVENT_DIS	    0x3FFF0003	"Specified event is already disabled for at least one of the specified mechanisms."

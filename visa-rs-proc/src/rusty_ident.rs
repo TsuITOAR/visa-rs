@@ -2,11 +2,13 @@ use proc_macro2::{Delimiter, TokenStream as TokenStream2, TokenTree};
 use quote::ToTokens;
 use syn::{
     parse::{Parse, ParseStream},
-    Ident, Result, Token,
+    Path, Result, Token,
 };
 
+use crate::{Body, OneLayer};
+
 pub struct Macros {
-    inner: Vec<MacroInside>,
+    inner: Vec<NestedMacros>,
 }
 
 impl Parse for Macros {
@@ -25,50 +27,43 @@ impl ToTokens for Macros {
     }
 }
 
-struct MacroInside {
-    mac: Ident,
-    exc: Token![!],
-    body: Body,
+pub struct NestedMacros {
+    pub(crate) macs: Vec<Path>,
+    pub(crate) exc: Token![!],
+    pub(crate) body: Body,
 }
 
-impl Parse for MacroInside {
+impl Parse for NestedMacros {
     fn parse(input: ParseStream) -> Result<Self> {
-        let mac: Ident = input.parse()?;
+        let mac: Path = input.call(Path::parse_mod_style)?;
         let exc = input.parse::<Token![!]>()?;
-        let body: Body = input.parse()?;
-        Ok(Self { mac, exc, body })
+        let mut body: Body = input.parse()?;
+        let mut macs = vec![mac];
+        while let Ok(s) = syn::parse2::<OneLayer>(body.content.clone()) {
+            body = s.body;
+            macs.push(s.mac);
+        }
+        Ok(Self { macs, exc, body })
     }
 }
 
-impl ToTokens for MacroInside {
+impl ToTokens for NestedMacros {
     fn to_tokens(&self, tokens: &mut TokenStream2) {
-        let Self { mac, exc, body } = self;
-        mac.to_tokens(tokens);
-        exc.to_tokens(tokens);
-        body.to_tokens(tokens);
-    }
-}
-
-struct Body {
-    delim: Delimiter,
-    content: TokenStream2,
-}
-
-impl ToTokens for Body {
-    fn to_tokens(&self, tokens: &mut TokenStream2) {
-        let Self { delim, content } = self;
-        let content: TokenStream2 = content.clone().into_iter().map(subst_token_tree).collect();
-        proc_macro2::Group::new(delim.clone(), content).to_tokens(tokens);
-    }
-}
-
-impl Parse for Body {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let g: proc_macro2::Group = input.parse()?;
-        Ok(Self {
-            delim: g.delimiter(),
-            content: g.stream(),
-        })
+        let Self { macs, exc, body } = self;
+        let body = body
+            .content
+            .clone()
+            .into_iter()
+            .map(subst_token_tree)
+            .collect();
+        let mut ret = body;
+        for mac in macs.iter().rev() {
+            let mut m = mac.to_token_stream();
+            exc.to_tokens(&mut m);
+            proc_macro2::Group::new(Delimiter::Brace, ret).to_tokens(&mut m);
+            ret = m;
+        }
+        ret.to_tokens(tokens)
     }
 }
 
