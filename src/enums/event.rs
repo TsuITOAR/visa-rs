@@ -131,22 +131,23 @@ Specifying VI_ALL_ENABLED_EVENTS in viEnableEvent for the eventType parameter re
         }
     }
 }
-
-#[repr(i16)]
-#[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash, Clone, Copy)]
-pub enum Mechanism {
-    Queue = vs::VI_QUEUE as _,
-    Handler = vs::VI_HNDLR as _,
-    SuspendHandler = vs::VI_SUSPEND_HNDLR as _,
-    AllMech = vs::VI_ALL_MECH as _,
+visa_rs_proc::repr! {
+    #[repr(ViUInt16)]
+    #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash, Clone, Copy)]
+    pub enum Mechanism {
+        Queue = vs::VI_QUEUE as _,
+        Handler = vs::VI_HNDLR as _,
+        SuspendHandler = vs::VI_SUSPEND_HNDLR as _,
+        AllMech = vs::VI_ALL_MECH as _,
+    }
 }
-
-#[repr(i16)]
+visa_rs_proc::repr! {
+#[repr(ViEventFilter)]
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash, Clone, Copy)]
 pub enum EventFilter {
     Null = vs::VI_NULL as _,
 }
-
+}
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct Event {
     pub(crate) handler: vs::ViEvent,

@@ -5,33 +5,47 @@ use syn::{parse::Parse, Path, Result, Token};
 use crate::rusty_ident::NestedMacros;
 
 pub struct Input {
-    macs: Vec<Path>,
-    exc: Token![!],
+    macs: Option<Vec<Path>>,
+    exc: Option<Token![!]>,
     inner: AttrProcessed,
 }
 
 impl Parse for Input {
     fn parse(input: syn::parse::ParseStream) -> Result<Self> {
-        let nest_macros: NestedMacros = input.parse()?;
-        Ok(Self {
-            macs: nest_macros.macs,
-            exc: nest_macros.exc,
-            inner: syn::parse2(nest_macros.body.content)?,
-        })
+        let fork = input.fork();
+        if let Ok(_) = fork.parse::<NestedMacros>() {
+            let nest_macros: NestedMacros = input.parse()?;
+            Ok(Self {
+                macs: nest_macros.macs.into(),
+                exc: nest_macros.exc.into(),
+                inner: syn::parse2(nest_macros.body.content)?,
+            })
+        } else {
+            Ok(Self {
+                macs: None,
+                exc: None,
+                inner: input.parse()?,
+            })
+        }
     }
 }
 
 impl ToTokens for Input {
     fn to_tokens(&self, tokens: &mut TokenStream2) {
         let Self { macs, exc, inner } = self;
-        let mut ret = inner.to_token_stream();
-        for mac in macs.iter().rev() {
-            let mut m = mac.to_token_stream();
-            exc.to_tokens(&mut m);
-            proc_macro2::Group::new(Delimiter::Brace, ret).to_tokens(&mut m);
-            ret = m;
+        match (macs, exc) {
+            (Some(macs), Some(exc)) => {
+                let mut ret = inner.to_token_stream();
+                for mac in macs.iter().rev() {
+                    let mut m = mac.to_token_stream();
+                    exc.to_tokens(&mut m);
+                    proc_macro2::Group::new(Delimiter::Brace, ret).to_tokens(&mut m);
+                    ret = m;
+                }
+                ret.to_tokens(tokens)
+            }
+            _ => inner.to_tokens(tokens),
         }
-        ret.to_tokens(tokens)
     }
 }
 
@@ -97,6 +111,8 @@ fn map_to_repr(ty: Ident) -> TokenStream2 {
         unsigned_ty_token::<vs::ViAttr>(ty.span())
     } else if ty == "ViStatus" {
         signed_ty_token::<vs::ViStatus>(ty.span())
+    } else if ty == "ViUInt32" {
+        signed_ty_token::<vs::ViUInt32>(ty.span())
     } else {
         unimplemented!("{}", ty.to_string())
     };
