@@ -154,3 +154,114 @@ fn signed_ty_token<T: Sized>(span: Span) -> Ident {
         unimplemented!()
     }
 }
+
+/// copied from visa-sys. If add visa-sys as a dependency, 
+/// would failed linking when running macros in visa-rs
+mod visa_sys {
+    #![allow(non_camel_case_types)]
+    #![allow(unused)]
+    pub type __builtin_va_list = *mut ::std::os::raw::c_char;
+
+    pub type va_list = __builtin_va_list;
+    pub type __gnuc_va_list = __builtin_va_list;
+    pub type ViUInt64 = ::std::os::raw::c_ulonglong;
+    pub type ViInt64 = ::std::os::raw::c_longlong;
+    pub type ViPUInt64 = *mut ViUInt64;
+    pub type ViAUInt64 = *mut ViUInt64;
+    pub type ViPInt64 = *mut ViInt64;
+    pub type ViAInt64 = *mut ViInt64;
+    pub type ViUInt32 = ::std::os::raw::c_ulong;
+    pub type ViPUInt32 = *mut ViUInt32;
+    pub type ViAUInt32 = *mut ViUInt32;
+    pub type ViInt32 = ::std::os::raw::c_long;
+    pub type ViPInt32 = *mut ViInt32;
+    pub type ViAInt32 = *mut ViInt32;
+    pub type ViUInt16 = ::std::os::raw::c_ushort;
+    pub type ViPUInt16 = *mut ViUInt16;
+    pub type ViAUInt16 = *mut ViUInt16;
+    pub type ViInt16 = ::std::os::raw::c_short;
+    pub type ViPInt16 = *mut ViInt16;
+    pub type ViAInt16 = *mut ViInt16;
+    pub type ViUInt8 = ::std::os::raw::c_uchar;
+    pub type ViPUInt8 = *mut ViUInt8;
+    pub type ViAUInt8 = *mut ViUInt8;
+    pub type ViInt8 = ::std::os::raw::c_schar;
+    pub type ViPInt8 = *mut ViInt8;
+    pub type ViAInt8 = *mut ViInt8;
+    pub type ViChar = ::std::os::raw::c_char;
+    pub type ViPChar = *mut ViChar;
+    pub type ViAChar = *mut ViChar;
+    pub type ViByte = ::std::os::raw::c_uchar;
+    pub type ViPByte = *mut ViByte;
+    pub type ViAByte = *mut ViByte;
+    pub type ViAddr = *mut ::std::os::raw::c_void;
+    pub type ViPAddr = *mut ViAddr;
+    pub type ViAAddr = *mut ViAddr;
+    pub type ViReal32 = f32;
+    pub type ViPReal32 = *mut ViReal32;
+    pub type ViAReal32 = *mut ViReal32;
+    pub type ViReal64 = f64;
+    pub type ViPReal64 = *mut ViReal64;
+    pub type ViAReal64 = *mut ViReal64;
+    pub type ViBuf = ViPByte;
+    pub type ViConstBuf = *const ViByte;
+    pub type ViPBuf = ViPByte;
+    pub type ViABuf = *mut ViPByte;
+    pub type ViString = ViPChar;
+    pub type ViConstString = *const ViChar;
+    pub type ViPString = ViPChar;
+    pub type ViAString = *mut ViPChar;
+    pub type ViRsrc = ViString;
+    pub type ViConstRsrc = ViConstString;
+    pub type ViPRsrc = ViString;
+    pub type ViARsrc = *mut ViString;
+    pub type ViBoolean = ViUInt16;
+    pub type ViPBoolean = *mut ViBoolean;
+    pub type ViABoolean = *mut ViBoolean;
+    pub type ViStatus = ViInt32;
+    pub type ViPStatus = *mut ViStatus;
+    pub type ViAStatus = *mut ViStatus;
+    pub type ViVersion = ViUInt32;
+    pub type ViPVersion = *mut ViVersion;
+    pub type ViAVersion = *mut ViVersion;
+    pub type ViObject = ViUInt32;
+    pub type ViPObject = *mut ViObject;
+    pub type ViAObject = *mut ViObject;
+    pub type ViSession = ViObject;
+    pub type ViPSession = *mut ViSession;
+    pub type ViASession = *mut ViSession;
+    pub type ViAttr = ViUInt32;
+    pub type ViEvent = ViObject;
+    pub type ViPEvent = *mut ViEvent;
+    pub type ViFindList = ViObject;
+    pub type ViPFindList = *mut ViFindList;
+    pub type ViBusAddress = ViUInt64;
+    pub type ViBusSize = ViUInt64;
+    pub type ViAttrState = ViUInt64;
+    pub type ViBusAddress64 = ViUInt64;
+    pub type ViPBusAddress64 = *mut ViBusAddress64;
+    pub type ViEventType = ViUInt32;
+    pub type ViPEventType = *mut ViEventType;
+    pub type ViAEventType = *mut ViEventType;
+    pub type ViPAttrState = *mut ::std::os::raw::c_void;
+    pub type ViPAttr = *mut ViAttr;
+    pub type ViAAttr = *mut ViAttr;
+    pub type ViKeyId = ViString;
+    pub type ViConstKeyId = ViConstString;
+    pub type ViPKeyId = ViPString;
+    pub type ViJobId = ViUInt32;
+    pub type ViPJobId = *mut ViJobId;
+    pub type ViAccessMode = ViUInt32;
+    pub type ViPAccessMode = *mut ViAccessMode;
+    pub type ViPBusAddress = *mut ViBusAddress;
+    pub type ViEventFilter = ViUInt32;
+    pub type ViVAList = va_list;
+    pub type ViHndlr = ::std::option::Option<
+        unsafe extern "C" fn(
+            vi: ViSession,
+            eventType: ViEventType,
+            event: ViEvent,
+            userHandle: ViAddr,
+        ) -> ViStatus,
+    >;
+}
