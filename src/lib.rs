@@ -1,6 +1,6 @@
 //!
 //! high level bind to VISA(Virtual Instrument Software Architecture) library
-//! doc comes from [NI-VISA Product Documentation](https://www.ni.com/docs/en-US/bundle/ni-visa/page/ni-visa/events.html), manual pdf can download from [here](https://www.ni.com/pdf/manuals/370132c.pdf)
+//! doc comes from [NI-VISA Product Documentation](https://www.ni.com/docs/en-US/bundle/ni-visa-20.0/page/ni-visa/help_file_title.html), manual pdf can download from [here](https://www.ni.com/pdf/manuals/370132c.pdf)
 //!
 
 use enums::{attribute, event};

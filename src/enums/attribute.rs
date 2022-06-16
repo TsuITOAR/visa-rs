@@ -1,4 +1,5 @@
-//! Attributes defined in NI-VISA product doc with NI-VISA specific attributes removed
+//! 
+//! Attributes defined in [NI-VISA product doc](https://www.ni.com/docs/en-US/bundle/ni-visa-20.0/page/ni-visa/attributes.html) with NI-VISA specific attributes removed
 //!
 //! auto fetched from NI-VISA doc web api and processed by macros
 //!
