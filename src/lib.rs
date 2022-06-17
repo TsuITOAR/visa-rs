@@ -1,7 +1,30 @@
 //!
-//! high level bind to VISA(Virtual Instrument Software Architecture) library
-//! doc comes from [NI-VISA Product Documentation](https://www.ni.com/docs/en-US/bundle/ni-visa-20.0/page/ni-visa/help_file_title.html), manual pdf can download from [here](https://www.ni.com/pdf/manuals/370132c.pdf)
+//! Safe rust bindings for VISA(Virtual Instrument Software Architecture) library
 //!
+//! Most documentation comes from [NI-VISA Product Documentation](https://www.ni.com/docs/en-US/bundle/ni-visa-20.0/page/ni-visa/help_file_title.html)
+//!
+//! # Requirements
+//! This crate needs to link to an installed visa library, for example, [NI-VISA](https://www.ni.com/en-us/support/downloads/drivers/download.ni-visa.html).
+//!
+//! You can specify path of `visa64.lib` file (or `visa32.lib` on 32-bit systems) by setting environment variable `LIB_VISA_PATH`.
+//!
+//! On Windows, the default installation path will be added if no path is specified.
+//!
+//! # Example
+//! ```
+//! let rm = DefaultRM::new()?; //open default resource manager
+//! let expr = CString::new("?*KEYSIGH?*INSTR").unwrap().into(); //expr used to match resource name
+//! let rsc = rm.find_res(&expr)?; // find the first resource matched
+//! if let Some(rsc) = rsc {
+//!     let mut instr = rm.open(&rsc, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?; //open a session to resource
+//!     instr.write_all(b"*IDN?\n").unwrap(); //write message
+//!     let mut buf_reader = BufReader::new(instr);
+//!     let mut buf = String::new();
+//!     buf_reader.read_line(&mut buf).unwrap(); //read response
+//!     println!("{}", buf);
+//! }
+//! Ok(())
+//! ```
 
 use enums::{attribute, event};
 use std::ffi::CStr;
@@ -87,6 +110,7 @@ impl TryFrom<vs::ViStatus> for Error {
 pub type Result<T> = std::result::Result<T, Error>;
 const SUCCESS: vs::ViStatus = vs::VI_SUCCESS as _;
 
+#[doc(hidden)]
 #[macro_export]
 macro_rules! wrap_raw_error_in_unsafe {
     ($s:expr) => {
@@ -104,7 +128,7 @@ macro_rules! wrap_raw_error_in_unsafe {
 pub struct DefaultRM(session::OwnedSs);
 
 impl DefaultRM {
-    /// returns a session to the Default Resource Manager resource.
+    /// Returns a session to the Default Resource Manager resource.
     ///
     /// The first call to this function initializes the VISA system, including the Default Resource Manager resource, and also returns a session to that resource. Subsequent calls to this function return unique sessions to the same Default Resource Manager resource.
     ///
@@ -284,7 +308,7 @@ impl DefaultRM {
     }
 }
 
-/// returned by [`DefaultRM::find_res_list`], handler to iterator over matched resources
+/// Returned by [`DefaultRM::find_res_list`], handler to iterator over matched resources
 #[derive(Debug)]
 pub struct ResList {
     list: vs::ViFindList,
@@ -310,14 +334,14 @@ impl ResList {
     }
 }
 
-/// simple wrapper of [std::ffi::CString]
+/// Simple wrapper of [std::ffi::CString]
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash, Clone)]
 pub struct VisaString(CString);
 
 /// resource ID
 pub type ResID = VisaString;
 
-/// access key used in [`Instrument::lock`]
+/// Access key used in [`Instrument::lock`]
 pub type AccessKey = VisaString;
 
 impl From<CString> for VisaString {
@@ -334,6 +358,14 @@ const fn new_visa_buf() -> VisaBuf {
 
 #[derive(Debug, Clone, Copy)]
 pub struct FromBytesWithNulError;
+
+impl Display for FromBytesWithNulError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Bytes include none null(\\0) character")
+    }
+}
+
+impl std::error::Error for FromBytesWithNulError {}
 
 impl TryFrom<[u8; vs::VI_FIND_BUFLEN as _]> for VisaString {
     type Error = FromBytesWithNulError;
@@ -366,7 +398,7 @@ impl Display for VisaString {
     }
 }
 
-/// session to a specified resource
+/// Session to a specified resource
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct Instrument(OwnedSs);
 
@@ -731,14 +763,14 @@ impl Instrument {
         Ok(())
     }
     /// Safe rust wrapper of [`Self::visa_read_async`]
-    /// 
+    ///
     /// *Note*: for now this function returns a future holding reference of `buf` and `Self`,
     /// which means it can't be send to another thread
     pub async fn async_read(&self, buf: &mut [u8]) -> Result<usize> {
         async_io::AsyncRead::new(self, buf).await
-    }    
+    }
     /// Safe rust wrapper of [`Self::visa_write_async`]
-    /// 
+    ///
     /// *Note*: for now this function returns a future holding reference of `buf` and `Self`,
     /// which means it can't be send to another thread
     pub async fn async_write(&self, buf: &[u8]) -> Result<usize> {

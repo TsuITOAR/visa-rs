@@ -19,7 +19,7 @@ fn init_logger() {
 #[test]
 fn list_instr() -> Result<()> {
     let rm = DefaultRM::new()?;
-    let mut list = rm.find_res_list(&CString::new("?*INSTR").unwrap().into())?;
+    let mut list = rm.find_res_list(&CString::new("?*INSTR")?.into())?;
     while let Some(n) = list.find_next()? {
         eprintln!("{}", n);
     }
@@ -29,13 +29,13 @@ fn list_instr() -> Result<()> {
 #[test]
 fn send_idn() -> Result<()> {
     let rm = DefaultRM::new()?;
-    let mut list = rm.find_res_list(&CString::new("?*KEYSIGH?*INSTR").unwrap().into())?;
+    let mut list = rm.find_res_list(&CString::new("?*KEYSIGH?*INSTR")?.into())?;
     if let Some(n) = list.find_next()? {
         let mut instr = rm.open(&n, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
-        instr.write_all(b"*IDN?\n").unwrap();
+        instr.write_all(b"*IDN?\n")?;
         let mut buf_reader = BufReader::new(instr);
         let mut buf = String::new();
-        buf_reader.read_line(&mut buf).unwrap();
+        buf_reader.read_line(&mut buf)?;
         eprintln!("{}", buf);
     }
     Ok(())
@@ -45,7 +45,7 @@ fn send_idn() -> Result<()> {
 fn handler() -> Result<()> {
     // tried EventKind::Trig, but not supported by my keysight osc :(
     let rm = DefaultRM::new()?;
-    let mut list = rm.find_res_list(&CString::new("?*KEYSIGH?*INSTR").unwrap().into())?;
+    let mut list = rm.find_res_list(&CString::new("?*KEYSIGH?*INSTR")?.into())?;
     if let Some(n) = list.find_next()? {
         let instr = rm.open(&n, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
         let call_back1 = |ins: &Instrument, t: &Event| -> () {
@@ -75,7 +75,7 @@ fn handler() -> Result<()> {
 fn async_io() -> Result<()> {
     init_logger();
     let rm = DefaultRM::new()?;
-    let mut list = rm.find_res_list(&CString::new("?*KEYSIGH?*INSTR").unwrap().into())?;
+    let mut list = rm.find_res_list(&CString::new("?*KEYSIGH?*INSTR")?.into())?;
     if let Some(n) = list.find_next()? {
         log::debug!("connecting to {}", n);
         let instr = rm.open(&n, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
@@ -84,15 +84,14 @@ fn async_io() -> Result<()> {
             instr.async_write(b"*IDN?\n").await?;
             let mut buf = [0; 256];
             instr.async_read(buf.as_mut_slice()).await?;
-            eprintln!("get response: {}", VisaString::try_from(buf).unwrap());
+            eprintln!("get response: {}", VisaString::try_from(buf)?);
             Result::<()>::Ok(())
         };
         use tokio::runtime::Builder;
         let runtime = Builder::new_multi_thread()
             .worker_threads(2)
             .enable_all()
-            .build()
-            .unwrap();
+            .build()?;
         runtime.block_on(task)?;
     }
     Ok(())
