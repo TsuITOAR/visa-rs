@@ -12,18 +12,21 @@
 //!
 //! # Example
 //! ```
-//! let rm = DefaultRM::new()?; //open default resource manager
-//! let expr = CString::new("?*KEYSIGH?*INSTR").unwrap().into(); //expr used to match resource name
-//! let rsc = rm.find_res(&expr)?; // find the first resource matched
-//! if let Some(rsc) = rsc {
+//! # fn main() -> visa_rs::Result<()>{
+//!     use std::ffi::CString;
+//!     use std::io::{BufRead, BufReader, Read, Write};
+//!     use visa_rs::{flags::AccessMode, DefaultRM, TIMEOUT_IMMEDIATE};
+//!     let rm = DefaultRM::new()?; //open default resource manager
+//!     let expr = CString::new("?*KEYSIGH?*INSTR").unwrap().into(); //expr used to match resource name
+//!     let rsc = rm.find_res(&expr)?; // find the first resource matched
 //!     let mut instr = rm.open(&rsc, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?; //open a session to resource
 //!     instr.write_all(b"*IDN?\n").unwrap(); //write message
 //!     let mut buf_reader = BufReader::new(instr);
 //!     let mut buf = String::new();
 //!     buf_reader.read_line(&mut buf).unwrap(); //read response
-//!     println!("{}", buf);
-//! }
-//! Ok(())
+//!     eprintln!("{}", buf);
+//!     Ok(())
+//! # }
 //! ```
 
 use enums::{attribute, event};
@@ -203,15 +206,21 @@ impl DefaultRM {
     /// Queries a VISA system to locate the resources associated with a specified interface, return the first resource matched
     ///
     pub fn find_res(&self, expr: &ResID) -> Result<ResID> {
+        /*
+        !keysight impl visa will try to write at address vs::VI_NULL, cause exit code: 0xc0000005, STATUS_ACCESS_VIOLATION
         let mut instr_desc = new_visa_buf();
+        let mut cnt: vs::ViUInt32 = 0;
         wrap_raw_error_in_unsafe!(vs::viFindRsrc(
             self.as_raw_ss(),
             expr.as_vi_const_string(),
             vs::VI_NULL as _,
-            vs::VI_NULL as _,
+            &mut cnt as *mut _,
             instr_desc.as_mut_ptr() as _,
         ))?;
         Ok(instr_desc.try_into().unwrap())
+        */
+
+        Ok(self.find_res_list(expr)?.instr_desc.try_into().unwrap())
     }
 
     /// Parse a resource string to get the interface information.
