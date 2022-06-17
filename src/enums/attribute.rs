@@ -1,14 +1,14 @@
-//! 
-//! Attributes defined in [NI-VISA product doc](https://www.ni.com/docs/en-US/bundle/ni-visa-20.0/page/ni-visa/attributes.html) with NI-VISA specific attributes removed
+//! Attributes defined in NI-VISA product doc with NI-VISA specific attributes removed
 //!
 //! auto fetched from NI-VISA doc web api and processed by macros
 //!
 //! sample of expanded codes
 //!
-//! ```
+//! ```ignore
+//! 
 //! #[repr(u32)]
 //! pub enum AttrKind {
-//!     AttrRsrcClass = 0xBFFF0001 as _,
+//!     Attr4882Compliant = 0x3FFF019F as _,
 //! }
 //!
 //! #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
@@ -32,7 +32,7 @@
 //!
 //!     pub fn kind(&self) -> AttrKind {
 //!         match self {
-//!             Self::Attr4882Compliant(s) => super::AttrInner::kind(s),
+//!             Self::Attr4882Compliant(s) => AttrInner::kind(s),
 //!         }
 //!     }
 //!
@@ -54,6 +54,7 @@
 //!         self.value
 //!     }
 //! }
+//! 
 //! impl Attr4882Compliant {
 //!     pub const VI_TRUE: Self = Self { value: 1 as _ };
 //!     pub const VI_FALSE: Self = Self { value: 0 as _ };
@@ -69,8 +70,9 @@
 //!         }
 //!     }
 //! }
-//! impl super::AttrInner for Attr4882Compliant {
-//!     const KIND: AttrKind = AttrKind::Attr4882Compliant
+//! 
+//! impl AttrInner for Attr4882Compliant {
+//!     const KIND: AttrKind = AttrKind::Attr4882Compliant;
 //!     unsafe fn zero() -> Self {
 //!         Self { value: 0 as _ }
 //!     }
@@ -78,8 +80,11 @@
 //!         &mut self.value as *mut _ as _
 //!     }
 //! }
-//! impl Attr4882Compliant {
-//!     
+//! 
+//! impl From<Attr4882Compliant> for Attribute {
+//!     fn from(s: Attr4882Compliant) -> Self {
+//!         Self::Attr4882Compliant(s)
+//!     }
 //! }
 //! ```
 //! TODO: ViString should be replaced by CString
