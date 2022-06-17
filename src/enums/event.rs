@@ -15,9 +15,13 @@ mod event_kind {
     consts_to_enum! {
         #[format=dbg]
         #[repr(ViEventType)]
+        ///
+        /// See [`enable_event`](crate::Instrument::enable_event), [`disable_event`](crate::Instrument::disable_event), [`discard_events`](crate::Instrument::discard_events), [`wait_on_event`](crate::Instrument::wait_on_event), [`install_handler`](crate::Instrument::install_handler)
+        /// 
         pub enum EventKind {
             VI_EVENT_IO_COMPLETION      0x3FFF2009 r#"
 This event notifies the application that an asynchronous operation has completed.
+
 Attribute Name      |	Description
 -------------       | ------------------------------------------
 VI_ATTR_EVENT_TYPE  | Unique logical identifier of the event. This attribute always has the value of VI_EVENT_IO_COMPLETION for this event type.
@@ -29,6 +33,7 @@ VI_ATTR_OPER_NAME   | Contains the name of the operation generating the event.
 "#
             VI_EVENT_TRIG               0xBFFF200A r#"
 This event notifies the application that a trigger interrupt was received from the device. This may be either a hardware or software trigger, depending on the interface and the current session settings.
+
 Attribute Name      |	Description
 -------------       | ------------------------------------------
 VI_ATTR_EVENT_TYPE  | Unique logical identifier of the event. This attribute always has the value of VI_EVENT_TRIG for this event type.
@@ -37,12 +42,14 @@ VI_ATTR_RECV_TRIG_ID| The identifier of the triggering mechanism on which the sp
             VI_EVENT_SERVICE_REQ        0x3FFF200B r#"
 This event notifies the application that a service request was received from the device or interface associated with the given session.
 *Note*: When you receive a VI_EVENT_SERVICE_REQ on an instrument session, you must call viReadSTB() to guarantee delivery of future service request events on the given session.
+
 Attribute Name      |	Description
 -------------       | ------------------------------------------
 VI_ATTR_EVENT_TYPE  | Unique logical identifier of the event. This attribute always has the value of VI_EVENT_SERVICE_REQ for this event type.
 "#
             VI_EVENT_CLEAR              0x3FFF200D r#"
 Notification that the local controller has been sent a device clear message.
+
 Attribute Name      |	Description
 -------------       | ------------------------------------------
 VI_ATTR_EVENT_TYPE  | 	Unique logical identifier of the event.
@@ -53,6 +60,7 @@ This event notifies the application that an error condition has occurred during 
 A VISA operation generating an exception blocks until the exception handler execution is completed. However, an exception handler sometimes may prefer to terminate the program prematurely without returning the control to the operation generating the exception. VISA does not preclude an application from using a platform-specific or language-specific exception handling mechanism from within the VISA exception handler. For example, the C++ try/catch block can be used in an application in conjunction with the C++ throw mechanism from within the VISA exception handler.  
 
 One situation in which an exception event will not be generated is in the case of asynchronous operations. If the error is detected after the operation is posted—once the asynchronous portion has begun—the status is returned normally via the I/O completion event. However, if an error occurs before the asynchronous portion begins—the error is returned from the asynchronous operation itself—then the exception event will still be raised. This deviation is due to the fact that asynchronous operations already raise an event when they complete, and this I/O completion event may occur in the context of a separate thread previously unknown to the application. In summary, a single application event handler can easily handle error conditions arising from both exception events and failed asynchronous operations.  
+
 Attribute Name      |	Description
 -------------       | ------------------------------------------
 VI_ATTR_EVENT_TYPE  | 	Unique logical identifier of the event. This attribute always has the value of VI_EVENT_EXCEPTION for this event type.
@@ -61,6 +69,7 @@ VI_ATTR_OPER_NAME   |   Contains the name of the operation generating the event.
 "#
             VI_EVENT_GPIB_CIC           0x3FFF2012 r#"
 Notification that the GPIB controller has gained or lost CIC (controller in charge) status.
+
 Attribute Name              |	Description
 -------------               | ------------------------------------------
 VI_ATTR_EVENT_TYPE          | 	Unique logical identifier of the event.
@@ -68,30 +77,35 @@ VI_ATTR_GPIB_RECV_CIC_STATE |   Specifies whether the CIC status was gained or l
 "#
             VI_EVENT_GPIB_TALK          0x3FFF2013 r#"
 Notification that the GPIB controller has been addressed to talk.
+
 Attribute Name      |	Description
 -------------       | ------------------------------------------
 VI_ATTR_EVENT_TYPE  | 	Unique logical identifier of the event.
 "#
             VI_EVENT_GPIB_LISTEN        0x3FFF2014 r#"
 Notification that the GPIB controller has been addressed to listen.
+
 Attribute Name      |	Description
 -------------       | ------------------------------------------
 VI_ATTR_EVENT_TYPE  | 	Unique logical identifier of the event.
 "#
             VI_EVENT_VXI_VME_SYSFAIL    0x3FFF201D r#"
 Notification that the VXI/VME SYSFAIL* line has been asserted.
+
 Attribute Name      |	Description
 -------------       | ------------------------------------------
 VI_ATTR_EVENT_TYPE  | 	Unique logical identifier of the event.
 "#
             VI_EVENT_VXI_VME_SYSRESET   0x3FFF201E r#"
 Notification that the VXI/VME SYSRESET* line has been asserted.
+
 Attribute Name      |	Description
 -------------       | ------------------------------------------
 VI_ATTR_EVENT_TYPE  | 	Unique logical identifier of the event.
 "#
             VI_EVENT_VXI_SIGP           0x3FFF2020 r#"
 This event notifies the application that a VXIbus signal or VXIbus interrupt was received from the device associated with the given session.
+
 Attribute Name          |	Description
 -------------           | ------------------------------------------
 VI_ATTR_EVENT_TYPE      | 	Unique logical identifier of the event. This attribute always has the value of VI_EVENT_VXI_SIGP for this event type.
@@ -99,6 +113,7 @@ VI_ATTR_SIGP_STATUS_ID  |   The 16-bit Status/ID value retrieved during the IACK
 "#
             VI_EVENT_VXI_VME_INTR       0xBFFF2021 r#"
 This event notifies the application that a VXIbus interrupt was received from the device associated with the given session.
+
 Attribute Name          |	Description
 -------------           | ------------------------------------------
 VI_ATTR_EVENT_TYPE      | 	Unique logical identifier of the event. This attribute always has the value of VI_EVENT_VXI_VME_INTR for this event type.
@@ -107,6 +122,7 @@ VI_ATTR_RECV_INTR_LEVEL |   The VXI interrupt level on which the interrupt was r
 "#
             VI_EVENT_PXI_INTR           0x3FFF2022 r#"
 This event notifies that a PXI interrupt has occurred.
+
 Attribute Name              |	Description
 -------------               | ------------------------------------------
 VI_ATTR_EVENT_TYPE          | 	Unique logical identifier of the event.
@@ -118,6 +134,7 @@ VI_ATTR_PXI_RECV_INTR_DATA  |   The first PXI/PCI register that was read in the 
 "#
             VI_EVENT_USB_INTR           0x3FFF2037 r#"
 This event notifies that a USB interrupt has occurred.
+
 Attribute Name              |	Description
 -------------               | ------------------------------------------
 VI_ATTR_EVENT_TYPE          | Unique logical identifier of the event.
@@ -134,6 +151,7 @@ Specifying VI_ALL_ENABLED_EVENTS in viEnableEvent for the eventType parameter re
 visa_rs_proc::repr! {
     #[repr(ViUInt16)]
     #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash, Clone, Copy)]
+    /// See [`enable_event`](crate::Instrument::enable_event), [`disable_event`](crate::Instrument::disable_event), [`discard_events`](crate::Instrument::discard_events) 
     pub enum Mechanism {
         Queue = vs::VI_QUEUE as _,
         Handler = vs::VI_HNDLR as _,
@@ -142,12 +160,19 @@ visa_rs_proc::repr! {
     }
 }
 visa_rs_proc::repr! {
-#[repr(ViEventFilter)]
-#[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash, Clone, Copy)]
-pub enum EventFilter {
-    Null = vs::VI_NULL as _,
+    #[repr(ViEventFilter)]
+    #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash, Clone, Copy)]
+    /// Not used in current VISA specification
+    pub enum EventFilter {
+        Null = vs::VI_NULL as _,
+    }
 }
-}
+
+///
+/// A visa event, containing an [`EventKind`] and a handle specifying the unique occurrence of an event.
+///
+/// See [`wait_on_event`](crate::Instrument::wait_on_event) and [`Callback`](crate::handler::Callback)
+///
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct Event {
     pub(crate) handler: vs::ViEvent,

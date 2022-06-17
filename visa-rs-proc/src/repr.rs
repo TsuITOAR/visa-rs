@@ -77,22 +77,25 @@ fn extract_repr_attribute(
 ) -> Result<Option<Ident>> {
     let fork = input.fork();
     use syn::parse::discouraged::Speculative;
+    let mut ret = None;
     if fork.peek(Token![#]) {
         if let Ok(attr) = fork.call(syn::Attribute::parse_outer) {
-            for a in attr {
+            let mut iter = attr.into_iter();
+            for a in &mut iter {
                 if a.path.is_ident("repr") {
                     input.advance_to(&fork);
                     let group: proc_macro2::Group = syn::parse2(a.tokens)?;
-
-                    return Ok(Some(syn::parse2(group.stream())?));
+                    ret = Some(syn::parse2(group.stream())?);
+                    break;
                 } else {
                     a.to_tokens(tokens);
                 }
             }
+            iter.for_each(|a| a.to_tokens(tokens));
+            input.advance_to(&fork);
         }
     }
-    input.advance_to(&fork);
-    Ok(None)
+    Ok(ret)
 }
 
 fn map_to_repr(ty: Ident) -> TokenStream2 {
@@ -155,7 +158,7 @@ fn signed_ty_token<T: Sized>(span: Span) -> Ident {
     }
 }
 
-/// copied from visa-sys. If add visa-sys as a dependency, 
+/// copied from visa-sys. If add visa-sys as a dependency,
 /// would failed linking when running macros in visa-rs
 mod visa_sys {
     #![allow(non_camel_case_types)]

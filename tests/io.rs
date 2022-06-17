@@ -58,12 +58,12 @@ fn handler() -> Result<()> {
         let h1 = instr.install_handler(event, call_back1)?;
         let h2 = instr.install_handler(event, call_back2)?;
         instr.enable_event(event, event::Mechanism::Handler)?;
-        (&instr).visa_write_async(b"*IDN?\n")?;
+        unsafe { (&instr).visa_write_async(b"*IDN?\n")? };
         h1.receiver().recv()?;
         h2.receiver().recv()?;
         h1.uninstall();
         let mut v = vec![0u8; 256];
-        (&instr).visa_read_async(&mut v)?;
+        unsafe { (&instr).visa_read_async(&mut v)? };
         eprintln!("{}", String::from_utf8_lossy(v.as_ref()));
         h2.receiver().recv()?;
         eprintln!("{}", String::from_utf8_lossy(v.as_ref()))

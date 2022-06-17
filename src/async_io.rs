@@ -83,16 +83,15 @@ impl<'b> Drop for AsyncIoHandler<'b> {
                 log::warn!("terminating async io: {}", e)
             };
         }
-        #[allow(unused_unsafe)]
+        if let Err(e) = wrap_raw_error_in_unsafe!(vs::viUninstallHandler(
+            self.instr.as_raw_ss(),
+            event::EventKind::EventIoCompletion as _,
+            Some(AsyncIoCallbackPack::call_in_c),
+            self.callback.as_ptr() as _,
+        )) {
+            log::warn!("uninstalling handler: {}", e)
+        };
         unsafe {
-            if let Err(e) = wrap_raw_error_in_unsafe!(vs::viUninstallHandler(
-                self.instr.as_raw_ss(),
-                event::EventKind::EventIoCompletion as _,
-                Some(AsyncIoCallbackPack::call_in_c),
-                self.callback.as_ptr() as _,
-            )) {
-                log::warn!("uninstalling handler: {}", e)
-            };
             Box::from_raw(self.callback.as_ptr());
         }
     }
@@ -200,7 +199,7 @@ impl<'a> Future for AsyncRead<'a> {
                     log::trace!("initializing async read");
                     let handler =
                         AsyncIoHandler::new(self_mut.ss, Arc::new(Mutex::new(cx.waker().clone())))?;
-                    handler.set_job_id(self_mut.ss.visa_read_async(self_mut.buf)?);
+                    handler.set_job_id(unsafe { self_mut.ss.visa_read_async(self_mut.buf)? });
                     *a = Some(handler);
                     log::trace!("initialized");
                 }
@@ -254,7 +253,7 @@ impl<'a> Future for AsyncWrite<'a> {
                     log::trace!("initializing async read");
                     let handler =
                         AsyncIoHandler::new(self_mut.ss, Arc::new(Mutex::new(cx.waker().clone())))?;
-                    handler.set_job_id(self_mut.ss.visa_write_async(self_mut.buf)?);
+                    handler.set_job_id(unsafe { self_mut.ss.visa_write_async(self_mut.buf)? });
                     *a = Some(handler);
                     log::trace!("initialized");
                 }

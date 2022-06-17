@@ -1,3 +1,5 @@
+//! Defines [visa attributes](attribute), [visa status](status) and [visa event](event) as Rust enums
+
 macro_rules! consts_to_enum {
     {
         #[format=$fmt:ident]

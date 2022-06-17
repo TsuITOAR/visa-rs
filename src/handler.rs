@@ -1,3 +1,10 @@
+//!
+//! Defines [`Callback`] trait used in [`Instrument::install_handler`](crate::Instrument::install_handler),
+//! which returns a [`Handler`] to manage lifetime of data passed
+//!
+//!
+//!
+
 use std::{
     ptr::NonNull,
     sync::mpsc::{Receiver, Sender},
@@ -10,6 +17,7 @@ use crate::{
     Instrument, Result, SUCCESS,
 };
 
+/// Defines a ability to be passed to [`Instrument::install_handler`](crate::Instrument::install_handler)
 pub trait Callback {
     type Output;
     fn call(&mut self, instr: &Instrument, event: &event::Event) -> Self::Output;
@@ -96,6 +104,9 @@ impl<F: Callback> CallbackWrapper<F> {
     }
 }
 
+/// Lifetime manager for [`Callback`], will uninstall the callback when dropped.
+///
+/// Internally hold a [`Receiver`](::std::sync::mpsc::Receiver) (accessed by [`Self::receiver`]) to receive output of callback from visa.
 pub struct Handler<'b, F: Callback> {
     instr: BorrowedSs<'b>,
     rec: Receiver<F::Output>,

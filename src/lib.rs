@@ -258,7 +258,11 @@ impl DefaultRM {
     ///
     /// Opens a session to the specified resource.
     ///
-    /// For the parameter accessMode, the value VI_EXCLUSIVE_LOCK (1) is used to acquire an exclusive lock immediately upon opening a session; if a lock cannot be acquired, the session is closed and an error is returned. The value VI_LOAD_CONFIG (4) is used to configure attributes to values specified by some external configuration utility. Multiple access modes can be used simultaneously by specifying a bit-wise OR of the values other than VI_NULL.
+    /// For the parameter accessMode, either VI_EXCLUSIVE_LOCK (1) or VI_SHARED_LOCK (2).
+    ///
+    /// VI_EXCLUSIVE_LOCK (1) is used to acquire an exclusive lock immediately upon opening a session; if a lock cannot be acquired, the session is closed and an error is returned.
+    ///
+    /// VI_LOAD_CONFIG (4) is used to configure attributes to values specified by some external configuration utility. Multiple access modes can be used simultaneously by specifying a bit-wise OR of the values other than VI_NULL.
     ///
     ///  NI-VISA currently supports VI_LOAD_CONFIG only on Serial INSTR sessions.
     ///
@@ -306,10 +310,14 @@ impl ResList {
     }
 }
 
+/// simple wrapper of [std::ffi::CString]
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash, Clone)]
 pub struct VisaString(CString);
 
+/// resource ID
 pub type ResID = VisaString;
+
+/// access key used in [`Instrument::lock`]
 pub type AccessKey = VisaString;
 
 impl From<CString> for VisaString {
@@ -670,9 +678,13 @@ impl Instrument {
     ///The operation returns jobId, which you can use with either viTerminate() to abort the operation, or with an I/O completion event to identify which asynchronous read operation completed. VISA will never return VI_NULL for a valid jobID.
     ///
     /// If you have enabled VI_EVENT_IO_COMPLETION for queueing (VI_QUEUE), for each successful call to viReadAsync(), you must call viWaitOnEvent() to retrieve the I/O completion event. This is true even if the I/O is done synchronously (that is, if the operation returns VI_SUCCESS_SYNC).
+    /// # Safety
+    /// This function is unsafe because the `buf` passed in may be dropped before the transfer terminates
+    ///
 
-    pub fn visa_read_async(&self, buf: &mut [u8]) -> Result<JobID> {
+    pub unsafe fn visa_read_async(&self, buf: &mut [u8]) -> Result<JobID> {
         let mut id: vs::ViJobId = 0;
+        #[allow(unused_unsafe)]
         wrap_raw_error_in_unsafe!(vs::viReadAsync(
             self.as_raw_ss(),
             buf.as_mut_ptr(),
@@ -689,8 +701,12 @@ impl Instrument {
     ///The operation returns a job identifier that you can use with either viTerminate() to abort the operation or with an I/O completion event to identify which asynchronous write operation completed. VISA will never return VI_NULL for a valid jobId.
     ///
     /// If you have enabled VI_EVENT_IO_COMPLETION for queueing (VI_QUEUE), for each successful call to viWriteAsync(), you must call viWaitOnEvent() to retrieve the I/O completion event. This is true even if the I/O is done synchronously (that is, if the operation returns VI_SUCCESS_SYNC).
-    pub fn visa_write_async(&self, buf: &[u8]) -> Result<JobID> {
+    ///
+    /// # Safety
+    /// This function is unsafe because the `buf` passed in may be dropped before the transfer terminates
+    pub unsafe fn visa_write_async(&self, buf: &[u8]) -> Result<JobID> {
         let mut id: vs::ViJobId = 0;
+        #[allow(unused_unsafe)]
         wrap_raw_error_in_unsafe!(vs::viWriteAsync(
             self.as_raw_ss(),
             buf.as_ptr(),
@@ -714,16 +730,25 @@ impl Instrument {
         ))?;
         Ok(())
     }
-
+    /// Safe rust wrapper of [`Self::visa_read_async`]
+    /// 
+    /// *Note*: for now this function returns a future holding reference of `buf` and `Self`,
+    /// which means it can't be send to another thread
     pub async fn async_read(&self, buf: &mut [u8]) -> Result<usize> {
         async_io::AsyncRead::new(self, buf).await
-    }
-
+    }    
+    /// Safe rust wrapper of [`Self::visa_write_async`]
+    /// 
+    /// *Note*: for now this function returns a future holding reference of `buf` and `Self`,
+    /// which means it can't be send to another thread
     pub async fn async_write(&self, buf: &[u8]) -> Result<usize> {
         async_io::AsyncWrite::new(self, buf).await
     }
 }
 
+/// Job ID of a asynchronous operation,
+///
+/// Returned by [`Instrument::visa_read_async`] or [`Instrument::visa_write_async`], to compare with the attribute [AttrJobId](enums::attribute::AttrJobId) get from [Event](enums::event::Event) to distinguish operations
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash, Clone, Copy)]
 pub struct JobID(vs::ViJobId);
 
@@ -731,5 +756,17 @@ impl JobID {
     ///create JobId with value null, used in [`Instrument::terminate`] to abort all calls
     pub fn null() -> Self {
         Self(vs::VI_NULL as _)
+    }
+}
+
+impl From<enums::attribute::AttrJobId> for JobID {
+    fn from(s: enums::attribute::AttrJobId) -> Self {
+        Self(s.into_inner())
+    }
+}
+
+impl PartialEq<enums::attribute::AttrJobId> for JobID {
+    fn eq(&self, other: &enums::attribute::AttrJobId) -> bool {
+        self.eq(&JobID::from(other.clone()))
     }
 }
