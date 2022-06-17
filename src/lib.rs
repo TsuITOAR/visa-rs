@@ -583,7 +583,7 @@ impl Instrument {
     }
 
     ///Relinquishes a lock for the specified resource.
-    pub fn unlock(&mut self) -> Result<()> {
+    pub fn unlock(&self) -> Result<()> {
         wrap_raw_error_in_unsafe!(vs::viUnlock(self.as_raw_ss()))?;
         Ok(())
     }
