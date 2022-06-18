@@ -124,7 +124,7 @@ impl AsyncIoCallbackPack {
             );
             let waited_id = s.job_id.lock().unwrap();
             match *waited_id {
-                None => Ok(false),
+                None => Ok(false),//TODO: check if return SUCCESS_SYNC, if so, wait until job id set and then compare
                 Some(x) => Ok(x == JobID(attribute::AttrJobId::get_from(event)?.into_inner())),
             }
         }

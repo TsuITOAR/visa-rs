@@ -733,8 +733,8 @@ impl Instrument {
     /// If you have enabled VI_EVENT_IO_COMPLETION for queueing (VI_QUEUE), for each successful call to viReadAsync(), you must call viWaitOnEvent() to retrieve the I/O completion event. This is true even if the I/O is done synchronously (that is, if the operation returns VI_SUCCESS_SYNC).
     /// # Safety
     /// This function is unsafe because the `buf` passed in may be dropped before the transfer terminates
-    ///
 
+    //todo: return VI_SUCCESS_SYNC, means IO operation has finished, so if there is a waker receiving JobID, would be called before JobID set and can't wake corresponding job
     pub unsafe fn visa_read_async(&self, buf: &mut [u8]) -> Result<JobID> {
         let mut id: vs::ViJobId = 0;
         #[allow(unused_unsafe)]
@@ -757,6 +757,9 @@ impl Instrument {
     ///
     /// # Safety
     /// This function is unsafe because the `buf` passed in may be dropped before the transfer terminates
+    
+    //todo: return VI_SUCCESS_SYNC, means IO operation has finished, so if there is a waker receiving JobID, would be called before JobID set and can't wake corresponding job
+
     pub unsafe fn visa_write_async(&self, buf: &[u8]) -> Result<JobID> {
         let mut id: vs::ViJobId = 0;
         #[allow(unused_unsafe)]
