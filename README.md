@@ -1,4 +1,4 @@
-# visa-rs
+﻿# visa-rs
 
 
 Safe rust bindings for VISA(Virtual Instrument Software Architecture) library

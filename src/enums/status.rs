@@ -121,3 +121,15 @@ mod completion {
         }
     }
 }
+
+impl TryFrom<super::attribute::AttrStatus> for CompletionCode {
+    type Error = ErrorCode;
+    fn try_from(value: super::attribute::AttrStatus) -> Result<Self, Self::Error> {
+        let status = value.into_inner();
+        if let Ok(o) = Self::try_from(status) {
+            Ok(o)
+        } else {
+            Err(ErrorCode::try_from(status).unwrap())
+        }
+    }
+}

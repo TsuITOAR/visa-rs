@@ -5,7 +5,7 @@
 //! sample of expanded codes
 //!
 //! ```ignore
-//! 
+//!
 //! #[repr(u32)]
 //! pub enum AttrKind {
 //!     Attr4882Compliant = 0x3FFF019F as _,
@@ -54,7 +54,7 @@
 //!         self.value
 //!     }
 //! }
-//! 
+//!
 //! impl Attr4882Compliant {
 //!     pub const VI_TRUE: Self = Self { value: 1 as _ };
 //!     pub const VI_FALSE: Self = Self { value: 0 as _ };
@@ -70,7 +70,7 @@
 //!         }
 //!     }
 //! }
-//! 
+//!
 //! impl AttrInner for Attr4882Compliant {
 //!     const KIND: AttrKind = AttrKind::Attr4882Compliant;
 //!     unsafe fn zero() -> Self {
@@ -80,14 +80,13 @@
 //!         &mut self.value as *mut _ as _
 //!     }
 //! }
-//! 
+//!
 //! impl From<Attr4882Compliant> for Attribute {
 //!     fn from(s: Attr4882Compliant) -> Self {
 //!         Self::Attr4882Compliant(s)
 //!     }
 //! }
 //! ```
-//! TODO: ViString should be replaced by CString
 
 use crate::{wrap_raw_error_in_unsafe, Result};
 
@@ -904,5 +903,85 @@ mod attributes {
             (Read/Write Global) ( ViInt16) [static as N/A in VI_ASRL_WIRE_485_4 (0) VI_ASRL_WIRE_485_2_DTR_ECHO (1) VI_ASRL_WIRE_485_2_DTR_CTRL (2) VI_ASRL_WIRE_485_2_AUTO (3) VI_ASRL_WIRE_232_DTE (128) VI_ASRL_WIRE_232_DCE (129) VI_ASRL_WIRE_232_AUTO (130) VI_STATE_UNKNOWN (-1)]
             */
         }
+    }
+
+    macro_rules! vi_string_attrs {
+        (
+            $(
+                const $attr_id:ident: $desc:literal
+                (Read Only $($g:tt)?) ( ViString) [static as N/A in N/A]
+            )*
+        ) => {
+            visa_rs_proc::rusty_ident!{
+                vi_string_attrs!{@inner
+                    $(
+                        const $attr_id: $desc
+                        (Read Only $($g)?) ( ViString) [static as N/A in N/A]
+                    )*
+                }
+            }
+        };
+        (@inner
+            $(
+                const $attr_id:ident: $desc:literal
+                (Read Only $($g:tt)?) ( ViString) [static as N/A in N/A]
+            )*
+        ) => {
+                $(
+                    #[doc=$desc]
+                    #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+                    pub struct $attr_id{
+                        value:$crate::VisaBuf
+                    }
+                    impl $attr_id{
+                        pub fn into_inner(self)->$crate::VisaString{
+                            self.value.try_into().unwrap()
+                        }
+                    }
+                    impl super::AttrInner for $attr_id{
+                        const KIND:AttrKind=AttrKind::$attr_id;
+                        unsafe fn zero()->Self{
+                            Self{value: crate::new_visa_buf()}
+                        }
+                        fn mut_c_void(&mut self) -> *mut ::std::ffi::c_void {
+                            self.value.as_mut_ptr() as _
+                        }
+                    }
+                )*
+        };
+    }
+    vi_string_attrs! {
+            const VI_ATTR_INTF_INST_NAME: r#"VI_ATTR_INTF_INST_NAME specifies human-readable text that describes the given interface."#
+            (Read Only Global) ( ViString) [static as N/A in N/A]
+
+            const VI_ATTR_MANF_NAME: r#"This string attribute is the manufacturer name."#
+            (Read Only Global) ( ViString) [static as N/A in N/A]
+
+            const VI_ATTR_MODEL_NAME: r#"This string attribute is the model name of the device."#
+            (Read Only Global) ( ViString) [static as N/A in N/A]
+
+            const VI_ATTR_OPER_NAME: r#"VI_ATTR_OPER_NAME contains the name of the operation generating this event."#
+            (Read Only) ( ViString) [static as N/A in N/A]
+
+            const VI_ATTR_PXI_SLOTPATH: r#"VI_ATTR_PXI_SLOTPATH specifies the slot path of this device. The purpose of a PXI slot path is to describe the PCI bus hierarchy in a manner independent of the PCI bus number. PXI slot paths are a sequence of values representing the PCI device number and function number of a PCI module and each parent PCI bridge that routes the module to the host PCI bridge (bus 0). Each value is represented as " dev[.func] ", where the function number is listed only if it is non-zero. When a PXI slot path includes multiple values, the values are comma-separated. The string format of the attribute value looks like this: device1[.function1][,device2[.function2]][,...] An example string is " 5.1,12,8 ". In this case, there is a PCI-to-PCI bridge on device 8 on the root bus. On its secondary bus, there is another PCI-to-PCI bridge on device 12. On its secondary bus, there is an instrument on device 5, function 1. The example string value describes this instrument's slot path."#
+            (Read Only Global) ( ViString) [static as N/A in N/A]
+
+            const VI_ATTR_RSRC_CLASS: r#"VI_ATTR_RSRC_CLASS specifies the resource class (for example, "INSTR") as defined by the canonical resource name."#
+            (Read Only Global) ( ViString) [static as N/A in N/A]
+
+            const VI_ATTR_RSRC_MANF_NAME: r#"VI_ATTR_RSRC_MANF_NAME is a string that corresponds to the manufacturer name of the vendor that implemented the VISA library. This attribute is not related to the device manufacturer attributes."#
+            (Read Only Global) ( ViString) [static as N/A in N/A]
+
+            const VI_ATTR_TCPIP_ADDR: r#"This is the TCPIP address of the device to which the session is connected. This string is formatted in dot notation."#
+            (Read Only Global) ( ViString) [static as N/A in N/A]
+
+            const VI_ATTR_TCPIP_DEVICE_NAME: r#"This specifies the LAN device name used by the VXI-11 or LXI protocol during connection."#
+            (Read Only Global) ( ViString) [static as N/A in N/A]
+
+            const VI_ATTR_TCPIP_HOSTNAME: r#"This specifies the host name of the device. If no host name is available, this attribute returns an empty string."#
+            (Read Only Global) ( ViString) [static as N/A in N/A]
+
+            const VI_ATTR_USB_SERIAL_NUM: r#"VI_ATTR_USB_SERIAL_NUM specifies the USB serial number of this device."#
+            (Read Only Global) ( ViString) [static as N/A in N/A]
     }
 }

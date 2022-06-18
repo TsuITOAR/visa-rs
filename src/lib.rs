@@ -111,6 +111,16 @@ impl TryFrom<vs::ViStatus> for Error {
     }
 }
 pub type Result<T> = std::result::Result<T, Error>;
+
+impl From<enums::attribute::AttrStatus> for Result<enums::status::CompletionCode> {
+    fn from(a: enums::attribute::AttrStatus) -> Self {
+        match a.into_inner() {
+            state if state >= SUCCESS => Ok(state.try_into().unwrap()),
+            e => Err(e.try_into().unwrap()),
+        }
+    }
+}
+
 const SUCCESS: vs::ViStatus = vs::VI_SUCCESS as _;
 
 #[doc(hidden)]
@@ -118,10 +128,12 @@ const SUCCESS: vs::ViStatus = vs::VI_SUCCESS as _;
 macro_rules! wrap_raw_error_in_unsafe {
     ($s:expr) => {
         match unsafe { $s } {
-            state if state >= $crate::SUCCESS => {
-                Result::<$crate::enums::status::CompletionCode>::Ok(state.try_into().unwrap())
+            state if state >= $crate::SUCCESS => $crate::Result::<
+                $crate::enums::status::CompletionCode,
+            >::Ok(state.try_into().unwrap()),
+            e => {
+                $crate::Result::<$crate::enums::status::CompletionCode>::Err(e.try_into().unwrap())
             }
-            e => Result::<$crate::enums::status::CompletionCode>::Err(e.try_into().unwrap()),
         }
     };
 }
