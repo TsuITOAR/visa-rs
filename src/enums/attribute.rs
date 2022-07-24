@@ -931,7 +931,7 @@ mod attributes {
                     #[doc=$desc]
                     #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
                     pub struct $attr_id{
-                        value:$crate::VisaBuf
+                        value: $crate::VisaBuf
                     }
                     impl $attr_id{
                         pub fn into_inner(self)->$crate::VisaString{
@@ -941,7 +941,7 @@ mod attributes {
                     impl super::AttrInner for $attr_id{
                         const KIND:AttrKind=AttrKind::$attr_id;
                         unsafe fn zero()->Self{
-                            Self{value: crate::new_visa_buf()}
+                            Self{value: $crate::new_visa_buf()}
                         }
                         fn mut_c_void(&mut self) -> *mut ::std::ffi::c_void {
                             self.value.as_mut_ptr() as _
