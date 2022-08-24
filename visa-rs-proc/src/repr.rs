@@ -260,7 +260,7 @@ mod visa_sys {
     pub type ViEventFilter = ViUInt32;
     pub type ViVAList = va_list;
     pub type ViHndlr = ::std::option::Option<
-        unsafe extern "C" fn(
+        unsafe extern "system" fn(
             vi: ViSession,
             eventType: ViEventType,
             event: ViEvent,

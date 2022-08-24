@@ -151,7 +151,7 @@ impl AsyncIoCallbackPack {
         vs::VI_SUCCESS_NCHAIN as _
         //Normally, an application should always return VI_SUCCESS from all callback handlers. If a specific handler does not want other handlers to be invoked for the given event for the given session, it should return VI_SUCCESS_NCHAIN. No return value from a handler on one session will affect callbacks on other sessions. Future versions of VISA (or specific implementations of VISA) may take actions based on other return values, so a user should return VI_SUCCESS from handlers unless there is a specific reason to do otherwise.
     }
-    unsafe extern "C" fn call_in_c(
+    unsafe extern "system" fn call_in_c(
         instr: vs::ViSession,
         event_type: vs::ViEventType,
         event: vs::ViEvent,

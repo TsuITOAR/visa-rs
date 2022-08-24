@@ -55,7 +55,7 @@ impl<F: Callback> CallbackPack<F> {
 struct CallbackWrapper<F: Callback> {
     f: NonNull<CallbackPack<F>>,
     //? not sure if reproduce from F would get the same fn pointer, so better hold it
-    hold: unsafe extern "C" fn(
+    hold: unsafe extern "system" fn(
         vs::ViSession,
         vs::ViEventType,
         vs::ViEvent,
@@ -66,7 +66,7 @@ fn split_pack<C: Callback>(
     pack: CallbackPack<C>,
 ) -> (
     std::ptr::NonNull<CallbackPack<C>>,
-    unsafe extern "C" fn(
+    unsafe extern "system" fn(
         vs::ViSession,
         vs::ViEventType,
         vs::ViEvent,
@@ -75,7 +75,7 @@ fn split_pack<C: Callback>(
 ) {
     use std::ffi::c_void;
     let data = Box::into_raw(Box::new(pack));
-    unsafe extern "C" fn trampoline<T: Callback>(
+    unsafe extern "system" fn trampoline<T: Callback>(
         instr: vs::ViSession,
         event_type: vs::ViEventType,
         event: vs::ViEvent,
