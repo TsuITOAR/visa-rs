@@ -145,7 +145,7 @@ impl<'b, F: Callback> Drop for Handler<'b, F> {
                 Some(self.callback.hold),
                 self.callback.f.as_ptr() as _,
             );
-            Box::from_raw(self.callback.f.as_ptr());
+            drop(Box::from_raw(self.callback.f.as_ptr()));
         }
     }
 }

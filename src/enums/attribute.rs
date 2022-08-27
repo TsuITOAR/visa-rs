@@ -144,6 +144,8 @@ impl<T: AttrInner> PartialEq<T> for AttrKind {
 
 mod attributes {
     #![allow(overflowing_literals)]
+    #![allow(clippy::zero_prefixed_literal)]
+    #![allow(clippy::missing_safety_doc)]
     use visa_sys as vs;
     consts_to_enum! {
         #[format=dbg]

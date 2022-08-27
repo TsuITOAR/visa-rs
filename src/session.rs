@@ -35,7 +35,7 @@ impl BorrowedSs<'_> {
     }
 }
 
-///	A trait to extract the raw visa session from an underlying object.
+///    A trait to extract the raw visa session from an underlying object.
 pub trait AsRawSs {
     fn as_raw_ss(&self) -> RawSs;
 }

@@ -77,7 +77,7 @@ impl<'b> Drop for AsyncIoHandler<'b> {
             Ok(())
         }
         // None while not spawned and job finished
-        if let Some(job_id) = self.job_id.lock().unwrap().clone() {
+        if let Some(job_id) = *self.job_id.lock().unwrap() {
             log::info!("terminating unfinished async io, jod id = {}", job_id.0);
             if let Err(e) = terminate_async(self.instr, job_id) {
                 log::warn!("terminating async io: {}", e)
@@ -91,9 +91,7 @@ impl<'b> Drop for AsyncIoHandler<'b> {
         )) {
             log::warn!("uninstalling handler: {}", e)
         };
-        unsafe {
-            Box::from_raw(self.callback.as_ptr());
-        }
+        drop(unsafe { Box::from_raw(self.callback.as_ptr()) });
     }
 }
 
@@ -122,9 +120,9 @@ impl AsyncIoCallbackPack {
                 attribute::AttrEventType::get_from(event)?.into_inner(),
                 event::EventKind::EventIoCompletion as vs::ViEvent,
             );
-            let waited_id = s.job_id.lock().unwrap();
-            match *waited_id {
-                None => Ok(false),//TODO: check if return SUCCESS_SYNC, if so, wait until job id set and then compare
+            let waited_id = *s.job_id.lock().unwrap();
+            match waited_id {
+                None => Ok(false), //TODO: check if return SUCCESS_SYNC, if so, wait until job id set and then compare
                 Some(x) => Ok(x == JobID(attribute::AttrJobId::get_from(event)?.into_inner())),
             }
         }

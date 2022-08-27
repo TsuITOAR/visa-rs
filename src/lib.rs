@@ -92,15 +92,15 @@ impl From<enums::status::ErrorCode> for Error {
     }
 }
 
-impl Into<enums::status::ErrorCode> for Error {
-    fn into(self) -> enums::status::ErrorCode {
-        self.0
+impl From<Error> for enums::status::ErrorCode {
+    fn from(s: Error) -> Self {
+        s.0
     }
 }
 
-impl Into<vs::ViStatus> for Error {
-    fn into(self) -> vs::ViStatus {
-        self.0.into()
+impl From<Error> for vs::ViStatus {
+    fn from(s: Error) -> Self {
+        s.0.into()
     }
 }
 
@@ -152,7 +152,7 @@ impl DefaultRM {
     pub fn new() -> Result<Self> {
         let mut new: vs::ViSession = 0;
         wrap_raw_error_in_unsafe!(vs::viOpenDefaultRM(&mut new as _))?;
-        return Ok(Self(unsafe { OwnedSs::from_raw_ss(new) }));
+        Ok(Self(unsafe { OwnedSs::from_raw_ss(new) }))
     }
 
     ///
@@ -175,7 +175,7 @@ impl DefaultRM {
     /// Exp\|exp                        |       Matches either the preceding or following expression. The or operator | matches the entire expression that precedes or follows it and not just the character that precedes or    follows it. For example, VXI|GPIB means (VXI)|(GPIB), not VX(I|G)PIB.
     /// (exp)                           |       Grouping characters or expressions.
     ///
-    ///  Regular Expression	            |   Sample Matches
+    ///  Regular Expression             |   Sample Matches
     /// :-----------------------------: |   :----------------------------------
     ///  GPIB?*INSTR                    |    GPIB0::2::INSTR, and GPIB1::1::1::INSTR.
     ///  GPIB\[0-9\]\*::?*INSTR         |    GPIB0::2::INSTR and GPIB1::1::1::INSTR.
@@ -343,7 +343,7 @@ impl ResList {
         if self.cnt < 1 {
             return Ok(None);
         }
-        let next: ResID = self.instr_desc.clone().try_into().unwrap();
+        let next: ResID = self.instr_desc.try_into().unwrap();
         if self.cnt > 1 {
             wrap_raw_error_in_unsafe!(vs::viFindNext(
                 self.list,
@@ -757,7 +757,7 @@ impl Instrument {
     ///
     /// # Safety
     /// This function is unsafe because the `buf` passed in may be dropped before the transfer terminates
-    
+
     //todo: return VI_SUCCESS_SYNC, means IO operation has finished, so if there is a waker receiving JobID, would be called before JobID set and can't wake corresponding job
 
     pub unsafe fn visa_write_async(&self, buf: &[u8]) -> Result<JobID> {
