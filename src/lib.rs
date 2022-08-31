@@ -42,7 +42,7 @@ pub mod session;
 use session::{AsRawSs, AsSs, FromRawSs, IntoRawSs, OwnedSs};
 
 pub const TIMEOUT_IMMEDIATE: Duration = Duration::from_millis(vs::VI_TMO_IMMEDIATE as _);
-pub const TIMEOUT_INFINITE: Duration = Duration::from_micros(vs::VI_TMO_INFINITE as _);
+pub const TIMEOUT_INFINITE: Duration = Duration::from_millis(vs::VI_TMO_INFINITE as _);
 macro_rules! impl_session_traits {
     ($($id:ident),* $(,)?) => {
         $(
