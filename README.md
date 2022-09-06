@@ -1,5 +1,8 @@
 ﻿# visa-rs
 
+[![crates.io](https://img.shields.io/crates/v/visa-rs.svg)](https://crates.io/crates/visa-rs)
+[![docs](https://docs.rs/visa-rs/badge.svg)](https://docs.rs/visa-rs)
+
 
 Safe rust bindings for VISA(Virtual Instrument Software Architecture) library
 
