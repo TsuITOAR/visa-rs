@@ -108,7 +108,7 @@ pub trait HasAttribute: crate::session::AsRawSs {
         wrap_raw_error_in_unsafe!(vs::viSetAttribute(
             self.as_raw_ss(),
             attr.kind() as _,
-            attr.as_u64()
+            attr.as_u64() as _,
         ))?;
         Ok(())
     }
