@@ -40,8 +40,8 @@ impl Parse for Attributes {
 impl ToTokens for Attributes {
     fn to_tokens(&self, tokens: &mut TokenStream2) {
         for attr in &self.attrs {
-            if let TypeCore::UnArch(ref t)=attr.ty.core{
-                if t=="ViString"{
+            if let TypeCore::UnArch(ref t) = attr.ty.core {
+                if t == "ViString" {
                     continue;
                 }
             }
@@ -287,11 +287,23 @@ impl Attr {
     }
 }
 
+const PLATFORM_DEPENDENT_TYPE: [&str; 8] = [
+    "VI_ATTR_USER_DATA",
+    "VI_ATTR_RET_COUNT",
+    "VI_ATTR_WIN_BASE_ADDR",
+    "VI_ATTR_WIN_SIZE",
+    "VI_ATTR_MEM_BASE",
+    "VI_ATTR_MEM_SIZE",
+    "VI_ATTR_PXI_MEM_BASE",
+    "VI_ATTR_PXI_MEM_SIZE",
+];
+
 fn struct_name_to_kind_name(id: &Ident) -> impl Iterator<Item = (Ident, TokenStream2)> {
     let kind_id = id;
     let kind_id_str = kind_id.to_string();
-    if kind_id_str.starts_with("VI_ATTR_PXI_MEM_BASE")
-        || kind_id_str.starts_with("VI_ATTR_PXI_MEM_SIZE")
+    if PLATFORM_DEPENDENT_TYPE
+        .iter()
+        .any(|p| kind_id_str.starts_with(p))
     {
         let kind_id_x64 = subst_ident(Ident::new(
             &format!("{}_32", kind_id_str),
@@ -308,14 +320,7 @@ fn struct_name_to_kind_name(id: &Ident) -> impl Iterator<Item = (Ident, TokenStr
         ]
         .into_iter();
     } else {
-        let kind_id = if let Some(new_id) = kind_id_str.strip_suffix("_32") {
-            Ident::new(new_id, kind_id.span())
-        } else if let Some(new_id) = kind_id_str.strip_suffix("_64") {
-            Ident::new(new_id, kind_id.span())
-        } else {
-            kind_id.clone()
-        };
-        let kind_id = subst_ident(kind_id);
+        let kind_id = subst_ident(kind_id.clone());
         return vec![(kind_id, TokenStream2::new())].into_iter();
     }
 }

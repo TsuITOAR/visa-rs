@@ -1,7 +1,7 @@
 //!
 //! Defines [`AccessMode`] and [`FlushMode`]
-//! 
-//! 
+//!
+//!
 
 use bitflags::bitflags;
 use visa_sys as vs;

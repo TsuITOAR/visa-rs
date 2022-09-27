@@ -96,7 +96,7 @@ fn async_io() -> Result<()> {
     }
     Ok(())
 }
-/* 
+/*
 #[test]
 fn crate_example() -> Result<()> {
     use std::ffi::CString;

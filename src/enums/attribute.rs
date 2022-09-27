@@ -146,6 +146,16 @@ mod attributes {
     #![allow(overflowing_literals)]
     #![allow(clippy::zero_prefixed_literal)]
     #![allow(clippy::missing_safety_doc)]
+    // ? not sure if should include
+    // ? {VI_ATTR_USER_DATA, VI_ATTR_RET_COUNT,VI_ATTR_WIN_BASE_ADDR,
+    // ? VI_ATTR_WIN_SIZE,VI_ATTR_MEM_BASE,VI_ATTR_MEM_SIZE,
+    // ? VI_ATTR_PXI_MEM_BASE_BAR0,VI_ATTR_PXI_MEM_BASE_BAR1,
+    // ? VI_ATTR_PXI_MEM_BASE_BAR2,VI_ATTR_PXI_MEM_BASE_BAR3,
+    // ? VI_ATTR_PXI_MEM_BASE_BAR4,VI_ATTR_PXI_MEM_BASE_BAR5,
+    // ? VI_ATTR_PXI_MEM_SIZE_BAR0,VI_ATTR_PXI_MEM_SIZE_BAR1,
+    // ? VI_ATTR_PXI_MEM_SIZE_BAR2,VI_ATTR_PXI_MEM_SIZE_BAR3,
+    // ? VI_ATTR_PXI_MEM_SIZE_BAR4,VI_ATTR_PXI_MEM_SIZE_BAR5}
+    // ? should be *_64 or *_32 based on platform
     use visa_sys as vs;
     consts_to_enum! {
         #[format=dbg]
@@ -156,7 +166,8 @@ mod attributes {
             VI_ATTR_RSRC_IMPL_VERSION	0x3FFF0003
             VI_ATTR_RSRC_LOCK_STATE	0x3FFF0004
             VI_ATTR_MAX_QUEUE_LENGTH	0x3FFF0005
-            VI_ATTR_USER_DATA	0x3FFF0007
+            VI_ATTR_USER_DATA_32	0x3FFF0007
+            VI_ATTR_USER_DATA_64	0x3FFF000A
             VI_ATTR_FDC_CHNL	0x3FFF000D
             VI_ATTR_FDC_MODE	0x3FFF000F
             VI_ATTR_FDC_GEN_SIGNAL_EN	0x3FFF0011
@@ -201,10 +212,13 @@ mod attributes {
             VI_ATTR_VXI_VME_INTR_STATUS	0x3FFF008B
             VI_ATTR_VXI_TRIG_STATUS	0x3FFF008D
             VI_ATTR_VXI_VME_SYSFAIL_STATE	0x3FFF0094
-            VI_ATTR_WIN_BASE_ADDR	0x3FFF0098
-            VI_ATTR_WIN_SIZE	0x3FFF009A
+            VI_ATTR_WIN_BASE_ADDR_32	0x3FFF0098
+            VI_ATTR_WIN_BASE_ADDR_64	0x3FFF009B
+            VI_ATTR_WIN_SIZE_32	0x3FFF009A
+            VI_ATTR_WIN_SIZE_64 0x3FFF009C
             VI_ATTR_ASRL_AVAIL_NUM	0x3FFF00AC
-            VI_ATTR_MEM_BASE	0x3FFF00AD
+            VI_ATTR_MEM_BASE_32	0x3FFF00AD
+            VI_ATTR_MEM_BASE_64 0x3FFF00D0
             VI_ATTR_ASRL_CTS_STATE	0x3FFF00AE
             VI_ATTR_ASRL_DCD_STATE	0x3FFF00AF
             VI_ATTR_ASRL_DSR_STATE	0x3FFF00B1
@@ -220,7 +234,8 @@ mod attributes {
             VI_ATTR_RM_SESSION	0x3FFF00C4
             VI_ATTR_VXI_LA	0x3FFF00D5
             VI_ATTR_MANF_ID	0x3FFF00D9
-            VI_ATTR_MEM_SIZE	0x3FFF00DD
+            VI_ATTR_MEM_SIZE_32	0x3FFF00DD
+            VI_ATTR_MEM_SIZE_64 0x3FFF00D1
             VI_ATTR_MEM_SPACE	0x3FFF00DE
             VI_ATTR_MODEL_CODE	0x3FFF00DF
             VI_ATTR_SLOT	0x3FFF00E8
@@ -257,7 +272,8 @@ mod attributes {
             VI_ATTR_RECV_TRIG_ID	0x3FFF4012
             VI_ATTR_INTR_STATUS_ID	0x3FFF4023
             VI_ATTR_STATUS	0x3FFF4025
-            VI_ATTR_RET_COUNT	0x3FFF4026
+            VI_ATTR_RET_COUNT_32	0x3FFF4026
+            VI_ATTR_RET_COUNT_64	0x3FFF4028
             VI_ATTR_BUFFER	0x3FFF4027
             VI_ATTR_RECV_INTR_LEVEL	0x3FFF4041
             VI_ATTR_OPER_NAME	0xBFFF4042
@@ -505,20 +521,8 @@ mod attributes {
             const VI_ATTR_MEM_BASE: r#"VI_ATTR_MEM_BASE , VI_ATTR_MEM_BASE_32 , and VI_ATTR_MEM_BASE_64 specify the base address of the device in VXIbus memory address space. This base address is applicable to A24 or A32 address space. If the value of VI_ATTR_MEM_SPACE is VI_A16_SPACE , the value of this attribute is meaningless for the given VXI device."#
             (Read Only Global) (VI_ATTR_MEM_BASE: ViBusAddress) [static as  N/A in VI_ATTR_MEM_BASE: 0h to FFFFFFFFh for 32-bit applications 0h to FFFFFFFFFFFFFFFFh for 64-bit applications]
 
-            const VI_ATTR_MEM_BASE_32: r#"VI_ATTR_MEM_BASE , VI_ATTR_MEM_BASE_32 , and VI_ATTR_MEM_BASE_64 specify the base address of the device in VXIbus memory address space. This base address is applicable to A24 or A32 address space. If the value of VI_ATTR_MEM_SPACE is VI_A16_SPACE , the value of this attribute is meaningless for the given VXI device."#
-            (Read Only Global) (VI_ATTR_MEM_BASE_32: ViUInt32) [static as  N/A in VI_ATTR_MEM_BASE_32: 0h to FFFFFFFFh]
-
-            const VI_ATTR_MEM_BASE_64: r#"VI_ATTR_MEM_BASE , VI_ATTR_MEM_BASE_32 , and VI_ATTR_MEM_BASE_64 specify the base address of the device in VXIbus memory address space. This base address is applicable to A24 or A32 address space. If the value of VI_ATTR_MEM_SPACE is VI_A16_SPACE , the value of this attribute is meaningless for the given VXI device."#
-            (Read Only Global) (VI_ATTR_MEM_BASE_64: ViUInt64) [static as  N/A in VI_ATTR_MEM_BASE_64: 0h to FFFFFFFFFFFFFFFFh]
-
             const VI_ATTR_MEM_SIZE: r#"VI_ATTR_MEM_SIZE , VI_ATTR_MEM_SIZE_32 , and VI_ATTR_MEM_SIZE_64 specify the size of memory requested by the device in VXIbus address space. If the value of VI_ATTR_MEM_SPACE is VI_A16_SPACE , the value of this attribute is meaningless for the given VXI device."#
             (Read Only Global) (VI_ATTR_MEM_SIZE: ViBusSize) [static as  N/A in VI_ATTR_MEM_SIZE: 0h to FFFFFFFFh for 32-bit applications 0h to FFFFFFFFFFFFFFFFh for 64-bit applications]
-
-            const VI_ATTR_MEM_SIZE_32: r#"VI_ATTR_MEM_SIZE , VI_ATTR_MEM_SIZE_32 , and VI_ATTR_MEM_SIZE_64 specify the size of memory requested by the device in VXIbus address space. If the value of VI_ATTR_MEM_SPACE is VI_A16_SPACE , the value of this attribute is meaningless for the given VXI device."#
-            (Read Only Global) (VI_ATTR_MEM_SIZE_32: ViUInt32) [static as  N/A in VI_ATTR_MEM_SIZE_32: 0h to FFFFFFFFh]
-
-            const VI_ATTR_MEM_SIZE_64: r#"VI_ATTR_MEM_SIZE , VI_ATTR_MEM_SIZE_32 , and VI_ATTR_MEM_SIZE_64 specify the size of memory requested by the device in VXIbus address space. If the value of VI_ATTR_MEM_SPACE is VI_A16_SPACE , the value of this attribute is meaningless for the given VXI device."#
-            (Read Only Global) (VI_ATTR_MEM_SIZE_64: ViUInt64) [static as  N/A in VI_ATTR_MEM_SIZE_64: 0h to FFFFFFFFFFFFFFFFh]
 
             const VI_ATTR_MEM_SPACE: r#"VI_ATTR_MEM_SPACE specifies the VXIbus address space used by the device. The three types are A16, A24, or A32 memory address space. A VXI device with memory in A24 or A32 space also has registers accessible in the configuration section of A16 space. A VME device with memory in multiple address spaces requires one VISA resource for each address space used."#
             (Read Only Global) ( ViUInt16) [static as VI_A16_SPACE in VI_A16_SPACE (1) VI_A24_SPACE (2) VI_A32_SPACE (3)]
@@ -665,12 +669,6 @@ mod attributes {
             const VI_ATTR_RET_COUNT: r#"VI_ATTR_RET_COUNT , VI_ATTR_RET_COUNT_32 , and VI_ATTR_RET_COUNT_64 contain the actual number of elements that were asynchronously transferred. VI_ATTR_RET_COUNT_32 is always a 32-bit value. VI_ATTR_RET_COUNT_64 is always a 64-bit value. VI_ATTR_RET_COUNT_64 is not supported with 32-bit applications. VI_ATTR_RET_COUNT is a 32-bit value for 32-bit applications and a 64-bit value for 64-bit applications."#
             (Read Only) (VI_ATTR_RET_COUNT: ViUInt32 for 32-bit applications ViUInt64 for 64-bit applications) [static as  N/A in VI_ATTR_RET_COUNT: 0h to FFFFFFFFh for 32-bit applications 0h to FFFFFFFFFFFFFFFFh for 64-bit applications]
 
-            const VI_ATTR_RET_COUNT_32: r#"VI_ATTR_RET_COUNT , VI_ATTR_RET_COUNT_32 , and VI_ATTR_RET_COUNT_64 contain the actual number of elements that were asynchronously transferred. VI_ATTR_RET_COUNT_32 is always a 32-bit value. VI_ATTR_RET_COUNT_64 is always a 64-bit value. VI_ATTR_RET_COUNT_64 is not supported with 32-bit applications. VI_ATTR_RET_COUNT is a 32-bit value for 32-bit applications and a 64-bit value for 64-bit applications."#
-            (Read Only) (VI_ATTR_RET_COUNT_32: ViUInt32) [static as  N/A in VI_ATTR_RET_COUNT_32: 0h to FFFFFFFFh]
-
-            const VI_ATTR_RET_COUNT_64: r#"VI_ATTR_RET_COUNT , VI_ATTR_RET_COUNT_32 , and VI_ATTR_RET_COUNT_64 contain the actual number of elements that were asynchronously transferred. VI_ATTR_RET_COUNT_32 is always a 32-bit value. VI_ATTR_RET_COUNT_64 is always a 64-bit value. VI_ATTR_RET_COUNT_64 is not supported with 32-bit applications. VI_ATTR_RET_COUNT is a 32-bit value for 32-bit applications and a 64-bit value for 64-bit applications."#
-            (Read Only) (VI_ATTR_RET_COUNT_64: ViUInt64) [static as  N/A in VI_ATTR_RET_COUNT_64: 0h to FFFFFFFFFFFFFFFFh]
-
             const VI_ATTR_RM_SESSION: r#"VI_ATTR_RM_SESSION specifies the session of the Resource Manager that was used to open this session."#
             (Read Only Local) ( ViSession) [static as N/A in N/A]
 
@@ -781,12 +779,6 @@ mod attributes {
             const VI_ATTR_USER_DATA: r#"VI_ATTR_USER_DATA , VI_ATTR_USER_DATA_32 , and VI_ATTR_USER_DATA_64 store data to be used privately by the application for a particular session. VISA does not use this data for any purpose. It is provided to the application for its own use. VI_ATTR_USER_DATA_64 is not supported with 32-bit applications."#
             (Read/Write Local) (VI_ATTR_USER_DATA: ViAddr) [static as  N/A in VI_ATTR_USER_DATA: Not specified]
 
-            const VI_ATTR_USER_DATA_32: r#"VI_ATTR_USER_DATA , VI_ATTR_USER_DATA_32 , and VI_ATTR_USER_DATA_64 store data to be used privately by the application for a particular session. VISA does not use this data for any purpose. It is provided to the application for its own use. VI_ATTR_USER_DATA_64 is not supported with 32-bit applications."#
-            (Read/Write Local) (VI_ATTR_USER_DATA_32: ViUInt32) [static as  N/A in VI_ATTR_USER_DATA_32: 0h to FFFFFFFFh]
-
-            const VI_ATTR_USER_DATA_64: r#"VI_ATTR_USER_DATA , VI_ATTR_USER_DATA_32 , and VI_ATTR_USER_DATA_64 store data to be used privately by the application for a particular session. VISA does not use this data for any purpose. It is provided to the application for its own use. VI_ATTR_USER_DATA_64 is not supported with 32-bit applications."#
-            (Read/Write Local) (VI_ATTR_USER_DATA_64: ViUInt64) [static as  N/A in VI_ATTR_USER_DATA_64: 0h to FFFFFFFFFFFFFFFFh]
-
             const VI_ATTR_VXI_DEV_CLASS: r#"This attribute represents the VXI-defined device class to which the resource belongs, either message based ( VI_VXI_CLASS_MESSAGE ), register based ( VI_VXI_CLASS_REGISTER ), extended ( VI_VXI_CLASS_EXTENDED ), or memory ( VI_VXI_CLASS_MEMORY ). VME devices are usually either register based or belong to a miscellaneous class ( VI_VXI_CLASS_OTHER )."#
             (Read Only Global) ( ViUInt16) [static as N/A in VI_VXI_CLASS_MEMORY(0) VI_VXI_CLASS_EXTENDED(1) VI_VXI_CLASS_MESSAGE(2) VI_VXI_CLASS_REGISTER(3) VI_VXI_CLASS_OTHER(4)]
 
@@ -814,23 +806,11 @@ mod attributes {
             const VI_ATTR_WIN_BASE_ADDR: r#"VI_ATTR_WIN_BASE_ADDR , VI_ATTR_WIN_BASE_ADDR_32 , and VI_ATTR_WIN_BASE_ADDR_64 specify the base address of the interface bus to which this window is mapped. If the value of VI_ATTR_WIN_ACCESS is VI_NMAPPED , the value of this attribute is undefined."#
             (Read Only Local) (VI_ATTR_WIN_BASE_ADDR: ViBusAddress) [static as  N/A in VI_ATTR_WIN_BASE_ADDR: 0h to FFFFFFFFh for 32-bit applications 0h to FFFFFFFFFFFFFFFFh for 64-bit applications]
 
-            const VI_ATTR_WIN_BASE_ADDR_32: r#"VI_ATTR_WIN_BASE_ADDR , VI_ATTR_WIN_BASE_ADDR_32 , and VI_ATTR_WIN_BASE_ADDR_64 specify the base address of the interface bus to which this window is mapped. If the value of VI_ATTR_WIN_ACCESS is VI_NMAPPED , the value of this attribute is undefined."#
-            (Read Only Local) (VI_ATTR_WIN_BASE_ADDR_32: ViUInt32) [static as  N/A in VI_ATTR_WIN_BASE_ADDR_32: 0h to FFFFFFFFh]
-
-            const VI_ATTR_WIN_BASE_ADDR_64: r#"VI_ATTR_WIN_BASE_ADDR , VI_ATTR_WIN_BASE_ADDR_32 , and VI_ATTR_WIN_BASE_ADDR_64 specify the base address of the interface bus to which this window is mapped. If the value of VI_ATTR_WIN_ACCESS is VI_NMAPPED , the value of this attribute is undefined."#
-            (Read Only Local) (VI_ATTR_WIN_BASE_ADDR_64: ViUInt64) [static as  N/A in VI_ATTR_WIN_BASE_ADDR_64: 0h to FFFFFFFFFFFFFFFFh]
-
             const VI_ATTR_WIN_BYTE_ORDER: r#"VI_ATTR_WIN_BYTE_ORDER specifies the byte order to be used in low-level access operations, such as viMapAddress() , viPeek XX () , and viPoke XX () , when accessing the mapped window. This attribute is Read/Write when the corresponding session is not mapped (that is, when VI_ATTR_WIN_ACCESS is VI_NMAPPED . When the session is mapped, this attribute is Read Only."#
             (Read/Write Local) ( ViUInt16) [static as VI_BIG_ENDIAN in VI_BIG_ENDIAN (0) VI_LITTLE_ENDIAN (1)]
 
             const VI_ATTR_WIN_SIZE: r#"VI_ATTR_WIN_SIZE , VI_ATTR_WIN_SIZE_32 , and VI_ATTR_WIN_SIZE_64 specify the size of the region mapped to this window. If the value of VI_ATTR_WIN_ACCESS is VI_NMAPPED , the value of this attribute is undefined."#
             (Read Only Local) (VI_ATTR_WIN_SIZE: ViBusSize) [static as  N/A in VI_ATTR_WIN_SIZE: 0h to FFFFFFFFh for 32-bit applications 0h to FFFFFFFFFFFFFFFFh for 64-bit applications]
-
-            const VI_ATTR_WIN_SIZE_32: r#"VI_ATTR_WIN_SIZE , VI_ATTR_WIN_SIZE_32 , and VI_ATTR_WIN_SIZE_64 specify the size of the region mapped to this window. If the value of VI_ATTR_WIN_ACCESS is VI_NMAPPED , the value of this attribute is undefined."#
-            (Read Only Local) (VI_ATTR_WIN_SIZE_32: ViUInt32) [static as  N/A in VI_ATTR_WIN_SIZE_32: 0h to FFFFFFFFh]
-
-            const VI_ATTR_WIN_SIZE_64: r#"VI_ATTR_WIN_SIZE , VI_ATTR_WIN_SIZE_32 , and VI_ATTR_WIN_SIZE_64 specify the size of the region mapped to this window. If the value of VI_ATTR_WIN_ACCESS is VI_NMAPPED , the value of this attribute is undefined."#
-            (Read Only Local) (VI_ATTR_WIN_SIZE_64: ViUInt64) [static as  N/A in VI_ATTR_WIN_SIZE_64: 0h to FFFFFFFFFFFFFFFFh]
 
             const VI_ATTR_WR_BUF_OPER_MODE: r#"VI_ATTR_WR_BUF_OPER_MODE specifies the operational mode of the formatted I/O write buffer. When the operational mode is set to VI_FLUSH_WHEN_FULL (default), the buffer is flushed when an END indicator is written to the buffer, or when the buffer fills up. If the operational mode is set to VI_FLUSH_ON_ACCESS , the write buffer is flushed under the same conditions, and also every time a viPrintf() (or related) operation completes."#
             (Read/Write Local) ( ViUInt16) [static as VI_FLUSH_WHEN_FULL in VI_FLUSH_ON_ACCESS (1) VI_FLUSH_WHEN_FULL (2)]

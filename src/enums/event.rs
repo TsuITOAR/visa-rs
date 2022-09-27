@@ -17,7 +17,7 @@ mod event_kind {
         #[repr(ViEventType)]
         ///
         /// See [`enable_event`](crate::Instrument::enable_event), [`disable_event`](crate::Instrument::disable_event), [`discard_events`](crate::Instrument::discard_events), [`wait_on_event`](crate::Instrument::wait_on_event), [`install_handler`](crate::Instrument::install_handler)
-        /// 
+        ///
         pub enum EventKind {
             VI_EVENT_IO_COMPLETION      0x3FFF2009 r#"
 This event notifies the application that an asynchronous operation has completed.
@@ -151,7 +151,7 @@ Specifying VI_ALL_ENABLED_EVENTS in viEnableEvent for the eventType parameter re
 visa_rs_proc::repr! {
     #[repr(ViUInt16)]
     #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash, Clone, Copy)]
-    /// See [`enable_event`](crate::Instrument::enable_event), [`disable_event`](crate::Instrument::disable_event), [`discard_events`](crate::Instrument::discard_events) 
+    /// See [`enable_event`](crate::Instrument::enable_event), [`disable_event`](crate::Instrument::disable_event), [`discard_events`](crate::Instrument::discard_events)
     pub enum Mechanism {
         Queue = vs::VI_QUEUE as _,
         Handler = vs::VI_HNDLR as _,
