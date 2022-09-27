@@ -36,7 +36,7 @@
 //!         }
 //!     }
 //!
-//!     pub(crate) fn as_u64(&self) -> u64 {
+//!     pub(crate) fn as_attr_state(&self) -> vs::ViAttrState {
 //!         match self {
 //!             Self::Attr4882Compliant(s) => s.value as _,
 //!         }
@@ -108,7 +108,7 @@ pub trait HasAttribute: crate::session::AsRawSs {
         wrap_raw_error_in_unsafe!(vs::viSetAttribute(
             self.as_raw_ss(),
             attr.kind() as _,
-            attr.as_u64() as _,
+            attr.as_attr_state(),
         ))?;
         Ok(())
     }

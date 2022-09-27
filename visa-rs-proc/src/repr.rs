@@ -163,6 +163,13 @@ fn signed_ty_token<T: Sized>(span: Span) -> Ident {
 mod visa_sys {
     #![allow(non_camel_case_types)]
     #![allow(unused)]
+
+    /// A UInt that is the same size as the target's pointer width
+    #[cfg(target_pointer_width = "64")]
+    pub type ViUIntPtrSize = ViUInt64;
+    #[cfg(not(target_pointer_width = "64"))]
+    pub type ViUIntPtrSize = ViUInt32;
+
     pub type __builtin_va_list = *mut ::std::os::raw::c_char;
 
     pub type va_list = __builtin_va_list;
@@ -238,9 +245,9 @@ mod visa_sys {
     pub type ViPEvent = *mut ViEvent;
     pub type ViFindList = ViObject;
     pub type ViPFindList = *mut ViFindList;
-    pub type ViBusAddress = ViUInt64;
-    pub type ViBusSize = ViUInt64;
-    pub type ViAttrState = ViUInt64;
+    pub type ViBusAddress = ViUIntPtrSize;
+    pub type ViBusSize = ViUIntPtrSize;
+    pub type ViAttrState = ViUIntPtrSize;
     pub type ViBusAddress64 = ViUInt64;
     pub type ViPBusAddress64 = *mut ViBusAddress64;
     pub type ViEventType = ViUInt32;

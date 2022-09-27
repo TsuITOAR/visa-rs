@@ -93,7 +93,7 @@ impl ToTokens for Attributes {
             .flatten();
         let fields1 = self.attrs.iter().map(|x| x.struct_name());
         let fields2 = self.attrs.iter().map(|x| x.struct_name());
-        let as_u64=self.attrs.iter().map(|x| {
+        let as_attr_state=self.attrs.iter().map(|x| {
             let field=x.struct_name();
             if let TypeCore::UnArch(ref t)=x.ty.core{
                 if t=="ViString"{
@@ -134,9 +134,9 @@ impl ToTokens for Attributes {
                     }
                 }
 
-                pub(crate) fn as_u64(&self)-> u64{
+                pub(crate) fn as_attr_state(&self)-> vs::ViAttrState{
                     match self{
-                        #(#as_u64),*
+                        #(#as_attr_state),*
                     }
                 }
             }
