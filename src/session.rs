@@ -5,7 +5,7 @@ use visa_sys as vs;
 /// Raw visa session.
 pub type RawSs = vs::ViSession;
 
-/// A owned visa session.
+/// An owned visa session.
 #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct OwnedSs {
     s: RawSs,
@@ -35,7 +35,7 @@ impl BorrowedSs<'_> {
     }
 }
 
-///    A trait to extract the raw visa session from an underlying object.
+/// A trait to extract the raw visa session from an underlying object.
 pub trait AsRawSs {
     fn as_raw_ss(&self) -> RawSs;
 }
@@ -45,7 +45,7 @@ pub trait FromRawSs {
     unsafe fn from_raw_ss(s: RawSs) -> Self;
 }
 
-///A trait to express the ability to consume an object and acquire ownership of its raw visa session.
+/// A trait to express the ability to consume an object and acquire ownership of its raw visa session.
 pub trait IntoRawSs {
     fn into_raw_ss(self) -> RawSs;
 }
