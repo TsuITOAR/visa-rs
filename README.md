@@ -17,19 +17,19 @@ On Windows, the default installation path will be added if no path is specified.
 
 ## Example
 ```rust
-    use std::ffi::CString;
-    use std::io::{BufRead, BufReader, Read, Write};
-    use visa_rs::{flags::AccessMode, DefaultRM, TIMEOUT_IMMEDIATE};
-    let rm = DefaultRM::new()?; //open default resource manager
-    let expr = CString::new("?*KEYSIGH?*INSTR").unwrap().into(); //expr used to match resource name
-    let rsc = rm.find_res(&expr)?; // find the first resource matched
-    let mut instr = rm.open(&rsc, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?; //open a session to resource
-    instr.write_all(b"*IDN?\n").unwrap(); //write message
-    let mut buf_reader = BufReader::new(instr);
-    let mut buf = String::new();
-    buf_reader.read_line(&mut buf).unwrap(); //read response
-    eprintln!("{}", buf);
-    Ok(())
+use std::ffi::CString;
+use std::io::{BufRead, BufReader, Read, Write};
+use visa_rs::{flags::AccessMode, DefaultRM, TIMEOUT_IMMEDIATE};
+let rm = DefaultRM::new()?.leak(); //open default resource manager
+let expr = CString::new("?*KEYSIGH?*INSTR").unwrap().into(); //expr used to match resource name
+let rsc = rm.find_res(&expr)?; // find the first resource matched
+let mut instr = rm.open(&rsc, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?; //open a session to resource
+instr.write_all(b"*IDN?\n").unwrap(); //write message
+let mut buf_reader = BufReader::new(instr);
+let mut buf = String::new();
+buf_reader.read_line(&mut buf).unwrap(); //read response
+eprintln!("{}", buf);
+Ok(())
 ```
 
 License: MIT OR Apache-2.0
