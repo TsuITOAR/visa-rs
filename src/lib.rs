@@ -15,8 +15,8 @@
 //! # fn main() -> visa_rs::Result<()>{
 //!     use std::ffi::CString;
 //!     use std::io::{BufRead, BufReader, Read, Write};
-//!     use visa_rs::{flags::AccessMode, DefaultRM, TIMEOUT_IMMEDIATE};
-//!     let rm = DefaultRM::new()?; //open default resource manager
+//!     use visa_rs::{flags::AccessMode, DefaultRM, OwnedDefaultRM, TIMEOUT_IMMEDIATE};
+//!     let rm = OwnedDefaultRM::new()?.leak(); //open default resource manager
 //!     let expr = CString::new("?*KEYSIGH?*INSTR").unwrap().into(); //expr used to match resource name
 //!     let rsc = rm.find_res(&expr)?; // find the first resource matched
 //!     let mut instr = rm.open(&rsc, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?; //open a session to resource
@@ -73,7 +73,7 @@ macro_rules! impl_session_traits {
     };
 }
 
-impl_session_traits! { DefaultRM, Instrument}
+impl_session_traits! { OwnedDefaultRM, Instrument}
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct Error(pub enums::status::ErrorCode);
@@ -138,23 +138,8 @@ macro_rules! wrap_raw_error_in_unsafe {
     };
 }
 
-/// Default Resource Manager for VISA
-#[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
-pub struct DefaultRM(session::OwnedSs);
-
-impl DefaultRM {
-    /// Returns a session to the Default Resource Manager resource.
-    ///
-    /// The first call to this function initializes the VISA system, including the Default Resource Manager resource, and also returns a session to that resource. Subsequent calls to this function return unique sessions to the same Default Resource Manager resource.
-    ///
-    ///When a Resource Manager session is dropped, not only is that session closed, but also all find lists and device sessions (which that Resource Manager session was used to create) are closed.
-    ///
-    pub fn new() -> Result<Self> {
-        let mut new: vs::ViSession = 0;
-        wrap_raw_error_in_unsafe!(vs::viOpenDefaultRM(&mut new as _))?;
-        Ok(Self(unsafe { OwnedSs::from_raw_ss(new) }))
-    }
-
+/// Ability as the Default Resource Manager for VISA
+pub trait DefaultRM: AsRawSs {
     ///
     /// Queries a VISA system to locate the resources associated with a specified interface.
     ///
@@ -196,7 +181,7 @@ impl DefaultRM {
     ///
     /// see also [official doc](https://www.ni.com/docs/en-US/bundle/ni-visa-20.0/page/ni-visa/vifindrsrc.html)
     ///
-    pub fn find_res_list(&self, expr: &ResID) -> Result<ResList> {
+    fn find_res_list(&self, expr: &ResID) -> Result<ResList> {
         let mut list: vs::ViFindList = 0;
         let mut cnt: vs::ViUInt32 = 0;
         let mut instr_desc = new_visa_buf();
@@ -217,7 +202,7 @@ impl DefaultRM {
     ///
     /// Queries a VISA system to locate the resources associated with a specified interface, return the first resource matched
     ///
-    pub fn find_res(&self, expr: &ResID) -> Result<ResID> {
+    fn find_res(&self, expr: &ResID) -> Result<ResID> {
         /*
         !keysight impl visa will try to write at address vs::VI_NULL, cause exit code: 0xc0000005, STATUS_ACCESS_VIOLATION
         let mut instr_desc = new_visa_buf();
@@ -236,10 +221,7 @@ impl DefaultRM {
     }
 
     /// Parse a resource string to get the interface information.
-    pub fn parse_res(
-        &self,
-        res: &ResID,
-    ) -> Result<(attribute::AttrIntfType, attribute::AttrIntfNum)> {
+    fn parse_res(&self, res: &ResID) -> Result<(attribute::AttrIntfType, attribute::AttrIntfNum)> {
         let mut ty = 0;
         let mut num = 0;
         wrap_raw_error_in_unsafe!(vs::viParseRsrc(
@@ -265,7 +247,7 @@ impl DefaultRM {
     /// + This is the expanded version of the given resource string. The format should be similar to the VISA-defined canonical resource name.
     ///
     /// + Specifies the user-defined alias for the given resource string.
-    pub fn parse_res_ex(
+    fn parse_res_ex(
         &self,
         res: &ResID,
     ) -> Result<(
@@ -311,7 +293,7 @@ impl DefaultRM {
     ///
     ///  NI-VISA currently supports VI_LOAD_CONFIG only on Serial INSTR sessions.
     ///
-    pub fn open(
+    fn open(
         &self,
         res_name: &ResID,
         access_mode: flags::AccessMode,
@@ -326,6 +308,63 @@ impl DefaultRM {
             &mut instr as _,
         ))?;
         Ok(unsafe { Instrument::from_raw_ss(instr) })
+    }
+}
+
+impl<'a> DefaultRM for BorrowedDefaultRM<'a> {}
+impl DefaultRM for OwnedDefaultRM {}
+
+/// A [`DefaultRM`] which is [`Clone`] and doesn't close everything on drop
+#[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash, Clone)]
+pub struct BorrowedDefaultRM<'a>(session::BorrowedSs<'a>);
+
+impl<'a> AsRawSs for BorrowedDefaultRM<'a> {
+    fn as_raw_ss(&self) -> session::RawSs {
+        self.0.as_raw_ss()
+    }
+}
+
+impl<'a> AsSs for BorrowedDefaultRM<'a> {
+    fn as_ss(&self) -> session::BorrowedSs {
+        self.0.as_ss()
+    }
+}
+
+impl<'a> BorrowedDefaultRM<'a> {
+    /// Close all find lists and device sessions (which this Resource Manager session was used to create).
+    pub fn close_all(self) {
+        std::mem::drop(unsafe { OwnedDefaultRM::from_raw_ss(self.as_raw_ss()) })
+    }
+}
+
+/// A [`DefaultRM`] which close everything on drop
+#[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
+pub struct OwnedDefaultRM(session::OwnedSs);
+
+impl OwnedDefaultRM {
+
+    /// [`OwnedDefaultRM`] will close everything on drop, not convenient when there are multiple instances, one drop would close all session since they have are indeed the same.
+    /// By converting to a [`BorrowedDefaultRM`], such behavior can be avoided.
+    pub fn leak(self) -> BorrowedDefaultRM<'static> {
+        unsafe { BorrowedDefaultRM(session::BorrowedSs::borrow_raw(self.into_raw_ss())) }
+    }
+
+    /// [`OwnedDefaultRM`] will close everything on drop, not convenient when there are multiple instances, one drop would close all session since they have are indeed the same.
+    /// By converting to a [`BorrowedDefaultRM`], such behavior can be avoided.
+    pub fn borrow(&'_ self) -> BorrowedDefaultRM<'_> {
+        BorrowedDefaultRM(self.as_ss())
+    }
+
+    /// Returns a session to the Default Resource Manager resource.
+    ///
+    /// The first call to this function initializes the VISA system, including the Default Resource Manager resource, and also returns a session to that resource. Subsequent calls to this function return unique sessions to the same Default Resource Manager resource.
+    ///
+    /// When a Resource Manager session is dropped, not only is that session closed, but also all find lists and device sessions (which that Resource Manager session was used to create) are closed.
+    ///
+    pub fn new() -> Result<Self> {
+        let mut new: vs::ViSession = 0;
+        wrap_raw_error_in_unsafe!(vs::viOpenDefaultRM(&mut new as _))?;
+        Ok(Self(unsafe { OwnedSs::from_raw_ss(new) }))
     }
 }
 
@@ -625,7 +664,7 @@ impl Instrument {
     ///
     /// The viDisableEvent() operation disables servicing of an event identified by the eventType parameter for the mechanisms specified in the mechanism parameter. This operation prevents new event occurrences from being added to the queue(s). However, event occurrences already existing in the queue(s) are not flushed. Use viDiscardEvents() if you want to discard events remaining in the queue(s).
     ///
-    ///Specifying VI_ALL_ENABLED_EVENTS for the eventType parameter allows a session to stop receiving all events. The session can stop receiving queued events by specifying VI_QUEUE. Applications can stop receiving callback events by specifying either VI_HNDLR or VI_SUSPEND_HNDLR. Specifying VI_ALL_MECH disables both the queuing and callback mechanisms.
+    /// Specifying VI_ALL_ENABLED_EVENTS for the eventType parameter allows a session to stop receiving all events. The session can stop receiving queued events by specifying VI_QUEUE. Applications can stop receiving callback events by specifying either VI_HNDLR or VI_SUSPEND_HNDLR. Specifying VI_ALL_MECH disables both the queuing and callback mechanisms.
     ///
     pub fn disable_event(
         &self,
@@ -645,7 +684,7 @@ impl Instrument {
     ///
     /// The information about all the event occurrences which have not yet been handled is discarded. This operation is useful to remove event occurrences that an application no longer needs. The discarded event occurrences are not available to a session at a later time.
     ///
-    ///  This operation does not apply to event contexts that have already been delivered to the application.
+    /// This operation does not apply to event contexts that have already been delivered to the application.
     pub fn discard_events(
         &self,
         event: event::EventKind,
@@ -662,9 +701,9 @@ impl Instrument {
     ///
     /// The viWaitOnEvent() operation suspends the execution of a thread of an application and waits for an event of the type specified by inEventType for a time period specified by timeout. You can wait only for events that have been enabled with the viEnableEvent() operation. Refer to individual event descriptions for context definitions. If the specified inEventType is VI_ALL_ENABLED_EVENTS, the operation waits for any event that is enabled for the given session. If the specified timeout value is VI_TMO_INFINITE, the operation is suspended indefinitely. If the specified timeout value is VI_TMO_IMMEDIATE, the operation is not suspended; therefore, this value can be used to dequeue events from an event queue.
     ///
-    ///When the outContext handle returned from a successful invocation of viWaitOnEvent() is no longer needed, it should be passed to viClose().
+    /// When the outContext handle returned from a successful invocation of viWaitOnEvent() is no longer needed, it should be passed to viClose().
     ///
-    ///If a session's event queue becomes full and a new event arrives, the new event is discarded. The default event queue size (per session) is 50, which is sufficiently large for most  applications. If an application expects more than 50 events to arrive without having been handled, it can modify the value of the attribute VI_ATTR_MAX_QUEUE_LENGTH to the required size.
+    /// If a session's event queue becomes full and a new event arrives, the new event is discarded. The default event queue size (per session) is 50, which is sufficiently large for most  applications. If an application expects more than 50 events to arrive without having been handled, it can modify the value of the attribute VI_ATTR_MAX_QUEUE_LENGTH to the required size.
     pub fn wait_on_event(
         &self,
         event_kind: event::EventKind,
@@ -722,13 +761,13 @@ impl Instrument {
 mod async_io;
 
 impl Instrument {
-    ///Reads data from device or interface asynchronously.
+    /// Reads data from device or interface asynchronously.
     ///
     /// The viReadAsync() operation asynchronously transfers data. The data read is to be stored in the buffer represented by buf. This operation normally returns before the transfer terminates.
     ///
-    ///Before calling this operation, you should enable the session for receiving I/O completion events. After the transfer has completed, an I/O completion event is posted.
+    /// Before calling this operation, you should enable the session for receiving I/O completion events. After the transfer has completed, an I/O completion event is posted.
     ///
-    ///The operation returns jobId, which you can use with either viTerminate() to abort the operation, or with an I/O completion event to identify which asynchronous read operation completed. VISA will never return VI_NULL for a valid jobID.
+    /// The operation returns jobId, which you can use with either viTerminate() to abort the operation, or with an I/O completion event to identify which asynchronous read operation completed. VISA will never return VI_NULL for a valid jobID.
     ///
     /// If you have enabled VI_EVENT_IO_COMPLETION for queueing (VI_QUEUE), for each successful call to viReadAsync(), you must call viWaitOnEvent() to retrieve the I/O completion event. This is true even if the I/O is done synchronously (that is, if the operation returns VI_SUCCESS_SYNC).
     /// # Safety
@@ -747,11 +786,11 @@ impl Instrument {
         Ok(JobID(id))
     }
 
-    ///The viWriteAsync() operation asynchronously transfers data. The data to be written is in the buffer represented by buf. This operation normally returns before the transfer terminates.
+    /// The viWriteAsync() operation asynchronously transfers data. The data to be written is in the buffer represented by buf. This operation normally returns before the transfer terminates.
     ///
-    ///Before calling this operation, you should enable the session for receiving I/O completion events. After the transfer has completed, an I/O completion event is posted.
+    /// Before calling this operation, you should enable the session for receiving I/O completion events. After the transfer has completed, an I/O completion event is posted.
     ///
-    ///The operation returns a job identifier that you can use with either viTerminate() to abort the operation or with an I/O completion event to identify which asynchronous write operation completed. VISA will never return VI_NULL for a valid jobId.
+    /// The operation returns a job identifier that you can use with either viTerminate() to abort the operation or with an I/O completion event to identify which asynchronous write operation completed. VISA will never return VI_NULL for a valid jobId.
     ///
     /// If you have enabled VI_EVENT_IO_COMPLETION for queueing (VI_QUEUE), for each successful call to viWriteAsync(), you must call viWaitOnEvent() to retrieve the I/O completion event. This is true even if the I/O is done synchronously (that is, if the operation returns VI_SUCCESS_SYNC).
     ///
@@ -776,7 +815,7 @@ impl Instrument {
     ///
     /// This operation is used to request a session to terminate normal execution of an operation, as specified by the jobId parameter. The jobId parameter is a unique value generated from each call to an asynchronous operation.
     ///
-    ///If a user passes VI_NULL as the jobId value to viTerminate(), VISA will abort any calls in the current process executing on the specified vi. Any call that is terminated this way should return VI_ERROR_ABORT. Due to the nature of multi-threaded systems, for example where operations in other threads may complete normally before the operation viTerminate() has any effect, the specified return value is not guaranteed.
+    /// If a user passes VI_NULL as the jobId value to viTerminate(), VISA will abort any calls in the current process executing on the specified vi. Any call that is terminated this way should return VI_ERROR_ABORT. Due to the nature of multi-threaded systems, for example where operations in other threads may complete normally before the operation viTerminate() has any effect, the specified return value is not guaranteed.
     ///
     pub fn terminate(&self, job_id: JobID) -> Result<()> {
         wrap_raw_error_in_unsafe!(vs::viTerminate(

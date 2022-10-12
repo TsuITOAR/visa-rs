@@ -7,7 +7,7 @@ use anyhow::Result;
 use visa_rs::{
     enums::event::{self, Event},
     flags::AccessMode,
-    DefaultRM, Instrument, VisaString, TIMEOUT_IMMEDIATE,
+    DefaultRM, Instrument, OwnedDefaultRM, VisaString, TIMEOUT_IMMEDIATE,
 };
 fn init_logger() {
     let _ = env_logger::builder()
@@ -18,7 +18,7 @@ fn init_logger() {
 
 #[test]
 fn list_instr() -> Result<()> {
-    let rm = DefaultRM::new()?;
+    let rm = OwnedDefaultRM::new()?.leak();
     let mut list = rm.find_res_list(&CString::new("?*INSTR")?.into())?;
     while let Some(n) = list.find_next()? {
         eprintln!("{}", n);
@@ -28,7 +28,7 @@ fn list_instr() -> Result<()> {
 
 #[test]
 fn send_idn() -> Result<()> {
-    let rm = DefaultRM::new()?;
+    let rm = OwnedDefaultRM::new()?.leak();
     let mut list = rm.find_res_list(&CString::new("?*KEYSIGH?*INSTR")?.into())?;
     if let Some(n) = list.find_next()? {
         let mut instr = rm.open(&n, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
@@ -44,7 +44,7 @@ fn send_idn() -> Result<()> {
 #[test]
 fn handler() -> Result<()> {
     // tried EventKind::Trig, but not supported by my keysight osc :(
-    let rm = DefaultRM::new()?;
+    let rm = OwnedDefaultRM::new()?.leak();
     let mut list = rm.find_res_list(&CString::new("?*KEYSIGH?*INSTR")?.into())?;
     if let Some(n) = list.find_next()? {
         let instr = rm.open(&n, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
@@ -74,7 +74,7 @@ fn handler() -> Result<()> {
 #[test]
 fn async_io() -> Result<()> {
     init_logger();
-    let rm = DefaultRM::new()?;
+    let rm = OwnedDefaultRM::new()?.leak();
     let mut list = rm.find_res_list(&CString::new("?*KEYSIGH?*INSTR")?.into())?;
     if let Some(n) = list.find_next()? {
         log::debug!("connecting to {}", n);
@@ -96,21 +96,4 @@ fn async_io() -> Result<()> {
     }
     Ok(())
 }
-/*
-#[test]
-fn crate_example() -> Result<()> {
-    use std::ffi::CString;
-    use std::io::{BufRead, BufReader, Read, Write};
-    use visa_rs::{flags::AccessMode, DefaultRM, TIMEOUT_IMMEDIATE};
-    let rm = DefaultRM::new()?; //open default resource manager
-    let expr = CString::new("?*KEYSIGH?*INSTR").unwrap().into(); //expr used to match resource name
-    let rsc = rm.find_res(&expr)?; // find the first resource matched
-    let mut instr = rm.open(&rsc, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?; //open a session to resource
-    instr.write_all(b"*IDN?\n").unwrap(); //write message
-    let mut buf_reader = BufReader::new(instr);
-    let mut buf = String::new();
-    buf_reader.read_line(&mut buf).unwrap(); //read response
-    eprintln!("{}", buf);
-    Ok(())
-}
- */
+

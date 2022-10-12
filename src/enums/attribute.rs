@@ -116,7 +116,7 @@ pub trait HasAttribute: crate::session::AsRawSs {
 
 impl HasAttribute for super::event::Event {}
 impl HasAttribute for crate::Instrument {}
-impl HasAttribute for crate::DefaultRM {}
+impl HasAttribute for crate::OwnedDefaultRM {}
 
 pub trait AttrInner: Sized {
     const KIND: AttrKind;
