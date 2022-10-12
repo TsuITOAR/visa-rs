@@ -175,7 +175,7 @@ pub trait DefaultRM: AsRawSs {
     ///  ?*VXI\[0-9\]\*::?*MEMACC       |    VXI0::MEMACC.
     ///  VXI0::?*                       |    VXI0::1::INSTR, VXI0::2::INSTR, and VXI0::MEMACC.
     ///  ?*                             |    all resources.
-    ///  visa://hostname/?*             |    all resources on the specified remote system. The hostname can be represented as either an IP address (dot-notation) or network machine name. This remote system need not be a conf    igured remote system.
+    ///  visa://hostname/?*             |    all resources on the specified remote system. The hostname can be represented as either an IP address (dot-notation) or network machine name. This remote system need not be a configured remote system.
     ///  /?*                            |    all resources on the local machine. Configured remote systems are not queried.
     ///  visa:/ASRL?*INSTR              |    all ASRL resources on the local machine and returns them in URL format (for example, visa:/ASRL1::INSTR).
     ///
