@@ -19,8 +19,8 @@ On Windows, the default installation path will be added if no path is specified.
 ```rust
 use std::ffi::CString;
 use std::io::{BufRead, BufReader, Read, Write};
-use visa_rs::{flags::AccessMode, DefaultRM, OwnedDefaultRM, TIMEOUT_IMMEDIATE};
-let rm = OwnedDefaultRM::new()?.leak(); //open default resource manager
+use visa_rs::{flags::AccessMode, AsDefaultRM, DefaultRM, TIMEOUT_IMMEDIATE};
+let rm = DefaultRM::new()?.leak(); //open default resource manager
 let expr = CString::new("?*KEYSIGH?*INSTR").unwrap().into(); //expr used to match resource name
 let rsc = rm.find_res(&expr)?; // find the first resource matched
 let mut instr = rm.open(&rsc, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?; //open a session to resource
