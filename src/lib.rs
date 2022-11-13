@@ -15,8 +15,8 @@
 //! # fn main() -> visa_rs::Result<()>{
 //!     use std::ffi::CString;
 //!     use std::io::{BufRead, BufReader, Read, Write};
-//!     use visa_rs::{flags::AccessMode, DefaultRM, OwnedDefaultRM, TIMEOUT_IMMEDIATE};
-//!     let rm = OwnedDefaultRM::new()?.leak(); //open default resource manager
+//!     use visa_rs::{flags::AccessMode, AsDefaultRM, DefaultRM, TIMEOUT_IMMEDIATE};
+//!     let rm = DefaultRM::new()?.leak(); //open default resource manager
 //!     let expr = CString::new("?*KEYSIGH?*INSTR").unwrap().into(); //expr used to match resource name
 //!     let rsc = rm.find_res(&expr)?; // find the first resource matched
 //!     let mut instr = rm.open(&rsc, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?; //open a session to resource
@@ -73,8 +73,26 @@ macro_rules! impl_session_traits {
     };
 }
 
-impl_session_traits! { OwnedDefaultRM, Instrument}
+macro_rules! impl_session_traits_for_borrowed {
+    ($($id:ident),* $(,)?) => {
+        $(
+            impl AsRawSs for $id<'_> {
+                fn as_raw_ss(&self) -> session::RawSs {
+                    self.0.as_raw_ss()
+                }
+            }
 
+            impl AsSs for $id<'_> {
+                fn as_ss(&self) -> session::BorrowedSs<'_> {
+                    self.0.as_ss()
+                }
+            }
+        )*
+    };
+}
+
+impl_session_traits! { DefaultRM, Instrument}
+impl_session_traits_for_borrowed! {WeakRM}
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct Error(pub enums::status::ErrorCode);
 
@@ -139,7 +157,7 @@ macro_rules! wrap_raw_error_in_unsafe {
 }
 
 /// Ability as the Default Resource Manager for VISA
-pub trait DefaultRM: AsRawSs {
+pub trait AsDefaultRM: AsRawSs {
     ///
     /// Queries a VISA system to locate the resources associated with a specified interface.
     ///
@@ -309,50 +327,35 @@ pub trait DefaultRM: AsRawSs {
         ))?;
         Ok(unsafe { Instrument::from_raw_ss(instr) })
     }
+
+    /// Close this session and all find lists and device sessions.
+    fn close_all(&self) {
+        std::mem::drop(unsafe { DefaultRM::from_raw_ss(self.as_raw_ss()) })
+    }
 }
 
-impl<'a> DefaultRM for BorrowedDefaultRM<'a> {}
-impl DefaultRM for OwnedDefaultRM {}
+impl<'a> AsDefaultRM for WeakRM<'a> {}
+impl AsDefaultRM for DefaultRM {}
 
 /// A [`DefaultRM`] which is [`Clone`] and doesn't close everything on drop
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash, Clone)]
-pub struct BorrowedDefaultRM<'a>(session::BorrowedSs<'a>);
-
-impl<'a> AsRawSs for BorrowedDefaultRM<'a> {
-    fn as_raw_ss(&self) -> session::RawSs {
-        self.0.as_raw_ss()
-    }
-}
-
-impl<'a> AsSs for BorrowedDefaultRM<'a> {
-    fn as_ss(&self) -> session::BorrowedSs {
-        self.0.as_ss()
-    }
-}
-
-impl<'a> BorrowedDefaultRM<'a> {
-    /// Close all find lists and device sessions (which this Resource Manager session was used to create).
-    pub fn close_all(self) {
-        std::mem::drop(unsafe { OwnedDefaultRM::from_raw_ss(self.as_raw_ss()) })
-    }
-}
+pub struct WeakRM<'a>(session::BorrowedSs<'a>);
 
 /// A [`DefaultRM`] which close everything on drop
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
-pub struct OwnedDefaultRM(session::OwnedSs);
+pub struct DefaultRM(session::OwnedSs);
 
-impl OwnedDefaultRM {
-
+impl DefaultRM {
     /// [`OwnedDefaultRM`] will close everything on drop, not convenient when there are multiple instances, one drop would close all session since they have are indeed the same.
     /// By converting to a [`BorrowedDefaultRM`], such behavior can be avoided.
-    pub fn leak(self) -> BorrowedDefaultRM<'static> {
-        unsafe { BorrowedDefaultRM(session::BorrowedSs::borrow_raw(self.into_raw_ss())) }
+    pub fn leak(self) -> WeakRM<'static> {
+        unsafe { WeakRM(session::BorrowedSs::borrow_raw(self.into_raw_ss())) }
     }
 
     /// [`OwnedDefaultRM`] will close everything on drop, not convenient when there are multiple instances, one drop would close all session since they have are indeed the same.
     /// By converting to a [`BorrowedDefaultRM`], such behavior can be avoided.
-    pub fn borrow(&'_ self) -> BorrowedDefaultRM<'_> {
-        BorrowedDefaultRM(self.as_ss())
+    pub fn borrow(&'_ self) -> WeakRM<'_> {
+        WeakRM(self.as_ss())
     }
 
     /// Returns a session to the Default Resource Manager resource.
