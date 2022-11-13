@@ -7,7 +7,7 @@ use anyhow::Result;
 use visa_rs::{
     enums::event::{self, Event},
     flags::AccessMode,
-    AsDefaultRM, Instrument, DefaultRM, VisaString, TIMEOUT_IMMEDIATE,
+    AsResourceManager, Instrument, DefaultRM, VisaString, TIMEOUT_IMMEDIATE,
 };
 fn init_logger() {
     let _ = env_logger::builder()

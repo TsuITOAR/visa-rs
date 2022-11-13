@@ -15,7 +15,7 @@
 //! # fn main() -> visa_rs::Result<()>{
 //!     use std::ffi::CString;
 //!     use std::io::{BufRead, BufReader, Read, Write};
-//!     use visa_rs::{flags::AccessMode, AsDefaultRM, DefaultRM, TIMEOUT_IMMEDIATE};
+//!     use visa_rs::{flags::AccessMode, AsResourceManager, DefaultRM, TIMEOUT_IMMEDIATE};
 //!     let rm = DefaultRM::new()?.leak(); //open default resource manager
 //!     let expr = CString::new("?*KEYSIGH?*INSTR").unwrap().into(); //expr used to match resource name
 //!     let rsc = rm.find_res(&expr)?; // find the first resource matched
@@ -157,7 +157,7 @@ macro_rules! wrap_raw_error_in_unsafe {
 }
 
 /// Ability as the Default Resource Manager for VISA
-pub trait AsDefaultRM: AsRawSs {
+pub trait AsResourceManager: AsRawSs {
     ///
     /// Queries a VISA system to locate the resources associated with a specified interface.
     ///
@@ -334,8 +334,8 @@ pub trait AsDefaultRM: AsRawSs {
     }
 }
 
-impl<'a> AsDefaultRM for WeakRM<'a> {}
-impl AsDefaultRM for DefaultRM {}
+impl<'a> AsResourceManager for WeakRM<'a> {}
+impl AsResourceManager for DefaultRM {}
 
 /// A [`DefaultRM`] which is [`Clone`] and doesn't close everything on drop
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash, Clone)]
