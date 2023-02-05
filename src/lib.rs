@@ -346,13 +346,13 @@ pub struct WeakRM<'a>(session::BorrowedSs<'a>);
 pub struct DefaultRM(session::OwnedSs);
 
 impl DefaultRM {
-    /// [`OwnedDefaultRM`] will close everything on drop, not convenient when there are multiple instances, one drop would close all session since they have are indeed the same.
+    /// [`OwnedDefaultRM`] will close everything on drop, not convenient when there are multiple instances, one drop would close all session since they are indeed the same.
     /// By converting to a [`BorrowedDefaultRM`], such behavior can be avoided.
     pub fn leak(self) -> WeakRM<'static> {
         unsafe { WeakRM(session::BorrowedSs::borrow_raw(self.into_raw_ss())) }
     }
 
-    /// [`OwnedDefaultRM`] will close everything on drop, not convenient when there are multiple instances, one drop would close all session since they have are indeed the same.
+    /// [`OwnedDefaultRM`] will close everything on drop, not convenient when there are multiple instances, one drop would close all session since they are indeed the same.
     /// By converting to a [`BorrowedDefaultRM`], such behavior can be avoided.
     pub fn borrow(&'_ self) -> WeakRM<'_> {
         WeakRM(self.as_ss())
