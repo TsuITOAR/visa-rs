@@ -18,7 +18,7 @@ fn init_logger() {
 
 #[test]
 fn list_instr() -> Result<()> {
-    let rm = DefaultRM::new()?.leak();
+    let rm = DefaultRM::new()?;
     let mut list = rm.find_res_list(&CString::new("?*INSTR")?.into())?;
     while let Some(n) = list.find_next()? {
         eprintln!("{}", n);
@@ -28,7 +28,7 @@ fn list_instr() -> Result<()> {
 
 #[test]
 fn send_idn() -> Result<()> {
-    let rm = DefaultRM::new()?.leak();
+    let rm = DefaultRM::new()?;
     let mut list = rm.find_res_list(&CString::new("?*KEYSIGH?*INSTR")?.into())?;
     if let Some(n) = list.find_next()? {
         let mut instr = rm.open(&n, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
@@ -44,7 +44,7 @@ fn send_idn() -> Result<()> {
 #[test]
 fn handler() -> Result<()> {
     // tried EventKind::Trig, but not supported by my keysight osc :(
-    let rm = DefaultRM::new()?.leak();
+    let rm = DefaultRM::new()?;
     let mut list = rm.find_res_list(&CString::new("?*KEYSIGH?*INSTR")?.into())?;
     if let Some(n) = list.find_next()? {
         let instr = rm.open(&n, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
@@ -74,7 +74,7 @@ fn handler() -> Result<()> {
 #[test]
 fn async_io() -> Result<()> {
     init_logger();
-    let rm = DefaultRM::new()?.leak();
+    let rm = DefaultRM::new()?;
     let mut list = rm.find_res_list(&CString::new("?*KEYSIGH?*INSTR")?.into())?;
     if let Some(n) = list.find_next()? {
         log::debug!("connecting to {}", n);

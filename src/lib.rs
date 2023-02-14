@@ -16,7 +16,7 @@
 //!     use std::ffi::CString;
 //!     use std::io::{BufRead, BufReader, Read, Write};
 //!     use visa_rs::{flags::AccessMode, AsResourceManager, DefaultRM, TIMEOUT_IMMEDIATE};
-//!     let rm = DefaultRM::new()?.leak(); //open default resource manager
+//!     let rm = DefaultRM::new()?; //open default resource manager
 //!     let expr = CString::new("?*KEYSIGH?*INSTR").unwrap().into(); //expr used to match resource name
 //!     let rsc = rm.find_res(&expr)?; // find the first resource matched
 //!     let mut instr = rm.open(&rsc, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?; //open a session to resource
