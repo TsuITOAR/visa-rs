@@ -346,14 +346,18 @@ pub struct WeakRM<'a>(session::BorrowedSs<'a>);
 pub struct DefaultRM(session::OwnedSs);
 
 impl DefaultRM {
-    /// [`OwnedDefaultRM`] will close everything on drop, not convenient when there are multiple instances, one drop would close all session since they have are indeed the same.
-    /// By converting to a [`BorrowedDefaultRM`], such behavior can be avoided.
+    /// [`DefaultRM`] will close everything opened by it on drop.
+    /// By converting to a [`WeakRM`], such behavior can be avoided.
+    /// 
+    /// *Note*: Sessions opened by another resource manager (get from another call to [`Self::new`]) won't be influenced.
     pub fn leak(self) -> WeakRM<'static> {
         unsafe { WeakRM(session::BorrowedSs::borrow_raw(self.into_raw_ss())) }
     }
 
-    /// [`OwnedDefaultRM`] will close everything on drop, not convenient when there are multiple instances, one drop would close all session since they have are indeed the same.
-    /// By converting to a [`BorrowedDefaultRM`], such behavior can be avoided.
+    /// [`DefaultRM`] will close everything opened by it on drop.
+    /// By converting to a [`WeakRM`], such behavior can be avoided.
+    /// 
+    /// *Note*: Sessions opened by another resource manager (get from another call to [`Self::new`]) won't be influenced.
     pub fn borrow(&'_ self) -> WeakRM<'_> {
         WeakRM(self.as_ss())
     }
@@ -866,5 +870,35 @@ impl From<enums::attribute::AttrJobId> for JobID {
 impl PartialEq<enums::attribute::AttrJobId> for JobID {
     fn eq(&self, other: &enums::attribute::AttrJobId) -> bool {
         self.eq(&JobID::from(other.clone()))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::ffi::CString;
+
+    use crate::{
+        session::{AsRawSs, FromRawSs},
+        AsResourceManager, DefaultRM,
+    };
+    use anyhow::{bail, Result};
+    #[test]
+    fn rm_behavior() -> Result<()> {
+        let rm1 = DefaultRM::new()?;
+        let rm2 = DefaultRM::new()?;
+        let r1 = rm1.as_raw_ss();
+        assert_ne!(rm1, rm2);
+        std::mem::drop(rm1);
+        let expr = CString::new("?*").unwrap().into();
+        match unsafe { DefaultRM::from_raw_ss(r1) }.find_res(&expr) {
+            Err(crate::Error(crate::enums::status::ErrorCode::ErrorInvObject)) => {
+                Ok::<_, crate::Error>(())
+            }
+            _ => bail!("unexpected behavior using a resource manager after it is dropped"),
+        }?;
+        match rm2.find_res(&expr) {
+            Ok(_) | Err(crate::Error(crate::enums::status::ErrorCode::ErrorRsrcNfound)) => Ok(()),
+            _ => bail!("unexpected behavior using a resource manager after dropping another resource manager"),
+        }
     }
 }
