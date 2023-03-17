@@ -17,7 +17,7 @@ use crate::{
     Instrument, Result, SUCCESS,
 };
 
-/// Defines a ability to be passed to [`Instrument::install_handler`](crate::Instrument::install_handler)
+/// Defines the ability for being passed to [`Instrument::install_handler`](crate::Instrument::install_handler)
 pub trait Callback {
     type Output;
     fn call(&mut self, instr: &Instrument, event: &event::Event) -> Self::Output;

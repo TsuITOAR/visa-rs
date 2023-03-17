@@ -12,18 +12,18 @@
 //!
 //! # Example
 //! ```
-//! # fn main() -> visa_rs::Result<()>{
+//! # fn main() -> anyhow::Result<()>{
 //!     use std::ffi::CString;
 //!     use std::io::{BufRead, BufReader, Read, Write};
 //!     use visa_rs::{flags::AccessMode, AsResourceManager, DefaultRM, TIMEOUT_IMMEDIATE};
 //!     let rm = DefaultRM::new()?; //open default resource manager
-//!     let expr = CString::new("?*KEYSIGH?*INSTR").unwrap().into(); //expr used to match resource name
+//!     let expr = CString::new("?*KEYSIGH?*INSTR")?.into(); //expr used to match resource name
 //!     let rsc = rm.find_res(&expr)?; // find the first resource matched
 //!     let mut instr = rm.open(&rsc, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?; //open a session to resource
-//!     instr.write_all(b"*IDN?\n").unwrap(); //write message
-//!     let mut buf_reader = BufReader::new(instr);
+//!     instr.write_all(b"*IDN?\n")?; //write message
+//!     let mut buf_reader = BufReader::new(&instr);
 //!     let mut buf = String::new();
-//!     buf_reader.read_line(&mut buf).unwrap(); //read response
+//!     buf_reader.read_line(&mut buf)?; //read response
 //!     eprintln!("{}", buf);
 //!     Ok(())
 //! # }

@@ -1,4 +1,4 @@
-﻿# visa-rs
+# visa-rs
 
 [![crates.io](https://img.shields.io/crates/v/visa-rs.svg)](https://crates.io/crates/visa-rs)
 [![docs](https://docs.rs/visa-rs/badge.svg)](https://docs.rs/visa-rs)
@@ -19,7 +19,7 @@ On Windows, the default installation path will be added if no path is specified.
 Add dependencies below to `Cargo.toml`
 ```
 [dependencies]
-visa_rs = { git = "https://github.com/TsuITOAR/visa-rs.git" }
+visa_rs = "^0.5"
 anyhow = "^1"
 ```
 Codes below will find the first Keysight instrument in your environment and print out its `*IDN` response.

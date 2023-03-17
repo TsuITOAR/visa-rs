@@ -6,9 +6,11 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/TsuITOAR/visa-rs"
 homepage = "https://github.com/TsuITOAR/visa-rs"
+keywords = ["control", "visa", "instrument"]
+categories = ["api-bindings"]
 description = "Safe rust bindings for VISA(Virtual Instrument Software Architecture) library"
 exclude = ["/expand.rs", "/fetch-doc"]
-readme = "README.MD"
+readme = "README_Crates_io.MD"
 
 [dependencies]
 visa-sys = "^0.1.4"
