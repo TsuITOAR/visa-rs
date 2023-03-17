@@ -13,7 +13,7 @@ This crate needs to link to an installed visa library, for example, [NI-VISA](ht
 
 You can specify path of `visa64.lib` file (or `visa32.lib` on 32-bit systems) by setting environment variable `LIB_VISA_PATH`.
 
-On Windows, the default installation path will be added if no path is specified.
+On Windows and macOS, the default installation path will be added if no path is specified.
 
 ## Example
 Add dependencies below to `Cargo.toml`
