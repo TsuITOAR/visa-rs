@@ -848,7 +848,7 @@ impl Instrument {
     }
 }
 
-/// Job ID of a asynchronous operation.
+/// Job ID of an asynchronous operation.
 ///
 /// Returned by [`Instrument::visa_read_async`] or [`Instrument::visa_write_async`], used to be compared with the attribute [AttrJobId](enums::attribute::AttrJobId) got from [Event](enums::event::Event) to distinguish operations. 
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash, Clone, Copy)]
