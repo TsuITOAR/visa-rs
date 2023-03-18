@@ -22,7 +22,7 @@ Add dependencies below to `Cargo.toml`
 visa_rs = "^0.5"
 anyhow = "^1"
 ```
-Codes below will find the first Keysight instrument in your environment and print out its `*IDN` response.
+Codes below will find the first Keysight instrument in your environment and print out its `*IDN?` response.
 ```rust
 fn find_a_instr() -> anyhow::Result<()>{
   use std::ffi::CString;
