@@ -24,7 +24,7 @@ anyhow = "^1"
 ```
 Codes below will find the first Keysight instrument in your environment and print out its `*IDN?` response.
 ```rust
-fn find_a_instr() -> anyhow::Result<()>{
+fn find_an_instr() -> anyhow::Result<()>{
   use std::ffi::CString;
   use std::io::{BufRead, BufReader, Read, Write};
   use visa_rs::{flags::AccessMode, AsResourceManager, DefaultRM, TIMEOUT_IMMEDIATE};
