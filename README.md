@@ -28,14 +28,27 @@ fn find_an_instr() -> anyhow::Result<()>{
   use std::ffi::CString;
   use std::io::{BufRead, BufReader, Read, Write};
   use visa_rs::{flags::AccessMode, AsResourceManager, DefaultRM, TIMEOUT_IMMEDIATE};
-  let rm = DefaultRM::new()?; //open default resource manager
-  let expr = CString::new("?*KEYSIGH?*INSTR")?.into(); //expr used to match resource name
-  let rsc = rm.find_res(&expr)?; // find the first resource matched
-  let mut instr = rm.open(&rsc, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?; //open a session to resource
-  instr.write_all(b"*IDN?\n")?; //write message
+
+  // open default resource manager
+  let rm = DefaultRM::new()?;
+
+  // expression to match resource name
+  let expr = CString::new("?*KEYSIGH?*INSTR")?.into();
+
+  // find the first resource matched
+  let rsc = rm.find_res(&expr)?;
+
+  // open a session to the resource, the session will be closed when rm is dropped
+  let mut instr = rm.open(&rsc, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
+
+  // write message
+  instr.write_all(b"*IDN?\n")?;
+
+  // read response
   let mut buf_reader = BufReader::new(&instr);
   let mut buf = String::new();
-  buf_reader.read_line(&mut buf)?; //read response
+  buf_reader.read_line(&mut buf)?;
+
   eprintln!("{}", buf);
   Ok(())
 }
