@@ -1,10 +1,10 @@
 use crate::{
     enums::{
-        attribute::{self, AttrInner},
+        attribute::{self, SpecAttr},
         event,
     },
     session::{AsRawSs, AsSs, BorrowedSs, FromRawSs},
-    JobID,
+    wrap_raw_error_in_unsafe, Instrument, JobID, Result,
 };
 use std::{
     future::Future,
@@ -16,8 +16,6 @@ use std::{
     task::{Poll, Waker},
 };
 use visa_sys as vs;
-
-use super::{Instrument, Result};
 
 type SyncJobID = Arc<Mutex<Option<JobID>>>;
 

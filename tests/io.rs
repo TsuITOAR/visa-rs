@@ -7,7 +7,7 @@ use anyhow::Result;
 use visa_rs::{
     enums::event::{self, Event},
     flags::AccessMode,
-    AsResourceManager, Instrument, DefaultRM, VisaString, TIMEOUT_IMMEDIATE,
+    AsResourceManager, DefaultRM, Instrument, VisaString, TIMEOUT_IMMEDIATE,
 };
 fn init_logger() {
     let _ = env_logger::builder()
@@ -49,10 +49,10 @@ fn handler() -> Result<()> {
     if let Some(n) = list.find_next()? {
         let instr = rm.open(&n, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
         let call_back1 = |ins: &Instrument, t: &Event| -> () {
-            println!("call1: {:?} {:?}", ins, t);
+            log::info!("call1: {:?} {:?}", ins, t);
         };
         let call_back2 = |ins: &Instrument, t: &Event| -> () {
-            println!("call2: {:?} {:?}", ins, t);
+            log::info!("call2: {:?} {:?}", ins, t);
         };
         let event = event::EventKind::EventIoCompletion;
         let h1 = instr.install_handler(event, call_back1)?;
@@ -64,9 +64,9 @@ fn handler() -> Result<()> {
         h1.uninstall();
         let mut v = vec![0u8; 256];
         unsafe { (&instr).visa_read_async(&mut v)? };
-        eprintln!("{}", String::from_utf8_lossy(v.as_ref()));
+        log::info!("{}", String::from_utf8_lossy(v.as_ref()));
         h2.receiver().recv()?;
-        eprintln!("{}", String::from_utf8_lossy(v.as_ref()))
+        log::info!("{}", String::from_utf8_lossy(v.as_ref()))
     }
     Ok(())
 }
@@ -84,16 +84,15 @@ fn async_io() -> Result<()> {
             instr.async_write(b"*IDN?\n").await?;
             let mut buf = [0; 256];
             instr.async_read(buf.as_mut_slice()).await?;
-            eprintln!("get response: {}", VisaString::try_from(buf)?);
+            log::info!("get response: {}", VisaString::try_from(buf)?);
             Result::<()>::Ok(())
         };
         use tokio::runtime::Builder;
         let runtime = Builder::new_multi_thread()
-            .worker_threads(2)
+            .worker_threads(1)
             .enable_all()
             .build()?;
         runtime.block_on(task)?;
     }
     Ok(())
 }
-

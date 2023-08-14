@@ -1,11 +1,10 @@
-//! Attributes defined in NI-VISA product doc with NI-VISA specific attributes removed
+//! Attributes defined in NI-VISA product doc with NI-VISA specific attributes removed.
 //!
-//! auto fetched from NI-VISA doc web api and processed by macros
+//! Auto fetched from NI-VISA doc web API and processed by macros.
 //!
-//! sample of expanded codes
+//! # Sample of expanded codes
 //!
 //! ```ignore
-//!
 //! #[repr(u32)]
 //! pub enum AttrKind {
 //!     Attr4882Compliant = 0x3FFF019F as _,
@@ -32,7 +31,7 @@
 //!
 //!     pub fn kind(&self) -> AttrKind {
 //!         match self {
-//!             Self::Attr4882Compliant(s) => AttrInner::kind(s),
+//!             Self::Attr4882Compliant(s) => SpecAttr::kind(s),
 //!         }
 //!     }
 //!
@@ -71,7 +70,7 @@
 //!     }
 //! }
 //!
-//! impl AttrInner for Attr4882Compliant {
+//! impl SpecAttr for Attr4882Compliant {
 //!     const KIND: AttrKind = AttrKind::Attr4882Compliant;
 //!     unsafe fn zero() -> Self {
 //!         Self { value: 0 as _ }
@@ -93,7 +92,7 @@ use crate::{wrap_raw_error_in_unsafe, Result};
 pub use attributes::*;
 use visa_sys as vs;
 pub trait HasAttribute: crate::session::AsRawSs {
-    /// if want a specific attribute, use [`AttrInner::get_from`]
+    /// if want a specific attribute, use [`SpecAttr::get_from`]
     fn get_attr(&self, attr_kind: AttrKind) -> Result<Attribute> {
         let mut attr = unsafe { Attribute::from_kind(attr_kind) };
         wrap_raw_error_in_unsafe!(vs::viGetAttribute(
@@ -118,7 +117,8 @@ impl HasAttribute for super::event::Event {}
 impl HasAttribute for crate::Instrument {}
 impl HasAttribute for crate::DefaultRM {}
 
-pub trait AttrInner: Sized {
+/// Trait for all specific attributes
+pub trait SpecAttr: Sized {
     const KIND: AttrKind;
     fn kind(&self) -> AttrKind {
         Self::KIND
@@ -136,7 +136,7 @@ pub trait AttrInner: Sized {
     }
 }
 
-impl<T: AttrInner> PartialEq<T> for AttrKind {
+impl<T: SpecAttr> PartialEq<T> for AttrKind {
     fn eq(&self, _: &T) -> bool {
         self.eq(&T::KIND)
     }
@@ -155,7 +155,7 @@ mod attributes {
     // ? VI_ATTR_PXI_MEM_SIZE_BAR0,VI_ATTR_PXI_MEM_SIZE_BAR1,
     // ? VI_ATTR_PXI_MEM_SIZE_BAR2,VI_ATTR_PXI_MEM_SIZE_BAR3,
     // ? VI_ATTR_PXI_MEM_SIZE_BAR4,VI_ATTR_PXI_MEM_SIZE_BAR5}
-    // ? should be *_64 or *_32 based on platform
+    // ? they should be *_64 or *_32 based on platform
     use visa_sys as vs;
     consts_to_enum! {
         #[format=dbg]
@@ -920,7 +920,7 @@ mod attributes {
                             self.value.try_into().unwrap()
                         }
                     }
-                    impl super::AttrInner for $attr_id{
+                    impl super::SpecAttr for $attr_id{
                         const KIND:AttrKind=AttrKind::$attr_id;
                         unsafe fn zero()->Self{
                             Self{value: $crate::new_visa_buf()}

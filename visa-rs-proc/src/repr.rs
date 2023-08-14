@@ -104,6 +104,8 @@ fn map_to_repr(ty: Ident) -> TokenStream2 {
         unsigned_ty_token::<vs::ViEventType>(ty.span())
     } else if ty == "ViUInt16" {
         unsigned_ty_token::<vs::ViUInt16>(ty.span())
+    } else if ty == "ViUInt32" {
+        unsigned_ty_token::<vs::ViUInt32>(ty.span())
     } else if ty == "ViEvent" {
         unsigned_ty_token::<vs::ViEvent>(ty.span())
     } else if ty == "ViEventType" {
@@ -114,8 +116,10 @@ fn map_to_repr(ty: Ident) -> TokenStream2 {
         unsigned_ty_token::<vs::ViAttr>(ty.span())
     } else if ty == "ViStatus" {
         signed_ty_token::<vs::ViStatus>(ty.span())
-    } else if ty == "ViUInt32" {
-        signed_ty_token::<vs::ViUInt32>(ty.span())
+    } else if ty == "ViInt16" {
+        signed_ty_token::<vs::ViInt16>(ty.span())
+    } else if ty == "ViInt32" {
+        signed_ty_token::<vs::ViInt32>(ty.span())
     } else {
         unimplemented!("{}", ty.to_string())
     };

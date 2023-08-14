@@ -75,6 +75,7 @@ macro_rules! consts_to_enum {
     }
 }
 
+pub mod assert;
 pub mod attribute;
 pub mod event;
 pub mod status;

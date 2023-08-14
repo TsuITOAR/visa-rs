@@ -86,7 +86,7 @@ impl ToTokens for Attributes {
                 t.into_iter().map(move |(ty, cfg)| {
                     quote!(
                             #cfg
-                            AttrKind::#ty => Self::from(<#f as super::AttrInner>::zero())
+                            AttrKind::#ty => Self::from(<#f as super::SpecAttr>::zero())
                     )
                 })
             })
@@ -121,14 +121,14 @@ impl ToTokens for Attributes {
                 }
 
                 pub(crate) fn mut_c_void(&mut self)->*mut ::std::ffi::c_void{
-                    use super::AttrInner;
+                    use super::SpecAttr;
                     match self{
                         #(Self::#fields1(s)=>s.mut_c_void()),*
                     }
                 }
                 
                 pub fn kind(&self)-> AttrKind{
-                    use super::AttrInner;
+                    use super::SpecAttr;
                     match self{
                         #(Self::#fields2(s)=>s.kind()),*
                     }
@@ -249,7 +249,7 @@ impl Attr {
             let kind_id = subst_ident(kind_id);
             quote_spanned!(self.id.span()=>
                     #cfg
-                    impl super::AttrInner for #struct_id{
+                    impl super::SpecAttr for #struct_id{
                         const KIND:AttrKind=AttrKind::#kind_id;
                         unsafe fn zero() -> Self {
                             Self{value:0 as _}
