@@ -4,6 +4,7 @@ consts_to_enum! {
     #[format=dbg]
     #[repr(ViInt16)]
     /// This specifies how to assert the interrupt. Refer to the Description section for actual values.
+    /// 
     /// See [`assert_intr_signal`](crate::Instrument::assert_intr_signal)
     ///
     pub enum AssertIntrHow {
