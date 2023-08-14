@@ -4,7 +4,7 @@ consts_to_enum! {
     #[format=dbg]
     #[repr(ViInt16)]
     /// This specifies how to assert the interrupt. Refer to the Description section for actual values.
-    /// See [`assert_instr_signal`](crate::Instrument::assert_instr_signal)
+    /// See [`assert_intr_signal`](crate::Instrument::assert_intr_signal)
     ///
     pub enum AssertIntrHow {
         VI_ASSERT_SIGNAL            -1           r#"Send the notification via a VXI signal."#
