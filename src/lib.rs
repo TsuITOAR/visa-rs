@@ -161,9 +161,12 @@ impl TryFrom<std::io::Error> for Error {
     }
 }
 
-/// Quickly convert [std::io::Error], panic if failed
+/// Quickly convert [std::io::Error].
 ///
-/// Use [TryInto] to perform conversion, the io error must be generated from [Instrument] IO ops
+///  # Panics
+///
+/// Panic if the input Error is not converted from [visa_rs::Error](Error), use [TryInto] to perform conversion, 
+/// the io error must be generated from [Instrument] IO ops
 pub fn io_to_vs_err(e: std::io::Error) -> Error {
     e.try_into().unwrap()
 }
