@@ -17,6 +17,12 @@ On Windows and macOS, the default installation path will be added if no path is 
 
 ## Example
 
+Add dependencies below to `Cargo.toml`
+```
+[dependencies]
+visa_rs = { git = "https://github.com/TsuITOAR/visa-rs.git" }
+```
+
 Codes below will find the first Keysight instrument in your environment and print out its `*IDN?` response.
 
 ```rust
