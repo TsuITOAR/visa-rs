@@ -35,10 +35,10 @@ fn find_an_instr() -> visa_rs::Result<()>{
   let rsc = rm.find_res(&expr)?;
 
   // open a session to the resource, the session will be closed when rm is dropped
-  let mut instr = rm.open(&rsc, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
+  let instr = rm.open(&rsc, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
 
   // write message
-  instr.write_all(b"*IDN?\n").map_err(io_to_vs_err)?;
+  (&instr).write_all(b"*IDN?\n").map_err(io_to_vs_err)?;
 
   // read response
   let mut buf_reader = BufReader::new(&instr);
