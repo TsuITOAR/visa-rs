@@ -16,13 +16,9 @@ You can specify path of `visa64.lib` file (or `visa32.lib` on 32-bit systems) by
 On Windows and macOS, the default installation path will be added if no path is specified.
 
 ## Example
-Add dependencies below to `Cargo.toml`
-```
-[dependencies]
-visa_rs = { git = "https://github.com/TsuITOAR/visa-rs.git" }
-anyhow = "^1"
-```
+
 Codes below will find the first Keysight instrument in your environment and print out its `*IDN?` response.
+
 ```rust
 fn find_an_instr() -> visa_rs::Result<()>{
   use std::ffi::CString;
