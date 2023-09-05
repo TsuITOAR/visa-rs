@@ -18,10 +18,10 @@
 //! fn main() -> visa_rs::Result<()>{
 //!     use std::ffi::CString;
 //!     use std::io::{BufRead, BufReader, Read, Write};
-//!     use visa_rs::{flags::AccessMode, AsResourceManager, DefaultRM, TIMEOUT_IMMEDIATE, io_to_vs_err};
+//!     use visa_rs::prelude::*;
 //!
 //!     // open default resource manager
-//!     let rm = DefaultRM::new()?;
+//!     let rm: DefaultRM = DefaultRM::new()?;
 //!
 //!     // expression to match resource name
 //!     let expr = CString::new("?*KEYSIGH?*INSTR").unwrap().into();
@@ -30,7 +30,7 @@
 //!     let rsc = rm.find_res(&expr)?;
 //!
 //!     // open a session to the resource, the session will be closed when rm is dropped
-//!     let instr = rm.open(&rsc, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
+//!     let instr: Instrument = rm.open(&rsc, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
 //!
 //!     // write message
 //!     (&instr).write_all(b"*IDN?\n").map_err(io_to_vs_err)?;
@@ -55,6 +55,7 @@ pub mod enums;
 pub mod flags;
 pub mod handler;
 mod instrument;
+pub mod prelude;
 pub mod session;
 
 pub use instrument::Instrument;
@@ -165,7 +166,7 @@ impl TryFrom<std::io::Error> for Error {
 ///
 ///  # Panics
 ///
-/// Panic if the input Error is not converted from [visa_rs::Error](Error), use [TryInto] to perform conversion, 
+/// Panic if the input Error is not converted from [visa_rs::Error](Error), use [TryInto] to perform conversion,
 /// the io error must be generated from [Instrument] IO ops
 pub fn io_to_vs_err(e: std::io::Error) -> Error {
     e.try_into().unwrap()
@@ -486,9 +487,9 @@ impl From<CString> for VisaString {
     }
 }
 
-impl Into<CString> for VisaString {
-    fn into(self) -> CString {
-        self.0
+impl From<VisaString> for CString {
+    fn from(value: VisaString) -> Self {
+        value.0
     }
 }
 

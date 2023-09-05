@@ -5,6 +5,7 @@ pub use completion::CompletionCode;
 pub use error::ErrorCode;
 mod error {
     #![allow(overflowing_literals)]
+    #![allow(non_upper_case_globals)]
     consts_to_enum! {
         #[format=doc]
         #[repr(ViStatus)]
@@ -94,6 +95,7 @@ mod error {
     }
 }
 mod completion {
+    #![allow(non_upper_case_globals)]
     consts_to_enum! {
         #[format=doc]
         #[repr(ViStatus)]

@@ -1,4 +1,5 @@
 #![allow(overflowing_literals)]
+#![allow(non_upper_case_globals)]
 
 consts_to_enum! {
     #[format=dbg]

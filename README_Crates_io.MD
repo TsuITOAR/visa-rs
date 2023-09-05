@@ -23,10 +23,10 @@ Codes below will find the first Keysight instrument in your environment and prin
 fn find_an_instr() -> visa_rs::Result<()>{
   use std::ffi::CString;
   use std::io::{BufRead, BufReader, Read, Write};
-  use visa_rs::{flags::AccessMode, AsResourceManager, DefaultRM, TIMEOUT_IMMEDIATE, io_to_vs_err};
+  use visa_rs::prelude::*;
 
   // open default resource manager
-  let rm = DefaultRM::new()?;
+  let rm: DefaultRM = DefaultRM::new()?;
 
   // expression to match resource name
   let expr = CString::new("?*KEYSIGH?*INSTR").unwrap().into();
@@ -35,7 +35,7 @@ fn find_an_instr() -> visa_rs::Result<()>{
   let rsc = rm.find_res(&expr)?;
 
   // open a session to the resource, the session will be closed when rm is dropped
-  let instr = rm.open(&rsc, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
+  let instr: Instrument = rm.open(&rsc, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
 
   // write message
   (&instr).write_all(b"*IDN?\n").map_err(io_to_vs_err)?;

@@ -27,6 +27,10 @@ impl Drop for OwnedSs {
 }
 
 impl BorrowedSs<'_> {
+    /// # Safety
+    /// 
+    /// The `ss` passed in must be a valid VISA session.
+
     pub unsafe fn borrow_raw(ss: RawSs) -> Self {
         Self {
             s: ss,
@@ -42,7 +46,10 @@ pub trait AsRawSs {
 
 /// A trait to express the ability to construct an object from a raw visa session.
 pub trait FromRawSs {
-    unsafe fn from_raw_ss(s: RawSs) -> Self;
+    /// # Safety
+    /// 
+    /// The `ss` passed in must be a valid VISA session.
+    unsafe fn from_raw_ss(ss: RawSs) -> Self;
 }
 
 /// A trait to express the ability to consume an object and acquire ownership of its raw visa session.
