@@ -6,13 +6,13 @@ use visa_sys as vs;
 pub type RawSs = vs::ViSession;
 
 /// An owned visa session.
-#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Hash)]
 pub struct OwnedSs {
     s: RawSs,
 }
 
 /// A borrowed visa session.
-#[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Hash)]
 pub struct BorrowedSs<'b> {
     s: RawSs,
     _phantom: PhantomData<&'b RawSs>,
