@@ -6,13 +6,13 @@ use visa_sys as vs;
 pub type RawSs = vs::ViSession;
 
 /// An owned visa session.
-#[derive(Debug, Clone, PartialEq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct OwnedSs {
     s: RawSs,
 }
 
 /// A borrowed visa session.
-#[derive(Debug, Clone, Copy, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct BorrowedSs<'b> {
     s: RawSs,
     _phantom: PhantomData<&'b RawSs>,
@@ -28,7 +28,7 @@ impl Drop for OwnedSs {
 
 impl BorrowedSs<'_> {
     /// # Safety
-    /// 
+    ///
     /// The `ss` passed in must be a valid VISA session.
 
     pub unsafe fn borrow_raw(ss: RawSs) -> Self {
@@ -47,7 +47,7 @@ pub trait AsRawSs {
 /// A trait to express the ability to construct an object from a raw visa session.
 pub trait FromRawSs {
     /// # Safety
-    /// 
+    ///
     /// The `ss` passed in must be a valid VISA session.
     unsafe fn from_raw_ss(ss: RawSs) -> Self;
 }

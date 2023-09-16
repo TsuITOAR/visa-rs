@@ -1,6 +1,6 @@
 use super::*;
 /// Session to a specified resource
-#[derive(Debug, PartialEq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Instrument(pub(crate) OwnedSs);
 
 impl std::io::Write for Instrument {

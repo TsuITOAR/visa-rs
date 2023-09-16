@@ -408,11 +408,11 @@ impl<'a> AsResourceManager for WeakRM<'a> {}
 impl AsResourceManager for DefaultRM {}
 
 /// A [`ResourceManager`](AsResourceManager) which is [`Clone`] and doesn't close everything on drop
-#[derive(Debug, PartialEq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct WeakRM<'a>(session::BorrowedSs<'a>);
 
 /// A [`ResourceManager`](AsResourceManager) which close everything on drop
-#[derive(Debug, PartialEq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct DefaultRM(session::OwnedSs);
 
 impl DefaultRM {
