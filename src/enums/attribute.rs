@@ -113,9 +113,7 @@ pub trait HasAttribute: crate::session::AsRawSs {
     }
 }
 
-impl HasAttribute for super::event::Event {}
-impl HasAttribute for crate::Instrument {}
-impl HasAttribute for crate::DefaultRM {}
+impl<T:crate::session::AsRawSs> HasAttribute for T {}
 
 /// Trait for all specific attributes
 pub trait SpecAttr: Sized {
