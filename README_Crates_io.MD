@@ -16,22 +16,17 @@ You can specify path of `visa64.lib` file (or `visa32.lib` on 32-bit systems) by
 On Windows and macOS, the default installation path will be added if no path is specified.
 
 ## Example
-Add dependencies below to `Cargo.toml`
-```
-[dependencies]
-visa_rs = "^0.5"
-anyhow = "^1"
-```
+
 Codes below will find the first Keysight instrument in your environment and print out its `*IDN?` response.
 
 ```rust
 fn find_an_instr() -> visa_rs::Result<()>{
   use std::ffi::CString;
   use std::io::{BufRead, BufReader, Read, Write};
-  use visa_rs::{flags::AccessMode, AsResourceManager, DefaultRM, TIMEOUT_IMMEDIATE, io_to_vs_err};
+  use visa_rs::prelude::*;
 
   // open default resource manager
-  let rm = DefaultRM::new()?;
+  let rm: DefaultRM = DefaultRM::new()?;
 
   // expression to match resource name
   let expr = CString::new("?*KEYSIGH?*INSTR").unwrap().into();
@@ -40,10 +35,10 @@ fn find_an_instr() -> visa_rs::Result<()>{
   let rsc = rm.find_res(&expr)?;
 
   // open a session to the resource, the session will be closed when rm is dropped
-  let mut instr = rm.open(&rsc, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
+  let instr: Instrument = rm.open(&rsc, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
 
   // write message
-  instr.write_all(b"*IDN?\n").map_err(io_to_vs_err)?;
+  (&instr).write_all(b"*IDN?\n").map_err(io_to_vs_err)?;
 
   // read response
   let mut buf_reader = BufReader::new(&instr);

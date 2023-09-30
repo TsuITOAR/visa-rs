@@ -1,4 +1,4 @@
-//! Defines [visa attributes](attribute), [visa status](status) and [visa event](event) as Rust enums
+//! Defines [visa attributes](attribute), [visa status](status), [visa event](event), etc as Rust enums
 
 macro_rules! consts_to_enum {
     {
@@ -78,4 +78,5 @@ macro_rules! consts_to_enum {
 pub mod assert;
 pub mod attribute;
 pub mod event;
+pub mod gpib;
 pub mod status;

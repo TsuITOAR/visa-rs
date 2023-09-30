@@ -113,9 +113,7 @@ pub trait HasAttribute: crate::session::AsRawSs {
     }
 }
 
-impl HasAttribute for super::event::Event {}
-impl HasAttribute for crate::Instrument {}
-impl HasAttribute for crate::DefaultRM {}
+impl<T:crate::session::AsRawSs> HasAttribute for T {}
 
 /// Trait for all specific attributes
 pub trait SpecAttr: Sized {
@@ -123,6 +121,10 @@ pub trait SpecAttr: Sized {
     fn kind(&self) -> AttrKind {
         Self::KIND
     }
+
+    /// # Safety
+    ///
+    /// Creates a instance with value 0, maybe illegal value.
     unsafe fn zero() -> Self;
     fn mut_c_void(&mut self) -> *mut ::std::ffi::c_void;
     fn get_from<S: HasAttribute>(s: &S) -> Result<Self> {
@@ -143,6 +145,7 @@ impl<T: SpecAttr> PartialEq<T> for AttrKind {
 }
 
 mod attributes {
+    #![allow(non_upper_case_globals)]
     #![allow(overflowing_literals)]
     #![allow(clippy::zero_prefixed_literal)]
     #![allow(clippy::missing_safety_doc)]

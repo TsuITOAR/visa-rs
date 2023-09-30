@@ -1,4 +1,5 @@
 #![allow(overflowing_literals)]
+#![allow(non_upper_case_globals)]
 
 consts_to_enum! {
     #[format=dbg]
@@ -60,6 +61,7 @@ consts_to_enum! {
     ///
     /// VI_TRIG_PROT_RESERVE (6)
     /// VI_TRIG_PROT_UNRESERVE (7)
+    /// 
     /// See [`assert_trigger`](crate::Instrument::assert_trigger)
     ///
     pub enum AssertTrigPro {

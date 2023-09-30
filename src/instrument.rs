@@ -1,6 +1,6 @@
 use super::*;
 /// Session to a specified resource
-#[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Instrument(pub(crate) OwnedSs);
 
 impl std::io::Write for Instrument {
@@ -325,8 +325,47 @@ impl Instrument {
         Ok(())
     }
 
+    /// Reads data from device or interface through the use of a formatted I/O read buffer.
+    ///
+    /// The viBufRead() operation is similar to viRead() and does not perform any kind of data formatting. It differs from viRead() in that the data is read from the formatted I/O read buffer—the same buffer used by viScanf() and related operations—rather than directly from the device. You can intermix this operation with viScanf(), but you should not mix it with viRead().
+    ///
+    /// * Note: If `buf` is empty, the `retCount` in [viBufRead](vs::viBufRead) is set to [VI_NULL](vs::VI_NULL), the number of bytes transferred is not returned. You may find this useful if you need to know only whether the operation succeeded or failed.
+    pub fn buf_read(&self, buf: &mut [u8]) -> Result<usize> {
+        let mut ret_cnt: vs::ViUInt32 = 0;
+        wrap_raw_error_in_unsafe!(vs::viBufRead(
+            self.as_raw_ss(),
+            if !buf.is_empty() {
+                buf.as_mut_ptr()
+            } else {
+                vs::VI_NULL as _
+            },
+            buf.len() as _,
+            &mut ret_cnt as _
+        ))?;
+        Ok(ret_cnt as _)
+    }
 
-    //todo: viBufRead viBufWrite viGpib* vi_MemoryOperations
+    /// Writes data to a formatted I/O write buffer synchronously.
+    ///
+    /// The viBufWrite() operation is similar to viWrite() and does not perform any kind of data formatting. It differs from viWrite() in that the data is written to the formatted I/O write buffer—the same buffer used by viPrintf() and related operations—rather than directly to the device. You can intermix this operation with viPrintf(), but you should not mix it with viWrite().
+    ///
+    /// If this operation returns VI_ERROR_TMO, the write buffer for the specified session is cleared.
+    ///
+    /// * Note: If `buf` is empty, the `retCount` in [viBufWrite](vs::viBufWrite) is set to [VI_NULL](vs::VI_NULL), the number of bytes transferred is not returned. You may find this useful if you need to know only whether the operation succeeded or failed.
+    pub fn buf_write(&self, buf: &[u8]) -> Result<usize> {
+        let mut ret_cnt: vs::ViUInt32 = 0;
+        wrap_raw_error_in_unsafe!(vs::viBufWrite(
+            self.as_raw_ss(),
+            if !buf.is_empty() {
+                buf.as_ptr()
+            } else {
+                vs::VI_NULL as _
+            },
+            buf.len() as _,
+            &mut ret_cnt as _
+        ))?;
+        Ok(ret_cnt as _)
+    }
 }
 
 use crate::async_io;
@@ -409,5 +448,78 @@ impl Instrument {
     /// which means it can't be send to another thread
     pub async fn async_write(&self, buf: &[u8]) -> Result<usize> {
         async_io::AsyncWrite::new(self, buf).await
+    }
+}
+
+// GPIB operations
+impl Instrument {
+    /// Write GPIB command bytes on the bus.
+    ///
+    /// This operation attempts to write count number of bytes of GPIB commands to the interface bus specified by vi. This operation is valid only on GPIB INTFC (interface) sessions. This operation returns only when the transfer terminates.
+    ///
+    /// * Note: If `buf` is empty, the `retCount` in [viGpibCommand](vs::viGpibCommand) is set to [VI_NULL](vs::VI_NULL), the number of bytes transferred is not returned. You may find this useful if you need to know only whether the operation succeeded or failed.
+    pub fn gpib_command(&self, buf: &[u8]) -> Result<usize> {
+        let mut ret_cnt: vs::ViUInt32 = 0;
+        wrap_raw_error_in_unsafe!(vs::viGpibCommand(
+            self.as_raw_ss(),
+            if !buf.is_empty() {
+                buf.as_ptr()
+            } else {
+                vs::VI_NULL as _
+            },
+            buf.len() as _,
+            &mut ret_cnt as _
+        ))?;
+        Ok(ret_cnt as _)
+    }
+
+    /// Specifies the state of the ATN line and the local active controller state.
+    ///
+    /// This operation asserts or deasserts the GPIB ATN interface line according to the specified mode. The mode can also specify whether the local interface should acquire or release Controller Active status. This operation is valid only on GPIB INTFC (interface) sessions.
+    ///
+    /// It is generally not necessary to use the viGpibControlATN() operation in most applications. Other operations such as viGpibCommand() and viGpibPassControl() modify the ATN and/or CIC state automatically.
+    pub fn gpib_control_atn(&self, mode: enums::gpib::AtnMode) -> Result<()> {
+        wrap_raw_error_in_unsafe!(vs::viGpibControlATN(self.as_raw_ss(), mode as _))?;
+        Ok(())
+    }
+
+    /// Controls the state of the GPIB Remote Enable (REN) interface line, and optionally the remote/local state of the device.
+    ///
+    /// The viGpibControlREN() operation asserts or unasserts the GPIB REN interface line according to the specified mode. The mode can also specify whether the device associated with this session should be placed in local state (before deasserting REN) or remote state (after asserting REN). This operation is valid only if the GPIB interface associated with the session specified by vi is currently the system controller.
+
+    pub fn gpib_control_ren(&self, mode: enums::gpib::RenMode) -> Result<()> {
+        wrap_raw_error_in_unsafe!(vs::viGpibControlREN(self.as_raw_ss(), mode as _))?;
+        Ok(())
+    }
+
+    /// Tell the GPIB device at the specified address to become controller in charge (CIC).
+    ///
+    /// This operation passes controller in charge status to the device indicated by primAddr and secAddr, and then deasserts the ATN line. This operation assumes that the targeted device has controller capability. This operation is valid only on GPIB INTFC (interface) sessions.
+    ///
+    /// + `prim_addr`: Primary address of the GPIB device to which you want to pass control.
+    ///
+    /// + `sec_addr`: Secondary address of the targeted GPIB device. If the targeted device does not have a secondary address, this parameter should set as None or the value [VI_NO_SEC_ADDR](vs::VI_NO_SEC_ADDR).
+    ///
+
+    pub fn gpib_pass_control(
+        &self,
+        prim_addr: vs::ViUInt16,
+        sec_addr: impl Into<Option<vs::ViUInt16>>,
+    ) -> Result<()> {
+        wrap_raw_error_in_unsafe!(vs::viGpibPassControl(
+            self.as_raw_ss(),
+            prim_addr as _,
+            sec_addr.into().unwrap_or(vs::VI_NO_SEC_ADDR as _) as _
+        ))?;
+        Ok(())
+    }
+    /// Pulse the interface clear line (IFC) for at least 100 microseconds.
+    ///
+    /// This operation asserts the IFC line and becomes controller in charge (CIC). The local board must be the system controller. This operation is valid only on GPIB INTFC (interface) sessions.
+    ///
+
+    pub fn gpib_send_ifc(&self) -> Result<()> {
+        wrap_raw_error_in_unsafe!(vs::viGpibSendIFC(self.as_raw_ss(),))?;
+        Ok(())
     }
 }
