@@ -106,7 +106,7 @@ impl<F: Callback> CallbackWrapper<F> {
 
 /// Lifetime manager for [`Callback`], will uninstall the callback when dropped.
 ///
-/// Internally hold a [`Receiver`](::std::sync::mpsc::Receiver) (accessed by [`Self::receiver`]) to receive output of callback from visa.
+/// Internally hold a [`Receiver`] (accessed by [`Self::receiver`]) to receive output of callback from visa.
 pub struct Handler<'b, F: Callback> {
     instr: BorrowedSs<'b>,
     rec: Receiver<F::Output>,
