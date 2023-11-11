@@ -453,6 +453,27 @@ pub struct ResList {
     instr_desc: VisaBuf,
 }
 
+impl Iterator for ResList {
+    type Item = Result<ResID>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.cnt < 1 {
+            return None;
+        }
+        let next: ResID = self.instr_desc.try_into().unwrap();
+        if self.cnt > 1 {
+            if let Err(e) = wrap_raw_error_in_unsafe!(vs::viFindNext(
+                self.list,
+                self.instr_desc.as_mut_ptr() as _
+            )) {
+                return Some(Err(e));
+            }
+        }
+        self.cnt -= 1;
+        Some(Ok(next))
+    }
+}
+
 impl ResList {
     /// Returns the next resource from the list of resources found during a previous call to viFindRsrc().
     pub fn find_next(&mut self) -> Result<Option<ResID>> {
