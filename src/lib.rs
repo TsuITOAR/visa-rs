@@ -411,6 +411,18 @@ impl AsResourceManager for DefaultRM {}
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct WeakRM<'a>(session::BorrowedSs<'a>);
 
+impl<'a> From<&'a attribute::AttrRmSession> for WeakRM<'a> {
+    fn from(value: &'a attribute::AttrRmSession) -> Self {
+        Self(unsafe { session::BorrowedSs::borrow_raw(value.clone().into_inner()) })
+    }
+}
+
+impl From<attribute::AttrRmSession> for WeakRM<'static> {
+    fn from(value: attribute::AttrRmSession) -> Self {
+        Self(unsafe { session::BorrowedSs::borrow_raw(value.into_inner()) })
+    }
+}
+
 /// A [`ResourceManager`](AsResourceManager) which close everything on drop
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct DefaultRM(session::OwnedSs);

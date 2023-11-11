@@ -79,5 +79,5 @@ fn subst_token_tree(t: TokenTree) -> TokenStream2 {
         return stream;
     }
     t.to_tokens(&mut stream);
-    return stream;
+    stream
 }

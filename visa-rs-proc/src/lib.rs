@@ -99,7 +99,7 @@ fn match_tokens(input: ParseStream, str: &str) -> Option<proc_macro2::Span> {
     input.advance_to(&fork);
     let end = input.span();
 
-    return Some(start.join(end).unwrap_or(start));
+    Some(start.join(end).unwrap_or(start))
 }
 mod attrs;
 

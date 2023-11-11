@@ -13,7 +13,7 @@ pub struct Input {
 impl Parse for Input {
     fn parse(input: syn::parse::ParseStream) -> Result<Self> {
         let fork = input.fork();
-        if let Ok(_) = fork.parse::<NestedMacros>() {
+        if fork.parse::<NestedMacros>().is_ok() {
             let nest_macros: NestedMacros = input.parse()?;
             Ok(Self {
                 macs: nest_macros.macs.into(),
@@ -100,9 +100,7 @@ fn extract_repr_attribute(
 
 fn map_to_repr(ty: Ident) -> TokenStream2 {
     use visa_sys as vs;
-    let align = if ty == "ViEventType" {
-        unsigned_ty_token::<vs::ViEventType>(ty.span())
-    } else if ty == "ViUInt16" {
+    let align = if ty == "ViUInt16" {
         unsigned_ty_token::<vs::ViUInt16>(ty.span())
     } else if ty == "ViUInt32" {
         unsigned_ty_token::<vs::ViUInt32>(ty.span())

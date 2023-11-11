@@ -79,25 +79,22 @@ impl ToTokens for Attributes {
 
         let type_name = self.attrs.iter().map(|x| struct_name_to_kind_name(&x.id));
 
-        let match_field = field_name
-            .zip(type_name)
-            .map(|(f, t)| {
-                let f = f.clone();
-                t.into_iter().map(move |(ty, cfg)| {
-                    quote!(
-                            #cfg
-                            AttrKind::#ty => Self::from(<#f as super::SpecAttr>::zero())
-                    )
-                })
+        let match_field = field_name.zip(type_name).flat_map(|(f, t)| {
+            let f = f.clone();
+            t.into_iter().map(move |(ty, cfg)| {
+                quote!(
+                        #cfg
+                        AttrKind::#ty => Self::from(<#f as super::SpecAttr>::zero())
+                )
             })
-            .flatten();
+        });
         let fields1 = self.attrs.iter().map(|x| x.struct_name());
         let fields2 = self.attrs.iter().map(|x| x.struct_name());
         let as_attr_state=self.attrs.iter().map(|x| {
             let field=x.struct_name();
             if let TypeCore::UnArch(ref t)=x.ty.core{
                 if t=="ViString"{
-                    return quote_spanned!(t.span()=> 
+                    return quote_spanned!(t.span()=>
                         Self::#field(s)=>
                             {
                                 log::warn!("setting read only attribute {}", ::std::stringify!(#field));
@@ -106,7 +103,7 @@ impl ToTokens for Attributes {
                     )
                 }
             }
-            return quote_spanned!(x.id.span()=> Self::#field(s)=>s.value as _)
+            quote_spanned!(x.id.span()=> Self::#field(s)=>s.value as _)
         }
         );
         quote!(
@@ -126,7 +123,7 @@ impl ToTokens for Attributes {
                         #(Self::#fields1(s)=>s.mut_c_void()),*
                     }
                 }
-                
+
                 pub fn kind(&self)-> AttrKind{
                     use super::SpecAttr;
                     match self{
@@ -159,7 +156,7 @@ fn match_ident(tar: &Ident, check: &Ident) {
 struct Attr {
     id: Ident,
     desc: LitStr,
-    _vis: TokenStream2,
+    vis: TokenStream2,
     ty: Type,
     range: Range,
 }
@@ -169,10 +166,9 @@ impl Attr {
         subst_ident(self.id.clone())
     }
     fn struct_def(&self, tokens: &mut TokenStream2) {
-        self.ty
-            .attr_name
-            .as_ref()
-            .map(|n| match_ident(&self.id, &n));
+        if let Some(n) = self.ty.attr_name.as_ref() {
+            match_ident(&self.id, n);
+        }
         let Self { desc, ty, .. } = self;
         let id = self.struct_name();
         match ty.core {
@@ -222,11 +218,14 @@ impl Attr {
             }
         }
     }
+    fn is_writeable(&self) -> bool {
+        self.vis.to_string().contains("Write")
+    }
     fn constructors(&self, tokens: &mut TokenStream2) {
         let mut c = |n: &RangeCore| {
             n.check_attr_name(&self.id);
             let mut constructors = TokenStream2::new();
-            n.to_constructor(&self.ty, &mut constructors);
+            n.to_constructor(&self.ty, &mut constructors, self.is_writeable());
             let struct_name = self.struct_name();
             quote!(
                 impl #struct_name{
@@ -314,14 +313,14 @@ fn struct_name_to_kind_name(id: &Ident) -> impl Iterator<Item = (Ident, TokenStr
             kind_id_str.span(),
         ));
 
-        return vec![
+        vec![
             (kind_id_x64, quote!(#[cfg(target_arch = "x86_64")])),
             (kind_id_x32, quote!(#[cfg(target_arch = "x86")])),
         ]
-        .into_iter();
+        .into_iter()
     } else {
         let kind_id = subst_ident(kind_id.clone());
-        return vec![(kind_id, TokenStream2::new())].into_iter();
+        vec![(kind_id, TokenStream2::new())].into_iter()
     }
 }
 
@@ -360,7 +359,7 @@ impl Parse for TypeCore {
             if match_tokens(input, "-bit applications").is_none() {
                 return Err(input.error("expected '-bit applications' after architecture"));
             }
-            let mut ret = vec![ArchType { arch, core: core }];
+            let mut ret = vec![ArchType { arch, core }];
             while !input.is_empty() {
                 let core = input.parse()?;
                 input.parse::<Token![for]>()?;
@@ -372,9 +371,9 @@ impl Parse for TypeCore {
                     return Err(input.error("expected '-bit applications' after architecture"));
                 }
             }
-            return Ok(TypeCore::Arch(ret));
+            Ok(TypeCore::Arch(ret))
         } else {
-            return Ok(TypeCore::UnArch(core));
+            Ok(TypeCore::UnArch(core))
         }
     }
 }
@@ -402,7 +401,7 @@ impl Parse for Attr {
         Ok(Self {
             id,
             desc,
-            _vis: vis,
+            vis,
             ty,
             range,
         })

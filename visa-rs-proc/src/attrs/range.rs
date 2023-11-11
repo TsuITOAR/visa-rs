@@ -86,7 +86,7 @@ impl DefaultValue {
             DefaultValue::Ident(n) => n.span(),
             DefaultValue::Key { char, .. } => char.span(),
             DefaultValue::NumDesc { num, .. } => num.span(),
-            DefaultValue::NA(s) => s.clone(),
+            DefaultValue::NA(s) => *s,
         }
     }
 }
@@ -131,6 +131,7 @@ impl Parse for DefaultValue {
     }
 }
 
+#[allow(clippy::upper_case_acronyms)]
 pub enum Port {
     PXI,
     Serial,
@@ -170,8 +171,8 @@ impl Parse for Port {
             "USB INSTR",
         ];
         for p in PORT.iter() {
-            if match_tokens(input, *p).is_some() {
-                return Ok(Self::from_str(*p).unwrap());
+            if match_tokens(input, p).is_some() {
+                return Ok(Self::from_str(p).unwrap());
             }
         }
         Err(input.error("Unknown port"))
@@ -231,7 +232,7 @@ impl RangeCore {
             |mut init, item| {
                 if let Bound::NoArch(ref n) = item.bound {
                     if let BoundCore::Stream(bounds) = n {
-                        init.0.extend(bounds.into_iter());
+                        init.0.extend(bounds);
                         if init.1.as_ref().map(|x| x != &item.default).unwrap_or(false) {
                             /* item.default
                             .source_span()
@@ -258,12 +259,19 @@ impl RangeCore {
         }
     }
     pub fn check_attr_name(&self, tar: &Ident) {
-        self.attr_name.as_ref().map(|n| super::match_ident(tar, n));
+        if let Some(n) = self.attr_name.as_ref() {
+            super::match_ident(tar, n);
+        }
     }
 }
 
 impl RangeCore {
-    pub fn to_constructor(&self, ty: &Type, tokens: &mut proc_macro2::TokenStream) {
+    pub fn to_constructor(
+        &self,
+        ty: &Type,
+        tokens: &mut proc_macro2::TokenStream,
+        writeable: bool,
+    ) {
         match self.bound {
             Bound::Arch(ref arch_bound) => match ty.core {
                 super::TypeCore::Arch(ref arch_ty) => {
@@ -277,20 +285,34 @@ impl RangeCore {
                             );
                             if let Ok(64) = bound.arch.base10_parse() {
                                 let cfg = quote!(#[cfg(target_arch = "x86_64")]);
-                                bound.core.to_constructor(&tya.core, &cfg.into(), tokens);
+                                bound.core.to_constructor(
+                                    &tya.core,
+                                    &cfg.into(),
+                                    tokens,
+                                    writeable,
+                                );
                             } else if let Ok(32) = bound.arch.base10_parse() {
                                 let cfg = quote!(#[cfg(target_arch = "x86")]);
-                                bound.core.to_constructor(&tya.core, &cfg.into(), tokens);
+                                bound.core.to_constructor(
+                                    &tya.core,
+                                    &cfg.into(),
+                                    tokens,
+                                    writeable,
+                                );
                             }
                         });
                 }
                 super::TypeCore::UnArch(ref tyu) => arch_bound.iter().for_each(|bound| {
                     if let Ok(64) = bound.arch.base10_parse() {
                         let cfg = quote!(#[cfg(target_arch = "x86_64")]);
-                        bound.core.to_constructor(&tyu, &cfg.into(), tokens);
+                        bound
+                            .core
+                            .to_constructor(tyu, &cfg.into(), tokens, writeable);
                     } else if let Ok(32) = bound.arch.base10_parse() {
                         let cfg = quote!(#[cfg(target_arch = "x86")]);
-                        bound.core.to_constructor(&tyu, &cfg.into(), tokens);
+                        bound
+                            .core
+                            .to_constructor(tyu, &cfg.into(), tokens, writeable);
                     }
                 }),
             },
@@ -298,13 +320,13 @@ impl RangeCore {
                 super::TypeCore::Arch(ref arch_ty) => arch_ty.iter().for_each(|tya| {
                     if let Ok(64) = tya.arch.base10_parse() {
                         let cfg = quote!(#[cfg(target_arch = "x86_64")]);
-                        n.to_constructor(&tya.core, &cfg.into(), tokens);
+                        n.to_constructor(&tya.core, &cfg.into(), tokens, writeable);
                     } else if let Ok(32) = tya.arch.base10_parse() {
                         let cfg = quote!(#[cfg(target_arch = "x86")]);
-                        n.to_constructor(&tya.core, &cfg.into(), tokens);
+                        n.to_constructor(&tya.core, &cfg.into(), tokens, writeable);
                     }
                 }),
-                super::TypeCore::UnArch(ref u) => n.to_constructor(u, &None, tokens),
+                super::TypeCore::UnArch(ref u) => n.to_constructor(u, &None, tokens, writeable),
             },
         }
     }
@@ -357,7 +379,7 @@ impl Parse for Bound {
                     return Err(input.error("expected '-bit applications' after architecture"));
                 }
             }
-            return Ok(Bound::Arch(ret));
+            Ok(Bound::Arch(ret))
         } else {
             Ok(Bound::NoArch(core))
         }
@@ -376,7 +398,13 @@ pub enum BoundCore {
 }
 
 impl BoundCore {
-    fn to_constructor(&self, ty: &Ident, cfg: &Option<TokenStream2>, tokens: &mut TokenStream2) {
+    fn to_constructor(
+        &self,
+        ty: &Ident,
+        cfg: &Option<TokenStream2>,
+        tokens: &mut TokenStream2,
+        is_writeable: bool,
+    ) {
         let new_uncheck = quote_spanned!( ty.span()=>
             #cfg
             pub unsafe fn new_unchecked(value:vs::#ty)->Self{
@@ -387,40 +415,45 @@ impl BoundCore {
         let mut new_check = None;
         match self {
             BoundCore::NA(_) => {
-                new = quote_spanned!(ty.span()=>
-                    #cfg
-                    pub fn new(value:vs::#ty)->Self{
-                        Self{value}
-                    }
-                )
-                .into();
-                new_check = quote_spanned!(ty.span()=>
-                    #cfg
-                    pub fn new_checked(value:vs::#ty)->Option<Self>{
-                        Some(Self{value})
-                    }
-                )
-                .into();
+                if is_writeable {
+                    new = quote_spanned!(ty.span()=>
+                        #cfg
+                        pub fn new(value:vs::#ty)->Self{
+                            Self{value}
+                        }
+                    )
+                    .into();
+                    new_check = quote_spanned!(ty.span()=>
+                        #cfg
+                        pub fn new_checked(value:vs::#ty)->Option<Self>{
+                            Some(Self{value})
+                        }
+                    )
+                    .into();
+                }
             }
             BoundCore::Unreachable(_) => (),
             BoundCore::Stream(s) => {
                 s.iter()
                     .for_each(|x| x.sub_constructor(ty, cfg).to_tokens(tokens));
-                let checks = s.iter().map(|x| x.check_range(ty));
-                new_check = quote_spanned!(ty.span()=>
-                    #cfg
-                    #[allow(unused_parens)]
-                    pub fn new_checked(value:vs::#ty)->Option<Self>{
-                        if #(#checks)||*{
-                            Some(Self{value})
-                        }else{
-                            None
+                if is_writeable {
+                    let checks = s.iter().map(|x| x.check_range(ty));
+                    new_check = quote_spanned!(ty.span()=>
+                        #cfg
+                        #[allow(unused_parens)]
+                        pub fn new_checked(value:vs::#ty)->Option<Self>{
+                            if #(#checks)||*{
+                                Some(Self{value})
+                            }else{
+                                None
+                            }
                         }
-                    }
-                )
-                .into()
+                    )
+                    .into();
+                }
             }
         }
+
         quote!(
             #new
             #new_uncheck
