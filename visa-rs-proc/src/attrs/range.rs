@@ -563,7 +563,7 @@ impl BoundItem {
                         .unwrap()
                         .parse::<u8>()
                         .unwrap())
-                        ..(id_h
+                        ..=(id_h
                             .rmatches(char::is_numeric)
                             .next()
                             .unwrap()
