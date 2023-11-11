@@ -475,7 +475,7 @@ impl Iterator for ResList {
 }
 
 impl ResList {
-    /// Returns the next resource from the list of resources found during a previous call to viFindRsrc().
+    /// Returns the next resource from the list of resources found
     pub fn find_next(&mut self) -> Result<Option<ResID>> {
         if self.cnt < 1 {
             return Ok(None);
