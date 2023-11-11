@@ -14,3 +14,7 @@ proc-macro = true
 syn = "^1"
 quote = "^1"
 proc-macro2 = "^1"
+visa-sys = { version = "^0.1" }
+
+[patch.crates-io]
+visa-sys = { path = "../../visa-sys" }

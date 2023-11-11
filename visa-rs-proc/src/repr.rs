@@ -121,7 +121,8 @@ fn map_to_repr(ty: Ident) -> TokenStream2 {
     } else if ty == "ViInt32" {
         signed_ty_token::<vs::ViInt32>(ty.span())
     } else {
-        unimplemented!("{}", ty.to_string())
+        //ty.span().unwrap().warning("unknown repr value");
+        ty.clone()
     };
     quote_spanned!(ty.span()=>#[repr(#align)])
 }
@@ -162,6 +163,8 @@ fn signed_ty_token<T: Sized>(span: Span) -> Ident {
     }
 }
 
+// solved by add conditional link flag #[cfg(not(docsrs))]
+/*
 /// copied from visa-sys. If add visa-sys as a dependency,
 /// would failed linking when running macros in visa-rs
 mod visa_sys {
@@ -279,3 +282,4 @@ mod visa_sys {
         ) -> ViStatus,
     >;
 }
+ */
