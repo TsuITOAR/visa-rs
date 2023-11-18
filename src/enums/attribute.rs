@@ -113,7 +113,7 @@ pub trait HasAttribute: crate::session::AsRawSs {
     }
 }
 
-impl<T:crate::session::AsRawSs> HasAttribute for T {}
+impl<T: crate::session::AsRawSs> HasAttribute for T {}
 
 /// Trait for all specific attributes
 pub trait SpecAttr: Sized {
@@ -894,14 +894,14 @@ mod attributes {
         (
             $(
                 const $attr_id:ident: $desc:literal
-                (Read Only $($g:tt)?) ( ViString) [static as N/A in N/A]
+                (Read Only $($g:tt)?) ( $(ViString)? $(ViRsrc)?) [static as N/A in N/A]
             )*
         ) => {
             visa_rs_proc::rusty_ident!{
                 vi_string_attrs!{@inner
                     $(
                         const $attr_id: $desc
-                        (Read Only $($g)?) ( ViString) [static as N/A in N/A]
+                        (Read Only $($g)?) [static as N/A in N/A]
                     )*
                 }
             }
@@ -909,7 +909,7 @@ mod attributes {
         (@inner
             $(
                 const $attr_id:ident: $desc:literal
-                (Read Only $($g:tt)?) ( ViString) [static as N/A in N/A]
+                (Read Only $($g:tt)?) [static as N/A in N/A]
             )*
         ) => {
                 $(
@@ -968,5 +968,8 @@ mod attributes {
 
             const VI_ATTR_USB_SERIAL_NUM: r#"VI_ATTR_USB_SERIAL_NUM specifies the USB serial number of this device."#
             (Read Only Global) ( ViString) [static as N/A in N/A]
+
+            const VI_ATTR_RSRC_NAME: r#"VI_ATTR_RSRC_NAME is the unique identifier for a resource. Refer to VISA Resource Syntax and Examples for the syntax of resource strings and examples."#
+            (Read Only Global) ( ViRsrc) [static as N/A in N/A]
     }
 }

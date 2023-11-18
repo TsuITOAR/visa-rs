@@ -41,7 +41,7 @@ impl ToTokens for Attributes {
     fn to_tokens(&self, tokens: &mut TokenStream2) {
         for attr in &self.attrs {
             if let TypeCore::UnArch(ref t) = attr.ty.core {
-                if t == "ViString" {
+                if t == "ViString" || t == "ViRsrc" {
                     continue;
                 }
             }
@@ -93,7 +93,7 @@ impl ToTokens for Attributes {
         let as_attr_state=self.attrs.iter().map(|x| {
             let field=x.struct_name();
             if let TypeCore::UnArch(ref t)=x.ty.core{
-                if t=="ViString"{
+                if t == "ViString" || t == "ViRsrc"{
                     return quote_spanned!(t.span()=>
                         Self::#field(s)=>
                             {
