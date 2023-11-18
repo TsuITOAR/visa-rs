@@ -504,6 +504,7 @@ impl ResList {
     }
 }
 
+#[repr(transparent)]
 /// Simple wrapper of [std::ffi::CString]
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash, Clone)]
 pub struct VisaString(CString);
