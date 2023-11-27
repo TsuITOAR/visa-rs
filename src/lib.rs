@@ -469,20 +469,10 @@ impl Iterator for ResList {
     type Item = Result<ResID>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.cnt < 1 {
-            return None;
+        match self.find_next() {
+            Ok(o) => o.map(Ok),
+            Err(e) => Some(Err(e)),
         }
-        let next: ResID = self.instr_desc.try_into().unwrap();
-        if self.cnt > 1 {
-            if let Err(e) = wrap_raw_error_in_unsafe!(vs::viFindNext(
-                self.list,
-                self.instr_desc.as_mut_ptr() as _
-            )) {
-                return Some(Err(e));
-            }
-        }
-        self.cnt -= 1;
-        Some(Ok(next))
     }
 }
 
@@ -508,6 +498,14 @@ impl ResList {
 /// Simple wrapper of [std::ffi::CString]
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord, Hash, Clone)]
 pub struct VisaString(CString);
+
+impl std::ops::Deref for VisaString {
+    type Target = CString;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 /// resource ID
 pub type ResID = VisaString;
