@@ -600,12 +600,7 @@ impl PartialEq<enums::attribute::AttrJobId> for JobID {
 
 #[cfg(test)]
 mod test {
-    use std::ffi::CString;
-
-    use crate::{
-        session::{AsRawSs, FromRawSs},
-        AsResourceManager, DefaultRM, *,
-    };
+    use crate::*;
     use anyhow::{bail, Result};
     #[test]
     fn rm_behavior() -> Result<()> {

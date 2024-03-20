@@ -13,10 +13,10 @@ exclude = ["/expand.rs", "/fetch-doc"]
 readme = "README_Crates_io.MD"
 
 [dependencies]
-visa-sys = "^0.1.4"
+visa-sys = {version ="^0.1.6", path = "../visa-sys" }
 bitflags = "^2.4"
 num_enum = "^0.7"
-visa-rs-proc = { version = "^0.5.0", path = "./visa-rs-proc" }
+visa-rs-proc = { version = "^0.6.0", path = "./visa-rs-proc" }
 log = "^0.4"
 
 [dev-dependencies]

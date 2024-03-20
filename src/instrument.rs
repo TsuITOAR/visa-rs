@@ -374,8 +374,6 @@ impl Instrument {
     }
 }
 
-use crate::async_io;
-
 impl Instrument {
     /// Reads data from device or interface asynchronously.
     ///
