@@ -27,6 +27,7 @@ mod kw {
 }
 
 #[derive(Clone)]
+#[allow(unused)]
 pub enum DefaultValue {
     Num(LitInt),
     Ident(Ident),
@@ -391,6 +392,7 @@ pub struct ArchBound {
     arch: LitInt,
 }
 
+#[allow(unused)]
 pub enum BoundCore {
     NA(Span),
     Unreachable(Span),
