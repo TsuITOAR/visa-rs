@@ -31,6 +31,7 @@ macro_rules! consts_to_enum {
     } => {
         $(#[$metas])*
         #[derive(num_enum::TryFromPrimitive,num_enum::IntoPrimitive, Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
+        #[allow(clippy::empty_docs)]
         pub enum $enum_id{
             $(
                 $(#[doc=$des])?
@@ -48,6 +49,7 @@ macro_rules! consts_to_enum {
     } => {
         $(#[$metas])*
         #[derive(num_enum::TryFromPrimitive,num_enum::IntoPrimitive, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
+        #[allow(clippy::empty_docs)]
         pub enum $enum_id{
             $(
                 #[doc=$des]

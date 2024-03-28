@@ -1,6 +1,6 @@
 [package]
 name = "visa-rs"
-version = "0.6.0"
+version = "0.6.1"
 authors = ["ITOAR <itoar@outlook.com>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -16,7 +16,7 @@ readme = "README_Crates_io.MD"
 visa-sys = {version ="^0.1.6", path = "../visa-sys" }
 bitflags = "^2.4"
 num_enum = "^0.7"
-visa-rs-proc = { version = "^0.6.0", path = "./visa-rs-proc" }
+visa-rs-proc = { version = "^0.6.1", path = "./visa-rs-proc" }
 log = "^0.4"
 
 [dev-dependencies]

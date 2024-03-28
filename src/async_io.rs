@@ -57,7 +57,7 @@ impl<'b> AsyncIoHandler<'b> {
         let mut old_waker = self.waker.lock().unwrap();
         if !old_waker.will_wake(waker) {
             log::trace!("need to update waker");
-            *old_waker = waker.clone();
+            old_waker.clone_from(waker);
         }
         log::trace!("try update waker finished");
     }
@@ -140,7 +140,7 @@ impl AsyncIoCallbackPack {
             .send(get_ret(event))
             .expect("send result to channel");
         log::trace!("sended results");
-        self.waker.upgrade().expect("as long as handler not dropped, upgrade is successful, only when this function will be called").lock().unwrap().clone().wake();
+        self.waker.upgrade().expect("as long as handler not dropped, upgrade is successful, only when this function will be called").lock().unwrap().wake_by_ref();
         log::trace!("waked");
         *self.job_id.lock().unwrap() = None;
         log::trace!("removed finished job id");

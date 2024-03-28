@@ -3,7 +3,6 @@
 [![crates.io](https://img.shields.io/crates/v/visa-rs.svg)](https://crates.io/crates/visa-rs)
 [![docs](https://docs.rs/visa-rs/badge.svg)](https://docs.rs/visa-rs)
 
-
 Safe Rust bindings for VISA(Virtual Instrument Software Architecture) library
 
 Most documentation comes from [NI-VISA Product Documentation](https://www.ni.com/docs/en-US/bundle/ni-visa-20.0/page/ni-visa/help_file_title.html)
