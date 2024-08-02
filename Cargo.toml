@@ -1,6 +1,6 @@
 [package]
 name = "visa-rs"
-version = "0.6.1"
+version = "0.6.2"
 authors = ["ITOAR <itoar@outlook.com>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -13,8 +13,8 @@ exclude = ["/expand.rs", "/fetch-doc"]
 readme = "README_Crates_io.MD"
 
 [dependencies]
-visa-sys = { version = "^0.1.6" }
-bitflags = "^2.4"
+visa-sys = { version = "^0.1.7" }
+bitflags = "^2.6"
 num_enum = "^0.7"
 visa-rs-proc = { version = "^0.6.1", path = "./visa-rs-proc" }
 log = "^0.4"
@@ -26,4 +26,4 @@ env_logger = "^0.10"
 
 
 [patch.crates-io]
-# visa-sys = { path = "../visa-sys" }
+#visa-sys = { path = "../visa-sys" }

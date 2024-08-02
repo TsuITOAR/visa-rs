@@ -5,7 +5,7 @@ consts_to_enum! {
     #[format=dbg]
     #[repr(ViInt16)]
     /// This specifies how to assert the interrupt.
-    /// 
+    ///
     /// See [`assert_intr_signal`](crate::Instrument::assert_intr_signal)
     ///
     pub enum AssertIntrHow {
@@ -47,7 +47,7 @@ consts_to_enum! {
     #[repr(ViUInt16)]
     /// Trigger protocol to use during assertion.
     /// * GPIB, Serial, TCPIP, USB
-    /// 
+    ///
     /// VI_TRIG_PROT_DEFAULT (0)
     ///
     /// * VXI
@@ -61,7 +61,7 @@ consts_to_enum! {
     ///
     /// VI_TRIG_PROT_RESERVE (6)
     /// VI_TRIG_PROT_UNRESERVE (7)
-    /// 
+    ///
     /// See [`assert_trigger`](crate::Instrument::assert_trigger)
     ///
     pub enum AssertTrigPro {
@@ -82,7 +82,7 @@ consts_to_enum! {
     #[format=dbg]
     #[repr(ViUInt16)]
     /// Specifies the utility bus signal to assert.
-    /// 
+    ///
     /// See [`assert_util_signal`](crate::Instrument::assert_util_signal)
     ///
     pub enum AssertBusSignal {

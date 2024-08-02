@@ -216,12 +216,17 @@ const SUCCESS: vs::ViStatus = vs::VI_SUCCESS as _;
 macro_rules! wrap_raw_error_in_unsafe {
     ($s:expr) => {
         match unsafe { $s } {
-            state if state >= $crate::SUCCESS => $crate::Result::<
-                $crate::enums::status::CompletionCode,
-            >::Ok(state.try_into().unwrap()),
-            e => {
-                $crate::Result::<$crate::enums::status::CompletionCode>::Err(e.try_into().unwrap())
+            state if state >= $crate::SUCCESS && state <= i32::MAX as _ => {
+                $crate::Result::<$crate::enums::status::CompletionCode>::Ok(
+                    state.try_into().expect(&format!(
+                        "Converting `{state}({state:#0X})` to CompletionCode failed"
+                    )),
+                )
             }
+            e => $crate::Result::<$crate::enums::status::CompletionCode>::Err(
+                e.try_into()
+                    .expect(&format!("Converting `{e}({e:#0X})` to ErrorCode failed")),
+            ),
         }
     };
 }
@@ -600,7 +605,48 @@ impl PartialEq<enums::attribute::AttrJobId> for JobID {
 
 #[cfg(test)]
 mod test {
+    use crate::enums::status::{CompletionCode, ErrorCode};
     use crate::*;
+
+    #[test]
+    fn convert_from_complete_code() {
+        assert_eq!(
+            CompletionCode::try_from(0 as vs::ViStatus).unwrap(),
+            CompletionCode::Success
+        );
+    }
+    #[test]
+    fn convert_from_error_code() {
+        assert_eq!(
+            ErrorCode::try_from(0xBFFF0011u32 as vs::ViStatus).unwrap(),
+            ErrorCode::ErrorRsrcNfound
+        );
+    }
+    #[test]
+    fn convert_to_complete_code() {
+        assert_eq!(
+            0 as vs::ViStatus,
+            CompletionCode::Success.try_into().unwrap()
+        );
+    }
+    #[test]
+    fn convert_to_error_code() {
+        assert_eq!(
+            0xBFFF0011u32 as vs::ViStatus,
+            ErrorCode::ErrorRsrcNfound.try_into().unwrap()
+        );
+    }
+    #[test]
+    #[should_panic]
+    fn convert_wrong_status1() {
+        CompletionCode::try_from(ErrorCode::ErrorRsrcNfound as vs::ViStatus).unwrap();
+    }
+    #[test]
+    #[should_panic]
+    fn convert_wrong_status2() {
+        ErrorCode::try_from(CompletionCode::Success as vs::ViStatus).unwrap();
+    }
+
     use anyhow::{bail, Result};
     #[test]
     fn rm_behavior() -> Result<()> {

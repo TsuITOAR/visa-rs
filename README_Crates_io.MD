@@ -11,9 +11,9 @@ Most documentation comes from [NI-VISA Product Documentation](https://www.ni.com
 
 This crate needs to link to an installed visa library, for example, [NI-VISA](https://www.ni.com/en-us/support/downloads/drivers/download.ni-visa.html).
 
-You can specify path of `visa64.lib` file (or `visa32.lib` on 32-bit systems) by setting environment variable `LIB_VISA_PATH`.
+A default link configuration is used for the default installation setup on Windows, Linux and MacOs.  
 
-On Windows and macOS, the default installation path will be added if no path is specified.
+You can overwrite the configuration by specifying the name of the visa library file (default to `visa` for linux, `visa64` or `visa32` for windows) by environment variable `LIB_VISA_NAME`, and the path of the file by environment variable `LIB_VISA_PATH`.
 
 ## Example
 

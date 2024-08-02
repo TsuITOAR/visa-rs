@@ -35,7 +35,7 @@ macro_rules! consts_to_enum {
         pub enum $enum_id{
             $(
                 $(#[doc=$des])?
-                $status=$value as _
+                $status=$value
             ),*
         }
 
@@ -53,7 +53,7 @@ macro_rules! consts_to_enum {
         pub enum $enum_id{
             $(
                 #[doc=$des]
-                $status=$value as _
+                $status=$value
             ),*
         }
         impl ::std::fmt::Display for $enum_id{
