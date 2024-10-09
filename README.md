@@ -21,7 +21,7 @@ Add dependencies below to `Cargo.toml`
 
 ```toml
 [dependencies]
-visa_rs = { git = "https://github.com/TsuITOAR/visa-rs.git" }
+visa-rs = { git = "https://github.com/TsuITOAR/visa-rs.git" }
 ```
 
 Codes below will find the first Keysight instrument in your environment and print out its `*IDN?` response.
