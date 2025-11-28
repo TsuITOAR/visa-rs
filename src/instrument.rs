@@ -244,7 +244,7 @@ impl Instrument {
     ///
     /// VISA allows applications to install multiple handlers for an eventType on the same session. You can install multiple handlers through multiple invocations of the viInstallHandler() operation, where each invocation adds to the previous list of handlers. If more than one handler is installed for an eventType, each of the handlers is invoked on every occurrence of the specified event(s). VISA specifies that the handlers are invoked in Last In First Out (LIFO) order.
     ///
-    /// *Note*: for some reason pass a closure with type `|instr, event|{...}` may get error.
+    /// *Note*: for some reason pass a closure with type `|instr, event|{...}` may get compile error.
     /// Instead, use `|instr: & Instrument, event: & Event|{...}`.
     ///
 
