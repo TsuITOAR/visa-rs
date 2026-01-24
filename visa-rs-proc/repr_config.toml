@@ -1,0 +1,49 @@
+# Configuration for VISA type to Rust repr mapping
+# This file defines how VISA types should be represented on different platforms
+
+# Platform-invariant types (same on all platforms)
+[invariant]
+ViUInt16 = "u16"  # c_ushort, always u16
+ViInt16 = "i16"   # c_short, always i16
+
+# Platform-dependent unsigned types (c_ulong based)
+# These types are: ViUInt32, ViEvent, ViEventType, ViEventFilter, ViAttr
+[platform_dependent.unsigned]
+types = ["ViUInt32", "ViEvent", "ViEventType", "ViEventFilter", "ViAttr"]
+
+# Mapping: c_ulong varies by platform
+# - Windows (32-bit and 64-bit): u32
+# - Unix 64-bit (Linux, macOS): u64
+# - Unix 32-bit: u32
+[[platform_dependent.unsigned.mappings]]
+condition = 'target_os = "windows"'
+repr = "u32"
+
+[[platform_dependent.unsigned.mappings]]
+condition = 'all(not(target_os = "windows"), target_pointer_width = "64")'
+repr = "u64"
+
+[[platform_dependent.unsigned.mappings]]
+condition = 'all(not(target_os = "windows"), not(target_pointer_width = "64"))'
+repr = "u32"
+
+# Platform-dependent signed types (c_long based)
+# These types are: ViStatus, ViInt32
+[platform_dependent.signed]
+types = ["ViStatus", "ViInt32"]
+
+# Mapping: c_long varies by platform
+# - Windows (32-bit and 64-bit): i32
+# - Unix 64-bit (Linux, macOS): i64
+# - Unix 32-bit: i32
+[[platform_dependent.signed.mappings]]
+condition = 'target_os = "windows"'
+repr = "i32"
+
+[[platform_dependent.signed.mappings]]
+condition = 'all(not(target_os = "windows"), target_pointer_width = "64")'
+repr = "i64"
+
+[[platform_dependent.signed.mappings]]
+condition = 'all(not(target_os = "windows"), not(target_pointer_width = "64"))'
+repr = "i32"

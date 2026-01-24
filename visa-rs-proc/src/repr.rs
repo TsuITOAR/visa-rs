@@ -1,8 +1,48 @@
 use proc_macro2::{Delimiter, Ident, TokenStream as TokenStream2, TokenTree};
 use quote::{quote_spanned, ToTokens};
 use syn::{parse::Parse, Path, Result, Token};
+use serde::Deserialize;
+use std::collections::HashMap;
 
 use crate::rusty_ident::NestedMacros;
+
+// Configuration structures for parsing the TOML config file
+#[derive(Debug, Deserialize)]
+struct ReprConfig {
+    invariant: HashMap<String, String>,
+    platform_dependent: PlatformDependent,
+}
+
+#[derive(Debug, Deserialize)]
+struct PlatformDependent {
+    unsigned: TypeMappings,
+    signed: TypeMappings,
+}
+
+#[derive(Debug, Deserialize)]
+struct TypeMappings {
+    types: Vec<String>,
+    mappings: Vec<Mapping>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Mapping {
+    condition: String,
+    repr: String,
+}
+
+// Load configuration at compile time
+fn load_config() -> ReprConfig {
+    const CONFIG_STR: &str = include_str!("../repr_config.toml");
+    toml::from_str(CONFIG_STR).expect("Failed to parse repr_config.toml")
+}
+
+// Lazy static config loaded once
+static CONFIG: std::sync::OnceLock<ReprConfig> = std::sync::OnceLock::new();
+
+fn get_config() -> &'static ReprConfig {
+    CONFIG.get_or_init(load_config)
+}
 
 pub struct Input {
     macs: Option<Vec<Path>>,
@@ -99,46 +139,45 @@ fn extract_repr_attribute(
 }
 
 fn map_to_repr(ty: Ident) -> TokenStream2 {
-    // Generate conditional compilation directives in the OUTPUT
-    // so they are evaluated for the TARGET, not the HOST
-    if ty == "ViUInt16" {
-        // ViUInt16 = c_ushort, always u16 on all platforms
-        quote_spanned!(ty.span()=>#[repr(u16)])
-    } else if ty == "ViInt16" {
-        // ViInt16 = c_short, always i16 on all platforms
-        quote_spanned!(ty.span()=>#[repr(i16)])
-    } else if ty == "ViUInt32" 
-           || ty == "ViEvent" 
-           || ty == "ViEventType" 
-           || ty == "ViEventFilter" 
-           || ty == "ViAttr" 
-    {
-        // ViUInt32 = c_ulong
-        // On Windows (32-bit and 64-bit): c_ulong = u32
-        // On Unix (Linux, macOS) 64-bit: c_ulong = u64
-        // On Unix 32-bit: c_ulong = u32
-        // Generate conditional #[cfg] attributes for the TARGET
-        quote_spanned!(ty.span()=>
-            #[cfg_attr(target_os = "windows", repr(u32))]
-            #[cfg_attr(all(not(target_os = "windows"), target_pointer_width = "64"), repr(u64))]
-            #[cfg_attr(all(not(target_os = "windows"), not(target_pointer_width = "64")), repr(u32))]
-        )
-    } else if ty == "ViStatus" || ty == "ViInt32" {
-        // ViStatus = ViInt32 = c_long
-        // On Windows (32-bit and 64-bit): c_long = i32
-        // On Unix (Linux, macOS) 64-bit: c_long = i64
-        // On Unix 32-bit: c_long = i32
-        // Generate conditional #[cfg] attributes for the TARGET
-        quote_spanned!(ty.span()=>
-            #[cfg_attr(target_os = "windows", repr(i32))]
-            #[cfg_attr(all(not(target_os = "windows"), target_pointer_width = "64"), repr(i64))]
-            #[cfg_attr(all(not(target_os = "windows"), not(target_pointer_width = "64")), repr(i32))]
-        )
-    } else {
-        //ty.span().unwrap().warning("unknown repr value");
-        let ty_clone = ty.clone();
-        quote_spanned!(ty.span()=>#[repr(#ty_clone)])
+    let config = get_config();
+    let ty_str = ty.to_string();
+    
+    // Check if it's a platform-invariant type
+    if let Some(repr_type) = config.invariant.get(&ty_str) {
+        let repr_ident = Ident::new(repr_type, ty.span());
+        return quote_spanned!(ty.span()=>#[repr(#repr_ident)]);
     }
+    
+    // Check if it's a platform-dependent unsigned type
+    if config.platform_dependent.unsigned.types.contains(&ty_str) {
+        return generate_platform_dependent_repr(&ty, &config.platform_dependent.unsigned.mappings);
+    }
+    
+    // Check if it's a platform-dependent signed type
+    if config.platform_dependent.signed.types.contains(&ty_str) {
+        return generate_platform_dependent_repr(&ty, &config.platform_dependent.signed.mappings);
+    }
+    
+    // Default: pass through the type as-is
+    let ty_clone = ty.clone();
+    quote_spanned!(ty.span()=>#[repr(#ty_clone)])
+}
+
+fn generate_platform_dependent_repr(ty: &Ident, mappings: &[Mapping]) -> TokenStream2 {
+    let mut attrs = TokenStream2::new();
+    
+    for mapping in mappings {
+        let condition: TokenStream2 = mapping.condition.parse()
+            .expect("Invalid condition in repr_config.toml");
+        let repr_type = Ident::new(&mapping.repr, ty.span());
+        
+        let attr = quote_spanned!(ty.span()=>
+            #[cfg_attr(#condition, repr(#repr_type))]
+        );
+        attr.to_tokens(&mut attrs);
+    }
+    
+    attrs
 }
 
 // solved by add conditional link flag #[cfg(not(docsrs))]
