@@ -10,13 +10,20 @@ description = "procedural macros used in visa-rs"
 [lib]
 proc-macro = true
 
+[features]
+default = []
+# Enable cross-compilation support using predefined platform configurations
+cross-compile = ["serde", "toml"]
+# Enable custom repr mapping via environment variables
+custom-repr = []
+
 [dependencies]
 syn = "^1"
 quote = "^1"
 proc-macro2 = "^1"
 visa-sys = { version = "^0.1.6", features = ["proc"] }
-serde = { version = "1.0", features = ["derive"] }
-toml = "0.8"
+serde = { version = "1.0", features = ["derive"], optional = true }
+toml = { version = "0.8", optional = true }
 
 [patch.crates-io]
 #visa-sys = { path = "../../visa-sys" }

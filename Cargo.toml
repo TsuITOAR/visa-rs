@@ -12,6 +12,13 @@ description = "Safe rust bindings for VISA(Virtual Instrument Software Architect
 exclude = ["/expand.rs", "/fetch-doc"]
 readme = "README_Crates_io.MD"
 
+[features]
+default = []
+# Enable cross-compilation support with predefined platform configurations
+cross-compile = ["visa-rs-proc/cross-compile"]
+# Enable custom repr mapping via environment variables
+custom-repr = ["visa-rs-proc/custom-repr"]
+
 [dependencies]
 visa-sys = { version = "^0.1.7" }
 bitflags = "^2.6"

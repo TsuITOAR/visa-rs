@@ -1,47 +1,53 @@
-use proc_macro2::{Delimiter, Ident, TokenStream as TokenStream2, TokenTree};
+use proc_macro2::{Delimiter, Ident, Span, TokenStream as TokenStream2, TokenTree};
 use quote::{quote_spanned, ToTokens};
 use syn::{parse::Parse, Path, Result, Token};
-use serde::Deserialize;
-use std::collections::HashMap;
 
 use crate::rusty_ident::NestedMacros;
 
-// Configuration structures for parsing the TOML config file
-#[derive(Debug, Deserialize)]
-struct ReprConfig {
-    invariant: HashMap<String, String>,
-    platform_dependent: PlatformDependent,
-}
+// Configuration structures for parsing the TOML config file (only when cross-compile feature is enabled)
+#[cfg(feature = "cross-compile")]
+mod config {
+    use serde::Deserialize;
+    use std::collections::HashMap;
 
-#[derive(Debug, Deserialize)]
-struct PlatformDependent {
-    unsigned: TypeMappings,
-    signed: TypeMappings,
-}
+    #[derive(Debug, Deserialize)]
+    pub struct ReprConfig {
+        pub invariant: HashMap<String, String>,
+        pub platform_dependent: PlatformDependent,
+    }
 
-#[derive(Debug, Deserialize)]
-struct TypeMappings {
-    types: Vec<String>,
-    mappings: Vec<Mapping>,
-}
+    #[derive(Debug, Deserialize)]
+    pub struct PlatformDependent {
+        pub unsigned: TypeMappings,
+        pub signed: TypeMappings,
+    }
 
-#[derive(Debug, Deserialize)]
-struct Mapping {
-    condition: String,
-    repr: String,
-}
+    #[derive(Debug, Deserialize)]
+    pub struct TypeMappings {
+        pub types: Vec<String>,
+        pub mappings: Vec<Mapping>,
+    }
 
-// Load configuration at compile time
-fn load_config() -> ReprConfig {
-    const CONFIG_STR: &str = include_str!("../repr_config.toml");
-    toml::from_str(CONFIG_STR).expect("Failed to parse repr_config.toml")
-}
+    #[derive(Debug, Deserialize)]
+    pub struct Mapping {
+        pub condition: String,
+        pub repr: String,
+    }
 
-// Lazy static config loaded once
-static CONFIG: std::sync::OnceLock<ReprConfig> = std::sync::OnceLock::new();
+    // Load configuration at compile time
+    pub fn load_config() -> ReprConfig {
+        const CONFIG_STR: &str = include_str!("../repr_config.toml");
+        toml::from_str(CONFIG_STR).unwrap_or_else(|e| {
+            panic!("Failed to parse repr_config.toml: {}", e)
+        })
+    }
 
-fn get_config() -> &'static ReprConfig {
-    CONFIG.get_or_init(load_config)
+    // Lazy static config loaded once
+    static CONFIG: std::sync::OnceLock<ReprConfig> = std::sync::OnceLock::new();
+
+    pub fn get_config() -> &'static ReprConfig {
+        CONFIG.get_or_init(load_config)
+    }
 }
 
 pub struct Input {
@@ -138,7 +144,50 @@ fn extract_repr_attribute(
     Ok(ret)
 }
 
+// Feature: custom-repr - Read repr types from environment variables
+#[cfg(feature = "custom-repr")]
 fn map_to_repr(ty: Ident) -> TokenStream2 {
+    let ty_str = ty.to_string();
+    let env_var = format!("VISA_REPR_{}", ty_str.to_uppercase());
+    
+    // Try to read from environment variable
+    if let Ok(custom_repr) = std::env::var(&env_var) {
+        // Parse the custom repr which should be in format: "condition1:type1,condition2:type2,..."
+        // Or just "type" for unconditional repr
+        if custom_repr.contains(':') {
+            // Platform-dependent with conditions
+            let mut attrs = TokenStream2::new();
+            for part in custom_repr.split(',') {
+                let parts: Vec<&str> = part.splitn(2, ':').collect();
+                if parts.len() == 2 {
+                    let condition: TokenStream2 = parts[0].trim().parse()
+                        .unwrap_or_else(|_| {
+                            panic!("Invalid condition '{}' in {}={}", parts[0], env_var, custom_repr)
+                        });
+                    let repr_type = Ident::new(parts[1].trim(), ty.span());
+                    let attr = quote_spanned!(ty.span()=>
+                        #[cfg_attr(#condition, repr(#repr_type))]
+                    );
+                    attr.to_tokens(&mut attrs);
+                }
+            }
+            return attrs;
+        } else {
+            // Simple unconditional repr
+            let repr_ident = Ident::new(custom_repr.trim(), ty.span());
+            return quote_spanned!(ty.span()=>#[repr(#repr_ident)]);
+        }
+    }
+    
+    // Fall back to default behavior if no env var is set
+    map_to_repr_default(ty)
+}
+
+// Feature: cross-compile - Use predefined config from TOML file
+#[cfg(all(feature = "cross-compile", not(feature = "custom-repr")))]
+fn map_to_repr(ty: Ident) -> TokenStream2 {
+    use config::get_config;
+    
     let config = get_config();
     let ty_str = ty.to_string();
     
@@ -158,17 +207,23 @@ fn map_to_repr(ty: Ident) -> TokenStream2 {
         return generate_platform_dependent_repr(&ty, &config.platform_dependent.signed.mappings);
     }
     
-    // Default: pass through the type as-is
-    let ty_clone = ty.clone();
-    quote_spanned!(ty.span()=>#[repr(#ty_clone)])
+    // ERROR: Type not found in configuration
+    panic!(
+        "Type '{}' not found in repr_config.toml. \
+         Please add it to either [invariant] or [platform_dependent] section.",
+        ty_str
+    );
 }
 
-fn generate_platform_dependent_repr(ty: &Ident, mappings: &[Mapping]) -> TokenStream2 {
+#[cfg(feature = "cross-compile")]
+fn generate_platform_dependent_repr(ty: &Ident, mappings: &[config::Mapping]) -> TokenStream2 {
     let mut attrs = TokenStream2::new();
     
     for mapping in mappings {
         let condition: TokenStream2 = mapping.condition.parse()
-            .expect("Invalid condition in repr_config.toml");
+            .unwrap_or_else(|_| {
+                panic!("Invalid condition '{}' in repr_config.toml", mapping.condition)
+            });
         let repr_type = Ident::new(&mapping.repr, ty.span());
         
         let attr = quote_spanned!(ty.span()=>
@@ -178,6 +233,79 @@ fn generate_platform_dependent_repr(ty: &Ident, mappings: &[Mapping]) -> TokenSt
     }
     
     attrs
+}
+
+// Default behavior: Use size_of to determine repr (original implementation)
+#[cfg(all(not(feature = "cross-compile"), not(feature = "custom-repr")))]
+fn map_to_repr(ty: Ident) -> TokenStream2 {
+    map_to_repr_default(ty)
+}
+
+// Default implementation using size_of (original approach)
+#[allow(dead_code)]
+fn map_to_repr_default(ty: Ident) -> TokenStream2 {
+    use visa_sys as vs;
+    let align = if ty == "ViUInt16" {
+        unsigned_ty_token::<vs::ViUInt16>(ty.span())
+    } else if ty == "ViUInt32" {
+        unsigned_ty_token::<vs::ViUInt32>(ty.span())
+    } else if ty == "ViEvent" {
+        unsigned_ty_token::<vs::ViEvent>(ty.span())
+    } else if ty == "ViEventType" {
+        unsigned_ty_token::<vs::ViEventType>(ty.span())
+    } else if ty == "ViEventFilter" {
+        unsigned_ty_token::<vs::ViEventFilter>(ty.span())
+    } else if ty == "ViAttr" {
+        unsigned_ty_token::<vs::ViAttr>(ty.span())
+    } else if ty == "ViStatus" {
+        signed_ty_token::<vs::ViStatus>(ty.span())
+    } else if ty == "ViInt16" {
+        signed_ty_token::<vs::ViInt16>(ty.span())
+    } else if ty == "ViInt32" {
+        signed_ty_token::<vs::ViInt32>(ty.span())
+    } else {
+        //ty.span().unwrap().warning("unknown repr value");
+        ty.clone()
+    };
+    quote_spanned!(ty.span()=>#[repr(#align)])
+}
+
+#[allow(dead_code)]
+fn unsigned_ty_token<T: Sized>(span: Span) -> Ident {
+    use std::mem::size_of;
+    let t = size_of::<T>();
+    if t == size_of::<u8>() {
+        Ident::new("u8", span)
+    } else if t == size_of::<u16>() {
+        Ident::new("u16", span)
+    } else if t == size_of::<u32>() {
+        Ident::new("u32", span)
+    } else if t == size_of::<u64>() {
+        Ident::new("u64", span)
+    } else if t == size_of::<u128>() {
+        Ident::new("u128", span)
+    } else {
+        unimplemented!()
+    }
+}
+
+#[allow(dead_code)]
+fn signed_ty_token<T: Sized>(span: Span) -> Ident {
+    use std::mem::size_of;
+    let t = size_of::<T>();
+    if t == size_of::<i8>() {
+        Ident::new("i8", span)
+    } else if t == size_of::<i16>() {
+        Ident::new("i16", span)
+    } else if t == size_of::<i32>() {
+        Ident::new("i32", span)
+    } else if t == size_of::<i64>() {
+        Ident::new("i64", span)
+    } else if t == size_of::<i128>() {
+        Ident::new("i128", span)
+    } else {
+        unimplemented!()
+    }
 }
 
 // solved by add conditional link flag #[cfg(not(docsrs))]
