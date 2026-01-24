@@ -1,4 +1,4 @@
-use proc_macro2::{Delimiter, Ident, Span, TokenStream as TokenStream2, TokenTree};
+use proc_macro2::{Delimiter, Ident, TokenStream as TokenStream2, TokenTree};
 use quote::{quote_spanned, ToTokens};
 use syn::{parse::Parse, Path, Result, Token};
 
@@ -99,65 +99,41 @@ fn extract_repr_attribute(
 }
 
 fn map_to_repr(ty: Ident) -> TokenStream2 {
-    use visa_sys as vs;
-    let align = if ty == "ViUInt16" {
-        unsigned_ty_token::<vs::ViUInt16>(ty.span())
-    } else if ty == "ViUInt32" {
-        unsigned_ty_token::<vs::ViUInt32>(ty.span())
-    } else if ty == "ViEvent" {
-        unsigned_ty_token::<vs::ViEvent>(ty.span())
-    } else if ty == "ViEventType" {
-        unsigned_ty_token::<vs::ViEventType>(ty.span())
-    } else if ty == "ViEventFilter" {
-        unsigned_ty_token::<vs::ViEventFilter>(ty.span())
-    } else if ty == "ViAttr" {
-        unsigned_ty_token::<vs::ViAttr>(ty.span())
-    } else if ty == "ViStatus" {
-        signed_ty_token::<vs::ViStatus>(ty.span())
+    // Generate conditional compilation directives in the OUTPUT
+    // so they are evaluated for the TARGET, not the HOST
+    if ty == "ViUInt16" {
+        // ViUInt16 = c_ushort, always u16 on all platforms
+        quote_spanned!(ty.span()=>#[repr(u16)])
     } else if ty == "ViInt16" {
-        signed_ty_token::<vs::ViInt16>(ty.span())
-    } else if ty == "ViInt32" {
-        signed_ty_token::<vs::ViInt32>(ty.span())
+        // ViInt16 = c_short, always i16 on all platforms
+        quote_spanned!(ty.span()=>#[repr(i16)])
+    } else if ty == "ViUInt32" || ty == "ViEvent" || ty == "ViEventType" 
+               || ty == "ViEventFilter" || ty == "ViAttr" {
+        // ViUInt32 = c_ulong
+        // On Windows (32-bit and 64-bit): c_ulong = u32
+        // On Unix (Linux, macOS) 64-bit: c_ulong = u64
+        // On Unix 32-bit: c_ulong = u32
+        // Generate conditional #[cfg] attributes for the TARGET
+        quote_spanned!(ty.span()=>
+            #[cfg_attr(target_os = "windows", repr(u32))]
+            #[cfg_attr(all(not(target_os = "windows"), target_pointer_width = "64"), repr(u64))]
+            #[cfg_attr(all(not(target_os = "windows"), not(target_pointer_width = "64")), repr(u32))]
+        )
+    } else if ty == "ViStatus" || ty == "ViInt32" {
+        // ViStatus = ViInt32 = c_long
+        // On Windows (32-bit and 64-bit): c_long = i32
+        // On Unix (Linux, macOS) 64-bit: c_long = i64
+        // On Unix 32-bit: c_long = i32
+        // Generate conditional #[cfg] attributes for the TARGET
+        quote_spanned!(ty.span()=>
+            #[cfg_attr(target_os = "windows", repr(i32))]
+            #[cfg_attr(all(not(target_os = "windows"), target_pointer_width = "64"), repr(i64))]
+            #[cfg_attr(all(not(target_os = "windows"), not(target_pointer_width = "64")), repr(i32))]
+        )
     } else {
         //ty.span().unwrap().warning("unknown repr value");
-        ty.clone()
-    };
-    quote_spanned!(ty.span()=>#[repr(#align)])
-}
-
-fn unsigned_ty_token<T: Sized>(span: Span) -> Ident {
-    use std::mem::size_of;
-    let t = size_of::<T>();
-    if t == size_of::<u8>() {
-        Ident::new("u8", span)
-    } else if t == size_of::<u16>() {
-        Ident::new("u16", span)
-    } else if t == size_of::<u32>() {
-        Ident::new("u32", span)
-    } else if t == size_of::<u64>() {
-        Ident::new("u64", span)
-    } else if t == size_of::<u128>() {
-        Ident::new("u128", span)
-    } else {
-        unimplemented!()
-    }
-}
-
-fn signed_ty_token<T: Sized>(span: Span) -> Ident {
-    use std::mem::size_of;
-    let t = size_of::<T>();
-    if t == size_of::<i8>() {
-        Ident::new("i8", span)
-    } else if t == size_of::<i16>() {
-        Ident::new("i16", span)
-    } else if t == size_of::<i32>() {
-        Ident::new("i32", span)
-    } else if t == size_of::<i64>() {
-        Ident::new("i64", span)
-    } else if t == size_of::<i128>() {
-        Ident::new("i128", span)
-    } else {
-        unimplemented!()
+        let ty_clone = ty.clone();
+        quote_spanned!(ty.span()=>#[repr(#ty_clone)])
     }
 }
 
