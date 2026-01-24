@@ -10,6 +10,8 @@ The `visa-rs` crate provides three different modes for determining how VISA type
 2. **`cross-compile` feature**: Uses predefined platform configurations from TOML
 3. **`custom-repr` feature**: Allows custom mapping via environment variables
 
+**Important:** When both `cross-compile` and `custom-repr` features are enabled simultaneously, the `custom-repr` behavior takes precedence. This ensures consistent and predictable behavior.
+
 ## Default Behavior (No Features)
 
 **When to use:** Native compilation on the same platform where you'll run the code.
@@ -116,13 +118,38 @@ cargo build --features custom-repr --target x86_64-pc-windows-gnu
 | Default | ❌ | None (automatic) | N/A | Native builds |
 | `cross-compile` | ✅ | TOML file | ✅ Yes | Standard cross-compilation |
 | `custom-repr` | ✅ | Environment variables | ❌ Fallback to default | Custom/advanced scenarios |
+| Both features | ✅ | Environment variables (custom-repr precedence) | ❌ Fallback to default | Maximum flexibility |
+
+**Note:** When both `cross-compile` and `custom-repr` are enabled, `custom-repr` takes precedence. This ensures that environment variables can override the TOML configuration if needed.
 
 ## Recommendations
 
 - **Native development:** Use default (no features)
 - **Cross-compilation in CI/CD:** Use `cross-compile` feature with `repr_config.toml`
 - **Custom build systems:** Use `custom-repr` feature with environment variables
+- **Maximum flexibility:** Enable both features - use env vars when needed, fall back to TOML config
 - **Library authors:** Consider supporting `cross-compile` feature for users
+
+## Feature Interaction
+
+### When Both Features Are Enabled
+
+When you enable both `cross-compile` and `custom-repr` features:
+
+```toml
+[dependencies]
+visa-rs = { version = "0.6", features = ["cross-compile", "custom-repr"] }
+```
+
+The behavior is **identical** to enabling only `custom-repr`:
+- If environment variable `VISA_REPR_<TYPENAME>` is set, it uses that value
+- If environment variable is NOT set, it falls back to the default `size_of` behavior
+- The TOML configuration is **not used** in this mode
+
+This design allows you to:
+1. Have TOML config as a safety net for cross-compilation
+2. Override specific types via environment variables when needed
+3. Get predictable behavior regardless of feature combination
 
 ## Troubleshooting
 

@@ -5,29 +5,35 @@ use syn::{parse::Parse, Path, Result, Token};
 use crate::rusty_ident::NestedMacros;
 
 // Configuration structures for parsing the TOML config file (only when cross-compile feature is enabled)
+// Note: When both cross-compile and custom-repr features are enabled, custom-repr takes precedence
+// and this code is not used (hence the allow(dead_code) attributes).
 #[cfg(feature = "cross-compile")]
 mod config {
     use serde::Deserialize;
     use std::collections::HashMap;
 
+    #[allow(dead_code)]
     #[derive(Debug, Deserialize)]
     pub struct ReprConfig {
         pub invariant: HashMap<String, String>,
         pub platform_dependent: PlatformDependent,
     }
 
+    #[allow(dead_code)]
     #[derive(Debug, Deserialize)]
     pub struct PlatformDependent {
         pub unsigned: TypeMappings,
         pub signed: TypeMappings,
     }
 
+    #[allow(dead_code)]
     #[derive(Debug, Deserialize)]
     pub struct TypeMappings {
         pub types: Vec<String>,
         pub mappings: Vec<Mapping>,
     }
 
+    #[allow(dead_code)]
     #[derive(Debug, Deserialize)]
     pub struct Mapping {
         pub condition: String,
@@ -35,6 +41,7 @@ mod config {
     }
 
     // Load configuration at compile time
+    #[allow(dead_code)]
     pub fn load_config() -> ReprConfig {
         const CONFIG_STR: &str = include_str!("../repr_config.toml");
         toml::from_str(CONFIG_STR).unwrap_or_else(|e| {
@@ -43,8 +50,10 @@ mod config {
     }
 
     // Lazy static config loaded once
+    #[allow(dead_code)]
     static CONFIG: std::sync::OnceLock<ReprConfig> = std::sync::OnceLock::new();
 
+    #[allow(dead_code)]
     pub fn get_config() -> &'static ReprConfig {
         CONFIG.get_or_init(load_config)
     }
@@ -145,6 +154,8 @@ fn extract_repr_attribute(
 }
 
 // Feature: custom-repr - Read repr types from environment variables
+// When both custom-repr and cross-compile features are enabled, this implementation
+// is used, ensuring custom-repr takes precedence as required.
 #[cfg(feature = "custom-repr")]
 fn map_to_repr(ty: Ident) -> TokenStream2 {
     let ty_str = ty.to_string();
@@ -184,6 +195,8 @@ fn map_to_repr(ty: Ident) -> TokenStream2 {
 }
 
 // Feature: cross-compile - Use predefined config from TOML file
+// Note: This is only used when cross-compile is enabled but custom-repr is NOT enabled.
+// When both features are active, custom-repr takes precedence (as required).
 #[cfg(all(feature = "cross-compile", not(feature = "custom-repr")))]
 fn map_to_repr(ty: Ident) -> TokenStream2 {
     use config::get_config;
@@ -216,6 +229,7 @@ fn map_to_repr(ty: Ident) -> TokenStream2 {
 }
 
 #[cfg(feature = "cross-compile")]
+#[allow(dead_code)] // May be unused when custom-repr is also enabled
 fn generate_platform_dependent_repr(ty: &Ident, mappings: &[config::Mapping]) -> TokenStream2 {
     let mut attrs = TokenStream2::new();
     
