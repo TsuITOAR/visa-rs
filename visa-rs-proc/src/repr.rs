@@ -107,8 +107,12 @@ fn map_to_repr(ty: Ident) -> TokenStream2 {
     } else if ty == "ViInt16" {
         // ViInt16 = c_short, always i16 on all platforms
         quote_spanned!(ty.span()=>#[repr(i16)])
-    } else if ty == "ViUInt32" || ty == "ViEvent" || ty == "ViEventType" 
-               || ty == "ViEventFilter" || ty == "ViAttr" {
+    } else if ty == "ViUInt32" 
+           || ty == "ViEvent" 
+           || ty == "ViEventType" 
+           || ty == "ViEventFilter" 
+           || ty == "ViAttr" 
+    {
         // ViUInt32 = c_ulong
         // On Windows (32-bit and 64-bit): c_ulong = u32
         // On Unix (Linux, macOS) 64-bit: c_ulong = u64
