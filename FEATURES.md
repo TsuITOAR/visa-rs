@@ -207,6 +207,31 @@ echo $VISA_REPR_VISTATUS
 export VISA_REPR_VISTATUS='target_os = "windows":i32'  # Must use quotes
 ```
 
+### Tool: generate-repr-config
+
+For easier configuration, you can use the `generate-repr-config` tool to automatically detect type sizes on the target platform:
+
+```bash
+# 1. Build the tool for your target
+cd generate-repr-config
+cargo build --release --target x86_64-pc-windows-gnu
+
+# 2. Run on the target platform to generate configuration
+# (On the target machine:)
+./generate-repr-config --format shell > set_vars.sh
+source set_vars.sh
+
+# Or on Windows:
+generate-repr-config.exe --format batch > set_vars.bat
+set_vars.bat
+
+# 3. Build visa-rs with the detected configuration
+cd ..
+cargo build --features custom-repr --target x86_64-pc-windows-gnu
+```
+
+See `generate-repr-config/README.md` for detailed usage instructions.
+
 ## Migration Guide
 
 ### From Default to Cross-Compile
