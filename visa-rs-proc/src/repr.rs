@@ -190,8 +190,13 @@ fn map_to_repr(ty: Ident) -> TokenStream2 {
         }
     }
     
-    // Fall back to default behavior if no env var is set
-    map_to_repr_default(ty)
+    // ERROR: Environment variable not set
+    panic!(
+        "custom-repr feature is enabled but environment variable '{}' is not set. \
+         Please set the environment variable with the repr type for '{}', \
+         or use the cross-compile feature instead for predefined platform configurations.",
+        env_var, ty_str
+    );
 }
 
 // Feature: cross-compile - Use predefined config from TOML file

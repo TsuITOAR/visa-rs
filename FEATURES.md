@@ -101,13 +101,20 @@ cargo build --features custom-repr
 **Features:**
 - ✅ Maximum flexibility
 - ✅ Can override types per build
-- ✅ Falls back to default behavior if env var not set
-- ⚙️ Requires setting environment variables
+- ✅ **Triggers compile error** if env var not set (ensures explicit configuration)
+- ⚙️ Requires setting environment variables for all VISA types used
 
 **Example - Custom cross-compilation:**
 ```bash
 export VISA_REPR_VISTATUS='target_os = "windows":i32,not(target_os = "windows"):i64'
 export VISA_REPR_VIUINT32='target_os = "windows":u32,not(target_os = "windows"):u64'
+export VISA_REPR_VIINT32='target_os = "windows":i32,not(target_os = "windows"):i64'
+export VISA_REPR_VIUINT16="u16"
+export VISA_REPR_VIINT16="i16"
+export VISA_REPR_VIEVENT='target_os = "windows":u32,not(target_os = "windows"):u64'
+export VISA_REPR_VIEVENTTYPE='target_os = "windows":u32,not(target_os = "windows"):u64'
+export VISA_REPR_VIEVENTFILTER='target_os = "windows":u32,not(target_os = "windows"):u64'
+export VISA_REPR_VIATTR='target_os = "windows":u32,not(target_os = "windows"):u64'
 cargo build --features custom-repr --target x86_64-pc-windows-gnu
 ```
 
@@ -117,17 +124,17 @@ cargo build --features custom-repr --target x86_64-pc-windows-gnu
 |---------|----------------------|---------------------|--------------------------------|----------|
 | Default | ❌ | None (automatic) | N/A | Native builds |
 | `cross-compile` | ✅ | TOML file | ✅ Yes | Standard cross-compilation |
-| `custom-repr` | ✅ | Environment variables | ❌ Fallback to default | Custom/advanced scenarios |
-| Both features | ✅ | Environment variables (custom-repr precedence) | ❌ Fallback to default | Maximum flexibility |
+| `custom-repr` | ✅ | Environment variables | ✅ Yes | Custom/advanced scenarios with explicit control |
+| Both features | ✅ | Environment variables (custom-repr precedence) | ✅ Yes | Maximum flexibility |
 
-**Note:** When both `cross-compile` and `custom-repr` are enabled, `custom-repr` takes precedence. This ensures that environment variables can override the TOML configuration if needed.
+**Note:** When both `cross-compile` and `custom-repr` are enabled, `custom-repr` takes precedence. Environment variables must be set for all types, or a compile error will occur.
 
 ## Recommendations
 
 - **Native development:** Use default (no features)
 - **Cross-compilation in CI/CD:** Use `cross-compile` feature with `repr_config.toml`
-- **Custom build systems:** Use `custom-repr` feature with environment variables
-- **Maximum flexibility:** Enable both features - use env vars when needed, fall back to TOML config
+- **Custom build systems with explicit control:** Use `custom-repr` feature with environment variables
+- **Maximum flexibility:** Enable both features - uses env vars when set (with compile error if missing)
 - **Library authors:** Consider supporting `cross-compile` feature for users
 
 ## Feature Interaction
@@ -143,15 +150,30 @@ visa-rs = { version = "0.6", features = ["cross-compile", "custom-repr"] }
 
 The behavior is **identical** to enabling only `custom-repr`:
 - If environment variable `VISA_REPR_<TYPENAME>` is set, it uses that value
-- If environment variable is NOT set, it falls back to the default `size_of` behavior
+- If environment variable is NOT set, a **compile error** is triggered
 - The TOML configuration is **not used** in this mode
 
-This design allows you to:
-1. Have TOML config as a safety net for cross-compilation
-2. Override specific types via environment variables when needed
-3. Get predictable behavior regardless of feature combination
+This design ensures:
+1. Explicit configuration is required when using `custom-repr`
+2. No silent fallback to potentially incorrect defaults
+3. Clear error messages indicating which environment variables are missing
 
 ## Troubleshooting
+
+### Error: "custom-repr feature is enabled but environment variable 'VISA_REPR_X' is not set"
+
+This error occurs when using the `custom-repr` feature and an environment variable is not set for a type.
+
+**Solution:** Set the environment variable for the type:
+```bash
+export VISA_REPR_VISTATUS='target_os = "windows":i32,not(target_os = "windows"):i64'
+cargo build --features custom-repr
+```
+
+Or switch to the `cross-compile` feature if you want to use the predefined configuration:
+```bash
+cargo build --features cross-compile
+```
 
 ### Error: "Type 'X' not found in repr_config.toml"
 
