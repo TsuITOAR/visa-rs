@@ -114,32 +114,90 @@ impl ToTokens for Input {
                     proc_macro2::Group::new(Delimiter::Brace, ret).to_tokens(&mut m);
                     ret = m;
                 }
-                ret.to_tokens(tokens)
+                ret.to_tokens(tokens);
+                // Add assertions after the macro expansion
+                for assertion in &inner.assertions {
+                    assertion.to_tokens(tokens);
+                }
             }
-            _ => inner.to_tokens(tokens),
+            _ => {
+                inner.to_tokens(tokens);
+            }
         }
     }
 }
 
-pub struct AttrProcessed(TokenStream2);
+pub struct AttrProcessed {
+    tokens: TokenStream2,
+    assertions: Vec<TokenStream2>,
+}
 
 impl ToTokens for AttrProcessed {
     fn to_tokens(&self, tokens: &mut TokenStream2) {
-        self.0.to_tokens(tokens)
+        self.tokens.to_tokens(tokens);
+        // Assertions are now added in Input::to_tokens after macro expansion
     }
 }
 
 impl Parse for AttrProcessed {
     fn parse(input: syn::parse::ParseStream) -> Result<Self> {
         let mut inner = TokenStream2::new();
+        let mut assertions = Vec::new();
+        let mut visa_type_for_next_enum: Option<Ident> = None;
+        let mut _in_enum_body = false;
+        
         while !input.is_empty() {
             if let Some(ty) = extract_repr_attribute(input, &mut inner)? {
+                // Store the VISA type - the next enum we encounter should use this
+                visa_type_for_next_enum = Some(ty.clone());
                 map_to_repr(ty).to_tokens(&mut inner);
             } else {
-                input.parse::<TokenTree>()?.to_tokens(&mut inner);
+                let token = input.parse::<TokenTree>()?;
+                
+                // Track when we enter/exit the enum body
+                match &token {
+                    TokenTree::Ident(id) if id == "enum" && visa_type_for_next_enum.is_some() => {
+                        // We're about to see the enum name
+                        token.to_tokens(&mut inner);
+                        
+                        // Next should be the enum name
+                        if !input.is_empty() {
+                            if let Ok(enum_name) = input.parse::<Ident>() {
+                                enum_name.to_tokens(&mut inner);
+                                
+                                // Generate the static assertion for this enum
+                                if let Some(visa_type) = visa_type_for_next_enum.take() {
+                                    let assertion_name = Ident::new(
+                                        &format!("_ASSERT_SIZE_EQ_{}", enum_name.to_string().to_uppercase()),
+                                        enum_name.span()
+                                    );
+                                    let assertion = quote_spanned!(enum_name.span()=>
+                                        const #assertion_name: () = {
+                                            const fn _assert_size_eq() {
+                                                let _ = ::std::mem::transmute::<#enum_name, visa_sys::#visa_type>;
+                                            }
+                                        };
+                                    );
+                                    assertions.push(assertion);
+                                }
+                                continue;
+                            }
+                        }
+                        continue;
+                    }
+                    TokenTree::Group(g) if g.delimiter() == Delimiter::Brace => {
+                        _in_enum_body = !_in_enum_body;
+                    }
+                    _ => {}
+                }
+                
+                token.to_tokens(&mut inner);
             }
         }
-        Ok(Self(inner))
+        Ok(Self { 
+            tokens: inner,
+            assertions,
+        })
     }
 }
 
