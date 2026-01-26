@@ -171,8 +171,36 @@ impl Parse for AttrProcessed {
                                         &format!("_ASSERT_SIZE_EQ_{}", enum_name.to_string().to_uppercase()),
                                         enum_name.span()
                                     );
+                                    
+                                    // Create a helpful error message
+                                    let error_msg = format!(
+                                        "Size mismatch: {} enum does not have the same size as visa_sys::{}. \
+                                         This likely means the #[repr(...)] attribute is incorrect for the target platform. \
+                                         If cross-compiling, ensure you're using the 'cross-compile' feature or have set \
+                                         the correct environment variables with 'custom-repr' feature.",
+                                        enum_name, visa_type
+                                    );
+                                    
                                     let assertion = quote_spanned!(enum_name.span()=>
                                         const #assertion_name: () = {
+                                            // Use a struct that implements a trait to provide better error messages
+                                            struct SizeAssert<const L: usize, const R: usize>;
+                                            
+                                            #[allow(dead_code)]
+                                            impl<const L: usize, const R: usize> SizeAssert<L, R> {
+                                                const VALID: () = assert!(
+                                                    L == R,
+                                                    #error_msg
+                                                );
+                                            }
+                                            
+                                            // Force evaluation of the assertion
+                                            let _ = SizeAssert::<
+                                                {::std::mem::size_of::<#enum_name>()},
+                                                {::std::mem::size_of::<visa_sys::#visa_type>()}
+                                            >::VALID;
+                                            
+                                            // Also use transmute as a fallback for older Rust versions
                                             const fn _assert_size_eq() {
                                                 let _ = ::std::mem::transmute::<#enum_name, visa_sys::#visa_type>;
                                             }
