@@ -43,9 +43,26 @@ mod config {
     // Load configuration at compile time
     #[allow(dead_code)]
     pub fn load_config() -> ReprConfig {
-        const CONFIG_STR: &str = include_str!("../repr_config.toml");
-        toml::from_str(CONFIG_STR).unwrap_or_else(|e| {
-            panic!("Failed to parse repr_config.toml: {}", e)
+        // Try to load from current directory first (allows user customization)
+        // Fall back to bundled config if not found
+        let config_str = if let Ok(current_dir) = std::env::var("CARGO_MANIFEST_DIR") {
+            let custom_path = std::path::Path::new(&current_dir).join("visa_repr_config.toml");
+            if custom_path.exists() {
+                std::fs::read_to_string(&custom_path)
+                    .unwrap_or_else(|e| {
+                        panic!("Failed to read custom config file {:?}: {}", custom_path, e)
+                    })
+            } else {
+                // Use bundled config
+                include_str!("../repr_config.toml").to_string()
+            }
+        } else {
+            // Use bundled config
+            include_str!("../repr_config.toml").to_string()
+        };
+        
+        toml::from_str(&config_str).unwrap_or_else(|e| {
+            panic!("Failed to parse repr config: {}", e)
         })
     }
 

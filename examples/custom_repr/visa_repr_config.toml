@@ -1,0 +1,28 @@
+# Custom VISA repr configuration example
+# 
+# This file demonstrates how to customize repr mappings for your specific needs.
+# Place this file named "visa_repr_config.toml" in the root of your crate
+# (same directory as Cargo.toml) and build with the "cross-compile" feature.
+
+# Platform-invariant types (same on all platforms)
+[invariant]
+ViUInt16 = "u16"
+ViInt16 = "i16"
+
+# Platform-dependent unsigned types
+[platform_dependent.unsigned]
+types = ["ViUInt32", "ViEvent", "ViEventType", "ViEventFilter", "ViAttr"]
+
+# Custom mapping - for example, forcing all to u32 regardless of platform
+[[platform_dependent.unsigned.mappings]]
+condition = 'any()'
+repr = "u32"
+
+# Platform-dependent signed types
+[platform_dependent.signed]
+types = ["ViStatus", "ViInt32"]
+
+# Custom mapping - for example, forcing all to i32 regardless of platform
+[[platform_dependent.signed.mappings]]
+condition = 'any()'
+repr = "i32"

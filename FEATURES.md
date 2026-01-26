@@ -39,7 +39,9 @@ visa-rs = { version = "0.6", features = ["cross-compile"] }
 
 This enables config-based type mapping using `repr_config.toml`. Platform-specific repr attributes are generated based on the target platform, not the host.
 
-**Configuration:** Edit `visa-rs-proc/repr_config.toml` to define type mappings:
+**Configuration:** The proc macro uses a bundled `repr_config.toml` by default, but you can override it by placing a `visa_repr_config.toml` file in your crate's root directory (same directory as `Cargo.toml`).
+
+Default config structure:
 
 ```toml
 [invariant]
@@ -57,10 +59,41 @@ condition = 'all(not(target_os = "windows"), target_pointer_width = "64")'
 repr = "u64"
 ```
 
+**Custom Configuration:**
+Create a `visa_repr_config.toml` file in your crate root to override the default mappings:
+
+```bash
+# In your project root (where Cargo.toml is)
+cat > visa_repr_config.toml << EOF
+[invariant]
+ViUInt16 = "u16"
+ViInt16 = "i16"
+
+[platform_dependent.unsigned]
+types = ["ViUInt32", "ViEvent", "ViEventType", "ViEventFilter", "ViAttr"]
+
+[[platform_dependent.unsigned.mappings]]
+condition = 'any()'  # Force u32 on all platforms
+repr = "u32"
+
+[platform_dependent.signed]
+types = ["ViStatus", "ViInt32"]
+
+[[platform_dependent.signed.mappings]]
+condition = 'any()'  # Force i32 on all platforms
+repr = "i32"
+EOF
+
+cargo build --features cross-compile
+```
+
+See `examples/custom_repr/` for a complete example.
+
 **Features:**
 - ✅ Supports cross-compilation
 - ✅ Generates compile errors if platform configuration is missing
 - ✅ Easy to extend for new platforms
+- ✅ **Can be customized per-project** with local `visa_repr_config.toml`
 - ⚙️ Requires maintaining config file
 
 **Example - Cross-compile Linux to Windows:**
