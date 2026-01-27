@@ -1,19 +1,19 @@
 [package]
 name = "visa-rs"
-version = "0.6.2"
+version = "0.6.3"
 authors = ["ITOAR <itoar@outlook.com>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/TsuITOAR/visa-rs"
 homepage = "https://github.com/TsuITOAR/visa-rs"
 keywords = ["control", "visa", "instrument"]
-categories = ["api-bindings"]
+categories = ["api-bindings", "hardware-support", "science","automotive"]
 description = "Safe rust bindings for VISA(Virtual Instrument Software Architecture) library"
 exclude = ["/expand.rs", "/fetch-doc"]
 readme = "README_Crates_io.MD"
 
 [dependencies]
-visa-sys = { version = "^0.1.7" }
+visa-sys = { version = "^0.1.8" }
 bitflags = "^2.6"
 num_enum = "^0.7"
 visa-rs-proc = { version = "^0.6.1", path = "./visa-rs-proc" }
@@ -22,7 +22,7 @@ log = "^0.4"
 [dev-dependencies]
 anyhow = "^1"
 tokio = { version = "^1", features = ["rt-multi-thread"] }
-env_logger = "^0.10"
+env_logger = "^0.11"
 
 
 [patch.crates-io]

@@ -30,7 +30,6 @@ impl BorrowedSs<'_> {
     /// # Safety
     ///
     /// The `ss` passed in must be a valid VISA session.
-
     pub unsafe fn borrow_raw(ss: RawSs) -> Self {
         Self {
             s: ss,

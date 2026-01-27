@@ -237,7 +237,6 @@ impl Instrument {
         Ok(event::Event { handler, kind })
     }
 
-    ///
     /// Installs handlers for event callbacks.
     ///
     /// The viInstallHandler() operation allows applications to install handlers on sessions. The handler specified in the handler parameter is installed along with any previously installed handlers for the specified event.
@@ -246,8 +245,6 @@ impl Instrument {
     ///
     /// *Note*: for some reason pass a closure with type `|instr, event|{...}` may get compile error.
     /// Instead, use `|instr: & Instrument, event: & Event|{...}`.
-    ///
-
     pub fn install_handler<F: handler::Callback>(
         &self,
         event_kind: event::EventKind,
@@ -386,7 +383,6 @@ impl Instrument {
     /// If you have enabled VI_EVENT_IO_COMPLETION for queueing (VI_QUEUE), for each successful call to viReadAsync(), you must call viWaitOnEvent() to retrieve the I/O completion event. This is true even if the I/O is done synchronously (that is, if the operation returns VI_SUCCESS_SYNC).
     /// # Safety
     /// This function is unsafe because the `buf` passed in may be dropped before the transfer terminates
-
     //todo: return VI_SUCCESS_SYNC, means IO operation has finished, so if there is a waker receiving JobID, would be called before JobID set and can't wake corresponding job
     pub unsafe fn visa_read_async(&self, buf: &mut [u8]) -> Result<JobID> {
         let mut id: vs::ViJobId = 0;
@@ -410,9 +406,7 @@ impl Instrument {
     ///
     /// # Safety
     /// This function is unsafe because the `buf` passed in may be dropped before the transfer terminates
-
     //todo: return VI_SUCCESS_SYNC, means IO operation has finished, so if there is a waker receiving JobID, would be called before JobID set and can't wake corresponding job
-
     pub unsafe fn visa_write_async(&self, buf: &[u8]) -> Result<JobID> {
         let mut id: vs::ViJobId = 0;
         #[allow(unused_unsafe)]
@@ -490,7 +484,6 @@ impl Instrument {
     /// Controls the state of the GPIB Remote Enable (REN) interface line, and optionally the remote/local state of the device.
     ///
     /// The viGpibControlREN() operation asserts or unasserts the GPIB REN interface line according to the specified mode. The mode can also specify whether the device associated with this session should be placed in local state (before deasserting REN) or remote state (after asserting REN). This operation is valid only if the GPIB interface associated with the session specified by vi is currently the system controller.
-
     pub fn gpib_control_ren(&self, mode: enums::gpib::RenMode) -> Result<()> {
         wrap_raw_error_in_unsafe!(vs::viGpibControlREN(self.as_raw_ss(), mode as _))?;
         Ok(())
@@ -504,7 +497,6 @@ impl Instrument {
     ///
     /// + `sec_addr`: Secondary address of the targeted GPIB device. If the targeted device does not have a secondary address, this parameter should set as None or the value [VI_NO_SEC_ADDR](vs::VI_NO_SEC_ADDR).
     ///
-
     pub fn gpib_pass_control(
         &self,
         prim_addr: vs::ViUInt16,
@@ -521,7 +513,6 @@ impl Instrument {
     ///
     /// This operation asserts the IFC line and becomes controller in charge (CIC). The local board must be the system controller. This operation is valid only on GPIB INTFC (interface) sessions.
     ///
-
     pub fn gpib_send_ifc(&self) -> Result<()> {
         wrap_raw_error_in_unsafe!(vs::viGpibSendIFC(self.as_raw_ss(),))?;
         Ok(())

@@ -82,10 +82,10 @@ fn extract_repr_attribute(
         if let Ok(attr) = fork.call(syn::Attribute::parse_outer) {
             let mut iter = attr.into_iter();
             for a in &mut iter {
-                if a.path.is_ident("repr") {
+                if a.path().is_ident("repr") {
                     input.advance_to(&fork);
-                    let group: proc_macro2::Group = syn::parse2(a.tokens)?;
-                    ret = Some(syn::parse2(group.stream())?);
+                    let ident: Ident = a.parse_args()?;
+                    ret = Some(ident);
                     break;
                 } else {
                     a.to_tokens(tokens);

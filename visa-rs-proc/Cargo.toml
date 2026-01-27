@@ -1,6 +1,6 @@
 [package]
 name = "visa-rs-proc"
-version = "0.6.1"
+version = "0.6.2"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/TsuITOAR/visa-rs"
@@ -11,10 +11,10 @@ description = "procedural macros used in visa-rs"
 proc-macro = true
 
 [dependencies]
-syn = "^1"
+syn = "^2"
 quote = "^1"
 proc-macro2 = "^1"
-visa-sys = { version = "^0.1.6", features = ["proc"] }
+visa-sys = { version = "^0.1.8", features = ["proc"] }
 
 [patch.crates-io]
 #visa-sys = { path = "../../visa-sys" }

@@ -190,9 +190,9 @@ impl Attr {
             TypeCore::Arch(ref a) => {
                 let arch = a.iter().map(|x| &x.arch).map(|x| {
                     if let Ok(64) = x.base10_parse() {
-                        LitStr::new("x86_64", x.span())
+                        LitStr::new("64", x.span())
                     } else if let Ok(32) = x.base10_parse() {
-                        LitStr::new("x86", x.span())
+                        LitStr::new("32", x.span())
                     } else {
                         LitStr::new(&x.to_string(), x.span())
                     }
@@ -200,13 +200,13 @@ impl Attr {
                 let ty = a.iter().map(|x| &x.core);
                 quote!(
                     #(
-                        #[cfg(target_arch = #arch)]
+                        #[cfg(target_pointer_width = #arch)]
                         #[doc= #desc]
                         #[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
                         pub struct #id{
                             value:vs::#ty
                         }
-                        #[cfg(target_arch = #arch)]
+                        #[cfg(target_pointer_width = #arch)]
                         impl #id{
                             pub fn into_inner(self)->vs::#ty{
                                 self.value
@@ -305,17 +305,17 @@ fn struct_name_to_kind_name(id: &Ident) -> impl Iterator<Item = (Ident, TokenStr
         .any(|p| kind_id_str.starts_with(p))
     {
         let kind_id_x64 = subst_ident(Ident::new(
-            &format!("{}_32", kind_id_str),
+            &format!("{}_64", kind_id_str),
             kind_id_str.span(),
         ));
         let kind_id_x32 = subst_ident(Ident::new(
-            &format!("{}_64", kind_id_str),
+            &format!("{}_32", kind_id_str),
             kind_id_str.span(),
         ));
 
         vec![
-            (kind_id_x64, quote!(#[cfg(target_arch = "x86_64")])),
-            (kind_id_x32, quote!(#[cfg(target_arch = "x86")])),
+            (kind_id_x64, quote!(#[cfg(target_pointer_width = "64")])),
+            (kind_id_x32, quote!(#[cfg(target_pointer_width = "32")])),
         ]
         .into_iter()
     } else {

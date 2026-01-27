@@ -285,7 +285,7 @@ impl RangeCore {
                                     == bound.arch.base10_parse::<u8>().unwrap()
                             );
                             if let Ok(64) = bound.arch.base10_parse() {
-                                let cfg = quote!(#[cfg(target_arch = "x86_64")]);
+                                let cfg = quote_spanned!(bound.arch.span()=> #[cfg(target_pointer_width = "64")]);
                                 bound.core.to_constructor(
                                     &tya.core,
                                     &cfg.into(),
@@ -293,7 +293,7 @@ impl RangeCore {
                                     writeable,
                                 );
                             } else if let Ok(32) = bound.arch.base10_parse() {
-                                let cfg = quote!(#[cfg(target_arch = "x86")]);
+                                let cfg = quote_spanned!(bound.arch.span()=> #[cfg(target_pointer_width = "32")]);
                                 bound.core.to_constructor(
                                     &tya.core,
                                     &cfg.into(),
@@ -305,12 +305,12 @@ impl RangeCore {
                 }
                 super::TypeCore::UnArch(ref tyu) => arch_bound.iter().for_each(|bound| {
                     if let Ok(64) = bound.arch.base10_parse() {
-                        let cfg = quote!(#[cfg(target_arch = "x86_64")]);
+                        let cfg = quote_spanned!(bound.arch.span()=> #[cfg(target_pointer_width = "64")]);
                         bound
                             .core
                             .to_constructor(tyu, &cfg.into(), tokens, writeable);
                     } else if let Ok(32) = bound.arch.base10_parse() {
-                        let cfg = quote!(#[cfg(target_arch = "x86")]);
+                        let cfg = quote_spanned!(bound.arch.span()=> #[cfg(target_pointer_width = "32")]);
                         bound
                             .core
                             .to_constructor(tyu, &cfg.into(), tokens, writeable);
@@ -320,10 +320,10 @@ impl RangeCore {
             Bound::NoArch(ref n) => match ty.core {
                 super::TypeCore::Arch(ref arch_ty) => arch_ty.iter().for_each(|tya| {
                     if let Ok(64) = tya.arch.base10_parse() {
-                        let cfg = quote!(#[cfg(target_arch = "x86_64")]);
+                        let cfg = quote_spanned!(tya.arch.span()=> #[cfg(target_pointer_width = "64")]);
                         n.to_constructor(&tya.core, &cfg.into(), tokens, writeable);
                     } else if let Ok(32) = tya.arch.base10_parse() {
-                        let cfg = quote!(#[cfg(target_arch = "x86")]);
+                        let cfg = quote_spanned!(tya.arch.span()=> #[cfg(target_pointer_width = "32")]);
                         n.to_constructor(&tya.core, &cfg.into(), tokens, writeable);
                     }
                 }),

@@ -6,8 +6,9 @@ use std::{
 use anyhow::Result;
 use visa_rs::{
     enums::event::{self, Event},
+    enums::status::ErrorCode,
     flags::AccessMode,
-    AsResourceManager, DefaultRM, Instrument, VisaString, TIMEOUT_IMMEDIATE,
+    AsResourceManager, DefaultRM, Error, Instrument, VisaString, TIMEOUT_IMMEDIATE,
 };
 fn init_logger() {
     let _ = env_logger::builder()
@@ -16,9 +17,22 @@ fn init_logger() {
         .try_init();
 }
 
+fn try_default_rm() -> Result<Option<DefaultRM>> {
+    match DefaultRM::new() {
+        Ok(rm) => Ok(Some(rm)),
+        Err(Error(ErrorCode::ErrorSystemError)) | Err(Error(ErrorCode::ErrorLibraryNfound)) => {
+            Ok(None)
+        }
+        Err(e) => Err(e.into()),
+    }
+}
+
 #[test]
 fn list_instr() -> Result<()> {
-    let rm = DefaultRM::new()?;
+    let rm = match try_default_rm()? {
+        Some(rm) => rm,
+        None => return Ok(()),
+    };
     let mut list = rm.find_res_list(&CString::new("?*INSTR")?.into())?;
     while let Some(n) = list.find_next()? {
         eprintln!("{}", n);
@@ -28,7 +42,10 @@ fn list_instr() -> Result<()> {
 
 #[test]
 fn send_idn() -> Result<()> {
-    let rm = DefaultRM::new()?;
+    let rm = match try_default_rm()? {
+        Some(rm) => rm,
+        None => return Ok(()),
+    };
     let mut list = rm.find_res_list(&CString::new("?*KEYSIGH?*INSTR")?.into())?;
     if let Some(n) = list.find_next()? {
         let mut instr = rm.open(&n, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
@@ -44,7 +61,10 @@ fn send_idn() -> Result<()> {
 #[test]
 fn handler() -> Result<()> {
     // tried EventKind::Trig, but not supported by my keysight osc :(
-    let rm = DefaultRM::new()?;
+    let rm = match try_default_rm()? {
+        Some(rm) => rm,
+        None => return Ok(()),
+    };
     let mut list = rm.find_res_list(&CString::new("?*KEYSIGH?*INSTR")?.into())?;
     if let Some(n) = list.find_next()? {
         let instr = rm.open(&n, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
@@ -74,7 +94,10 @@ fn handler() -> Result<()> {
 #[test]
 fn async_io() -> Result<()> {
     init_logger();
-    let rm = DefaultRM::new()?;
+    let rm = match try_default_rm()? {
+        Some(rm) => rm,
+        None => return Ok(()),
+    };
     let mut list = rm.find_res_list(&CString::new("?*KEYSIGH?*INSTR")?.into())?;
     if let Some(n) = list.find_next()? {
         log::debug!("connecting to {}", n);
