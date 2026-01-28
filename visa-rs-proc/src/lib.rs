@@ -34,8 +34,11 @@ pub fn rusty_ident(input: TokenStream) -> TokenStream {
 
 #[proc_macro]
 pub fn repr(input: TokenStream) -> TokenStream {
-    let macros = parse_macro_input!(input as repr::Input);
-    quote! {#macros}.into()
+    let input2: TokenStream2 = input.into();
+    match syn::parse2::<repr::Input>(input2) {
+        Ok(macros) => quote! {#macros}.into(),
+        Err(err) => err.to_compile_error().into(),
+    }
 }
 
 fn get_visa_num(input: TokenTree) -> TokenTree {

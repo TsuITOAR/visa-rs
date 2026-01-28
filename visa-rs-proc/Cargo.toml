@@ -1,11 +1,13 @@
 [package]
 name = "visa-rs-proc"
-version = "0.6.1"
+version = "0.7.0"
 edition = "2021"
+authors = ["ITOAR <itoar@outlook.com>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/TsuITOAR/visa-rs"
 homepage = "https://github.com/TsuITOAR/visa-rs"
 description = "procedural macros used in visa-rs"
+include = ["default_repr_config.toml"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 proc-macro = true
@@ -15,15 +17,15 @@ default = []
 # Enable cross-compilation support using predefined platform configurations
 cross-compile = ["serde", "toml"]
 # Enable custom repr mapping via environment variables
-custom-repr = []
+custom-repr = ["cross-compile"]
 
 [dependencies]
-syn = "^1"
+syn = "^2"
 quote = "^1"
 proc-macro2 = "^1"
-visa-sys = { version = "^0.1.6", features = ["proc"] }
+visa-sys = { version = "^0.1.8", features = ["proc"] }
 serde = { version = "1.0", features = ["derive"], optional = true }
-toml = { version = "0.8", optional = true }
+toml = { version = "0.9.8", optional = true }
 
 [patch.crates-io]
 #visa-sys = { path = "../../visa-sys" }

@@ -14,7 +14,7 @@
 //!
 //! Codes below will find the first Keysight instrument in your environment and print out its `*IDN?` response.
 //!
-//! ```
+//! ```no_run
 //! fn main() -> visa_rs::Result<()>{
 //!     use std::ffi::CString;
 //!     use std::io::{BufRead, BufReader, Read, Write};
@@ -112,8 +112,9 @@ macro_rules! impl_session_traits_for_borrowed {
     };
 }
 
-impl_session_traits! { DefaultRM, Instrument}
-impl_session_traits_for_borrowed! {WeakRM}
+impl_session_traits! { DefaultRM, Instrument }
+impl_session_traits_for_borrowed! { WeakRM }
+
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct Error(pub enums::status::ErrorCode);
 
@@ -626,14 +627,14 @@ mod test {
     fn convert_to_complete_code() {
         assert_eq!(
             0 as vs::ViStatus,
-            CompletionCode::Success.try_into().unwrap()
+            CompletionCode::Success.into()
         );
     }
     #[test]
     fn convert_to_error_code() {
         assert_eq!(
             0xBFFF0011u32 as vs::ViStatus,
-            ErrorCode::ErrorRsrcNfound.try_into().unwrap()
+            ErrorCode::ErrorRsrcNfound.into()
         );
     }
     #[test]
@@ -650,21 +651,44 @@ mod test {
     use anyhow::{bail, Result};
     #[test]
     fn rm_behavior() -> Result<()> {
-        let rm1 = DefaultRM::new()?;
-        let rm2 = DefaultRM::new()?;
+        let rm1 = match DefaultRM::new() {
+            Ok(rm) => rm,
+            Err(crate::Error(crate::enums::status::ErrorCode::ErrorSystemError))
+            | Err(crate::Error(crate::enums::status::ErrorCode::ErrorLibraryNfound)) => {
+                return Ok(());
+            }
+            Err(e) => return Err(e.into()),
+        };
+        let rm2 = match DefaultRM::new() {
+            Ok(rm) => rm,
+            Err(crate::Error(crate::enums::status::ErrorCode::ErrorSystemError))
+            | Err(crate::Error(crate::enums::status::ErrorCode::ErrorLibraryNfound)) => {
+                return Ok(());
+            }
+            Err(e) => return Err(e.into()),
+        };
         let r1 = rm1.as_raw_ss();
         assert_ne!(rm1, rm2);
         std::mem::drop(rm1);
         let expr = CString::new("?*").unwrap().into();
-        match unsafe { DefaultRM::from_raw_ss(r1) }.find_res(&expr) {
+        match unsafe { DefaultRM::from_raw_ss(r1).leak() }.find_res(&expr) {
             Err(crate::Error(crate::enums::status::ErrorCode::ErrorInvObject)) => {
                 Ok::<_, crate::Error>(())
             }
-            _ => bail!("unexpected behavior using a resource manager after it is dropped"),
+            Err(e) => {
+                bail!("unexpected behavior using a resource manager after it is dropped: {e:?}",)
+            }
+            Ok(_) => bail!(
+                "unexpected behavior using a resource manager after it is dropped: found resource",
+            ),
         }?;
         match rm2.find_res(&expr) {
-            Ok(_) | Err(crate::Error(crate::enums::status::ErrorCode::ErrorRsrcNfound)) => Ok(()),
-            _ => bail!("unexpected behavior using a resource manager after dropping another resource manager"),
+            Ok(_)
+            | Err(crate::Error(crate::enums::status::ErrorCode::ErrorRsrcNfound))
+             => Ok(()),
+            Err(e) => bail!(
+                "unexpected behavior using a resource manager after dropping another resource manager: {e:?}",
+            ),
         }
     }
 
@@ -673,7 +697,7 @@ mod test {
         let vs_error = Error(enums::status::ErrorCode::ErrorTmo);
         let io_error = vs_to_io_err(vs_error);
         assert_eq!(Error::try_from(io_error).unwrap(), vs_error);
-        let no_vs_io_error = std::io::Error::new(std::io::ErrorKind::Other, FromBytesWithNulError);
+        let no_vs_io_error = std::io::Error::other(FromBytesWithNulError);
         assert!(Error::try_from(no_vs_io_error).is_err());
     }
 }

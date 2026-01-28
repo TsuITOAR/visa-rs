@@ -1,0 +1,13 @@
+[env]
+# VISA_REPR_CONFIG_PATH = "/absolute/path/to/visa_repr_config.toml"
+# Above is the file-based approach; kept for reference. We prefer env mapping below.
+# For macOS 
+VISA_REPR_VIUINT16 = "u16"
+VISA_REPR_VIINT16 = "i16"
+VISA_REPR_VIUINT32 = "u64"
+VISA_REPR_VIEVENT = "u64"
+VISA_REPR_VIEVENTTYPE = "u64"
+VISA_REPR_VIEVENTFILTER = "u64"
+VISA_REPR_VIATTR = "u64"
+VISA_REPR_VISTATUS = "i64"
+VISA_REPR_VIINT32 = "i64"

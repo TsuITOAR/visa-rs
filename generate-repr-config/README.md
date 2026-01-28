@@ -7,7 +7,7 @@ A utility tool to detect VISA type sizes on the target platform and generate con
 When cross-compiling `visa-rs`, you may need to use the `custom-repr` feature with environment variables. This tool helps by:
 
 1. Running on the target platform to detect actual type sizes
-2. Generating configuration in various formats (shell script, batch file, TOML, JSON)
+2. Generating configuration in various formats (shell script, batch file, Cargo config, TOML, JSON)
 3. Providing the exact repr types needed for that platform
 
 ## Usage
@@ -24,6 +24,9 @@ generate-repr-config --format batch > set_vars.bat
 # Generate TOML config
 generate-repr-config --format toml > detected_config.toml
 
+# Generate .cargo/config.toml
+generate-repr-config --format cargo-config > .cargo/config.toml
+
 # Generate JSON
 generate-repr-config --format json
 ```
@@ -31,18 +34,21 @@ generate-repr-config --format json
 ### Cross-Compilation Workflow
 
 1. **Build the tool for your target platform:**
+
    ```bash
    cd generate-repr-config
    cargo build --release --target x86_64-pc-windows-gnu
    ```
 
 2. **Copy the binary to the target platform:**
+
    ```bash
    # The binary will be at:
    # target/x86_64-pc-windows-gnu/release/generate-repr-config.exe
    ```
 
 3. **Run on the target platform:**
+
    ```bash
    # On Windows:
    generate-repr-config.exe --format batch > set_repr_vars.bat
@@ -52,6 +58,7 @@ generate-repr-config --format json
    ```
 
 4. **Use the generated configuration:**
+
    ```bash
    # On Windows (cmd.exe):
    set_repr_vars.bat
@@ -60,7 +67,16 @@ generate-repr-config --format json
    source set_repr_vars.sh
    ```
 
+   Or drop it into `.cargo/config.toml`:
+
+   ```toml
+   [env]
+   VISA_REPR_VISTATUS = "i32"
+   # ... etc
+   ```
+
 5. **Build visa-rs with custom-repr:**
+
    ```bash
    cd ../..  # Back to visa-rs root
    cargo build --features custom-repr --target x86_64-pc-windows-gnu
@@ -69,6 +85,7 @@ generate-repr-config --format json
 ## Output Formats
 
 ### Shell Script (`--format shell`)
+
 Generates a POSIX shell script with `export` commands. Can be sourced to set environment variables.
 
 ```bash
@@ -78,6 +95,7 @@ export VISA_REPR_VIUINT32="u32"
 ```
 
 ### Batch File (`--format batch`)
+
 Generates a Windows batch file with `set` commands.
 
 ```batch
@@ -87,16 +105,32 @@ REM ... etc
 ```
 
 ### TOML (`--format toml`)
-Generates a TOML configuration file that shows the detected types. This can be used as a reference for `repr_config.toml`.
+
+Generates a TOML configuration snippet that shows the detected types. You can paste these
+under a `[[platforms]]` entry in `visa_repr_config.toml`.
 
 ```toml
-[invariant]
+[[platforms]]
+condition = 'all()'
+[platforms.types]
 ViStatus = "i32"
 ViUInt32 = "u32"
 # ... etc
 ```
 
+### Cargo Config (`--format cargo-config`)
+
+Generates a `.cargo/config.toml` snippet with `[env]` entries.
+
+```toml
+[env]
+VISA_REPR_VISTATUS = "i32"
+VISA_REPR_VIUINT32 = "u32"
+# ... etc
+```
+
 ### JSON (`--format json`)
+
 Generates JSON output for programmatic use.
 
 ```json

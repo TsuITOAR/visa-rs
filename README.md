@@ -13,7 +13,7 @@ This crate needs to link to an installed visa library, for example, [NI-VISA](ht
 
 A default link configuration is used for the default installation setup on Windows, Linux and MacOs.  
 
-You can overwrite the configuration by specifying the name of the visa library file (`visa` for linux, `visa64` or `visa32` for windows) by environment variable `LIB_VISA_NAME`, and the path of the file by environment variable `LIB_VISA_PATH`.
+You can overwrite the configuration by specifying the name of the visa library file (default to `visa` for linux, `visa64` or `visa32` for windows) by environment variable `LIB_VISA_NAME`, and the path of the file by environment variable `LIB_VISA_PATH`.
 
 ## Example
 
@@ -56,5 +56,9 @@ fn find_an_instr() -> visa_rs::Result<()>{
   Ok(())
 }
 ```
+
+## Cross-compilation support
+
+Due to some repr of enum depending on the target architecture, there is a explicit feature `cross-compile`. Check [FEATURES.md](FEATURES.md) for more details.
 
 License: MIT OR Apache-2.0

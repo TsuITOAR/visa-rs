@@ -17,7 +17,7 @@
 //! ./target/x86_64-pc-windows-gnu/debug/generate_repr_config.exe --format shell > set_repr_vars.sh
 //! 
 //! # Or generate TOML config
-//! ./target/x86_64-pc-windows-gnu/debug/generate_repr_config.exe --format toml > repr_config.toml
+//! ./target/x86_64-pc-windows-gnu/debug/generate_repr_config.exe --format toml > visa_repr_config.toml
 //! ```
 
 use std::env;
@@ -80,68 +80,100 @@ impl VisaReprConfig {
 
     /// Output as shell script for setting environment variables
     fn output_shell(&self) {
-        println!("#!/bin/sh");
-        println!("# Generated VISA repr configuration for custom-repr feature");
-        println!("# Source this file or copy the exports to your environment");
-        println!();
-        println!("export VISA_REPR_VIUINT16=\"{}\"", self.vi_uint16);
-        println!("export VISA_REPR_VIINT16=\"{}\"", self.vi_int16);
-        println!("export VISA_REPR_VIUINT32=\"{}\"", self.vi_uint32);
-        println!("export VISA_REPR_VIINT32=\"{}\"", self.vi_int32);
-        println!("export VISA_REPR_VISTATUS=\"{}\"", self.vi_status);
-        println!("export VISA_REPR_VIEVENT=\"{}\"", self.vi_event);
-        println!("export VISA_REPR_VIEVENTTYPE=\"{}\"", self.vi_event_type);
-        println!("export VISA_REPR_VIEVENTFILTER=\"{}\"", self.vi_event_filter);
-        println!("export VISA_REPR_VIATTR=\"{}\"", self.vi_attr);
+        use std::fmt::Write;
+        let mut out = String::new();
+        let _ = writeln!(out, "#!/bin/sh");
+        let _ = writeln!(out, "# Generated VISA repr configuration for custom-repr feature");
+        let _ = writeln!(out, "# Source this file or copy the exports to your environment");
+        let _ = writeln!(out);
+        let _ = writeln!(out, "export VISA_REPR_VIUINT16=\"{}\"", self.vi_uint16);
+        let _ = writeln!(out, "export VISA_REPR_VIINT16=\"{}\"", self.vi_int16);
+        let _ = writeln!(out, "export VISA_REPR_VIUINT32=\"{}\"", self.vi_uint32);
+        let _ = writeln!(out, "export VISA_REPR_VIINT32=\"{}\"", self.vi_int32);
+        let _ = writeln!(out, "export VISA_REPR_VISTATUS=\"{}\"", self.vi_status);
+        let _ = writeln!(out, "export VISA_REPR_VIEVENT=\"{}\"", self.vi_event);
+        let _ = writeln!(out, "export VISA_REPR_VIEVENTTYPE=\"{}\"", self.vi_event_type);
+        let _ = writeln!(out, "export VISA_REPR_VIEVENTFILTER=\"{}\"", self.vi_event_filter);
+        let _ = writeln!(out, "export VISA_REPR_VIATTR=\"{}\"", self.vi_attr);
+        print!("{out}");
     }
 
     /// Output as Windows batch script
     fn output_batch(&self) {
-        println!("@echo off");
-        println!("REM Generated VISA repr configuration for custom-repr feature");
-        println!("REM Run this file to set environment variables");
-        println!();
-        println!("set VISA_REPR_VIUINT16={}", self.vi_uint16);
-        println!("set VISA_REPR_VIINT16={}", self.vi_int16);
-        println!("set VISA_REPR_VIUINT32={}", self.vi_uint32);
-        println!("set VISA_REPR_VIINT32={}", self.vi_int32);
-        println!("set VISA_REPR_VISTATUS={}", self.vi_status);
-        println!("set VISA_REPR_VIEVENT={}", self.vi_event);
-        println!("set VISA_REPR_VIEVENTTYPE={}", self.vi_event_type);
-        println!("set VISA_REPR_VIEVENTFILTER={}", self.vi_event_filter);
-        println!("set VISA_REPR_VIATTR={}", self.vi_attr);
+        use std::fmt::Write;
+        let mut out = String::new();
+        let _ = writeln!(out, "@echo off");
+        let _ = writeln!(out, "REM Generated VISA repr configuration for custom-repr feature");
+        let _ = writeln!(out, "REM Run this file to set environment variables");
+        let _ = writeln!(out);
+        let _ = writeln!(out, "set VISA_REPR_VIUINT16={}", self.vi_uint16);
+        let _ = writeln!(out, "set VISA_REPR_VIINT16={}", self.vi_int16);
+        let _ = writeln!(out, "set VISA_REPR_VIUINT32={}", self.vi_uint32);
+        let _ = writeln!(out, "set VISA_REPR_VIINT32={}", self.vi_int32);
+        let _ = writeln!(out, "set VISA_REPR_VISTATUS={}", self.vi_status);
+        let _ = writeln!(out, "set VISA_REPR_VIEVENT={}", self.vi_event);
+        let _ = writeln!(out, "set VISA_REPR_VIEVENTTYPE={}", self.vi_event_type);
+        let _ = writeln!(out, "set VISA_REPR_VIEVENTFILTER={}", self.vi_event_filter);
+        let _ = writeln!(out, "set VISA_REPR_VIATTR={}", self.vi_attr);
+        print!("{out}");
     }
 
-    /// Output as TOML configuration file
+    /// Output as TOML configuration file (visa_repr_config.toml)
     fn output_toml(&self) {
-        println!("# Generated VISA repr configuration");
-        println!("# This can be used as a reference for repr_config.toml");
-        println!();
-        println!("[invariant]");
-        println!("ViUInt16 = \"{}\"", self.vi_uint16);
-        println!("ViInt16 = \"{}\"", self.vi_int16);
-        println!("ViUInt32 = \"{}\"", self.vi_uint32);
-        println!("ViInt32 = \"{}\"", self.vi_int32);
-        println!("ViStatus = \"{}\"", self.vi_status);
-        println!("ViEvent = \"{}\"", self.vi_event);
-        println!("ViEventType = \"{}\"", self.vi_event_type);
-        println!("ViEventFilter = \"{}\"", self.vi_event_filter);
-        println!("ViAttr = \"{}\"", self.vi_attr);
+        use std::fmt::Write;
+        let mut out = String::new();
+        let _ = writeln!(out, "# Generated VISA repr configuration");
+        let _ = writeln!(out, "# This can be used as a reference for visa_repr_config.toml");
+        let _ = writeln!(out);
+        let _ = writeln!(out, "[[platforms]]");
+        let _ = writeln!(out, "condition = 'all()'");
+        let _ = writeln!(out, "[platforms.types]");
+        let _ = writeln!(out, "ViUInt16 = \"{}\"", self.vi_uint16);
+        let _ = writeln!(out, "ViInt16 = \"{}\"", self.vi_int16);
+        let _ = writeln!(out, "ViUInt32 = \"{}\"", self.vi_uint32);
+        let _ = writeln!(out, "ViInt32 = \"{}\"", self.vi_int32);
+        let _ = writeln!(out, "ViStatus = \"{}\"", self.vi_status);
+        let _ = writeln!(out, "ViEvent = \"{}\"", self.vi_event);
+        let _ = writeln!(out, "ViEventType = \"{}\"", self.vi_event_type);
+        let _ = writeln!(out, "ViEventFilter = \"{}\"", self.vi_event_filter);
+        let _ = writeln!(out, "ViAttr = \"{}\"", self.vi_attr);
+        print!("{out}");
+    }
+
+    /// Output as Cargo config (for .cargo/config.toml)
+    fn output_cargo_config(&self) {
+        use std::fmt::Write;
+        let mut out = String::new();
+        let _ = writeln!(out, "# Generated VISA repr configuration for .cargo/config.toml");
+        let _ = writeln!(out, "[env]");
+        let _ = writeln!(out, "VISA_REPR_VIUINT16 = \"{}\"", self.vi_uint16);
+        let _ = writeln!(out, "VISA_REPR_VIINT16 = \"{}\"", self.vi_int16);
+        let _ = writeln!(out, "VISA_REPR_VIUINT32 = \"{}\"", self.vi_uint32);
+        let _ = writeln!(out, "VISA_REPR_VIINT32 = \"{}\"", self.vi_int32);
+        let _ = writeln!(out, "VISA_REPR_VISTATUS = \"{}\"", self.vi_status);
+        let _ = writeln!(out, "VISA_REPR_VIEVENT = \"{}\"", self.vi_event);
+        let _ = writeln!(out, "VISA_REPR_VIEVENTTYPE = \"{}\"", self.vi_event_type);
+        let _ = writeln!(out, "VISA_REPR_VIEVENTFILTER = \"{}\"", self.vi_event_filter);
+        let _ = writeln!(out, "VISA_REPR_VIATTR = \"{}\"", self.vi_attr);
+        print!("{out}");
     }
 
     /// Output as JSON for programmatic use
     fn output_json(&self) {
-        println!("{{");
-        println!("  \"ViUInt16\": \"{}\",", self.vi_uint16);
-        println!("  \"ViInt16\": \"{}\",", self.vi_int16);
-        println!("  \"ViUInt32\": \"{}\",", self.vi_uint32);
-        println!("  \"ViInt32\": \"{}\",", self.vi_int32);
-        println!("  \"ViStatus\": \"{}\",", self.vi_status);
-        println!("  \"ViEvent\": \"{}\",", self.vi_event);
-        println!("  \"ViEventType\": \"{}\",", self.vi_event_type);
-        println!("  \"ViEventFilter\": \"{}\",", self.vi_event_filter);
-        println!("  \"ViAttr\": \"{}\"", self.vi_attr);
-        println!("}}");
+        use std::fmt::Write;
+        let mut out = String::new();
+        let _ = writeln!(out, "{{");
+        let _ = writeln!(out, "  \"ViUInt16\": \"{}\",", self.vi_uint16);
+        let _ = writeln!(out, "  \"ViInt16\": \"{}\",", self.vi_int16);
+        let _ = writeln!(out, "  \"ViUInt32\": \"{}\",", self.vi_uint32);
+        let _ = writeln!(out, "  \"ViInt32\": \"{}\",", self.vi_int32);
+        let _ = writeln!(out, "  \"ViStatus\": \"{}\",", self.vi_status);
+        let _ = writeln!(out, "  \"ViEvent\": \"{}\",", self.vi_event);
+        let _ = writeln!(out, "  \"ViEventType\": \"{}\",", self.vi_event_type);
+        let _ = writeln!(out, "  \"ViEventFilter\": \"{}\",", self.vi_event_filter);
+        let _ = writeln!(out, "  \"ViAttr\": \"{}\"", self.vi_attr);
+        let _ = writeln!(out, "}}");
+        print!("{out}");
     }
 }
 
@@ -158,6 +190,7 @@ fn print_usage() {
     eprintln!("  generate_repr_config --format shell > set_vars.sh");
     eprintln!("  generate_repr_config --format batch > set_vars.bat");
     eprintln!("  generate_repr_config --format toml > detected_config.toml");
+    eprintln!("  generate_repr_config --format cargo-config > .cargo/config.toml");
     eprintln!("  generate_repr_config --format json");
 }
 
@@ -197,10 +230,11 @@ fn main() {
         "shell" | "sh" => config.output_shell(),
         "batch" | "bat" | "cmd" => config.output_batch(),
         "toml" => config.output_toml(),
+        "cargo-config" | "cargo" | "config" => config.output_cargo_config(),
         "json" => config.output_json(),
         _ => {
             eprintln!("Error: Unknown format: {}", format);
-            eprintln!("Supported formats: shell, batch, toml, json");
+            eprintln!("Supported formats: shell, batch, toml, cargo-config, json");
             std::process::exit(1);
         }
     }

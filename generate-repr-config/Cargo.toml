@@ -10,4 +10,4 @@ name = "generate-repr-config"
 path = "src/main.rs"
 
 [dependencies]
-visa-sys = { version = "^0.1.7", features = ["proc"] }
+visa-sys = { version = "^0.1.8", features = ["proc"] }
