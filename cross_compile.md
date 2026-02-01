@@ -1,4 +1,4 @@
-# visa-rs Feature Guide: Type Representation
+# visa-rs Cross-Compile Feature Guide: Type Representation
 
 This document explains the different ways to configure VISA type-to-Rust repr mapping in the `visa-rs` crate to support various build scenarios.
 

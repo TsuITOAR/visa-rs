@@ -1,6 +1,6 @@
 [package]
 name = "visa-rs-proc"
-version = "0.7.0"
+version = "0.7.0-alpha.1"
 edition = "2021"
 authors = ["ITOAR <itoar@outlook.com>"]
 license = "MIT OR Apache-2.0"

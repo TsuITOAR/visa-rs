@@ -50,4 +50,26 @@ fn find_an_instr() -> visa_rs::Result<()>{
 }
 ```
 
+## Tokio Feature
+
+Enable `tokio` to use the async adapter that implements `tokio::io::AsyncRead` and
+`tokio::io::AsyncWrite` for VISA sessions.
+
+```toml
+[dependencies]
+visa-rs = { version = "0.7.0-alpha.1", features = ["tokio"] }
+```
+
+This exposes `InstrumentTokioAdapter`, which wraps `AsyncInstrument` and provides
+Tokio-compatible I/O traits.
+
+## Cross-compilation support
+
+Due to some repr of enum depending on the target architecture, there is a explicit feature `cross-compile`. Check [FEATURES.md](FEATURES.md) for more details.
+
+## Feedback (Alpha)
+
+This is an alpha release. If you run into issues, please share your runtime feedback
+and device/driver environment to help improve the next release.
+
 License: MIT OR Apache-2.0

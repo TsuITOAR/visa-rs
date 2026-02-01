@@ -305,12 +305,14 @@ impl RangeCore {
                 }
                 super::TypeCore::UnArch(ref tyu) => arch_bound.iter().for_each(|bound| {
                     if let Ok(64) = bound.arch.base10_parse() {
-                        let cfg = quote_spanned!(bound.arch.span()=> #[cfg(target_pointer_width = "64")]);
+                        let cfg =
+                            quote_spanned!(bound.arch.span()=> #[cfg(target_pointer_width = "64")]);
                         bound
                             .core
                             .to_constructor(tyu, &cfg.into(), tokens, writeable);
                     } else if let Ok(32) = bound.arch.base10_parse() {
-                        let cfg = quote_spanned!(bound.arch.span()=> #[cfg(target_pointer_width = "32")]);
+                        let cfg =
+                            quote_spanned!(bound.arch.span()=> #[cfg(target_pointer_width = "32")]);
                         bound
                             .core
                             .to_constructor(tyu, &cfg.into(), tokens, writeable);
@@ -320,10 +322,12 @@ impl RangeCore {
             Bound::NoArch(ref n) => match ty.core {
                 super::TypeCore::Arch(ref arch_ty) => arch_ty.iter().for_each(|tya| {
                     if let Ok(64) = tya.arch.base10_parse() {
-                        let cfg = quote_spanned!(tya.arch.span()=> #[cfg(target_pointer_width = "64")]);
+                        let cfg =
+                            quote_spanned!(tya.arch.span()=> #[cfg(target_pointer_width = "64")]);
                         n.to_constructor(&tya.core, &cfg.into(), tokens, writeable);
                     } else if let Ok(32) = tya.arch.base10_parse() {
-                        let cfg = quote_spanned!(tya.arch.span()=> #[cfg(target_pointer_width = "32")]);
+                        let cfg =
+                            quote_spanned!(tya.arch.span()=> #[cfg(target_pointer_width = "32")]);
                         n.to_constructor(&tya.core, &cfg.into(), tokens, writeable);
                     }
                 }),
@@ -633,24 +637,24 @@ impl Parse for BoundItem {
                 if c.peek2(kw::to) {
                     let b = c.parse()?;
                     c.parse::<kw::to>()?;
-                    return Ok(BoundItem::NamedRange {
+                    Ok(BoundItem::NamedRange {
                         name: id,
                         range: (b, c.parse()?),
-                    });
+                    })
                 } else {
                     let b: LitInt = c.parse()?;
                     if input.peek(kw::to) {
                         input.parse::<kw::to>()?;
-                        return Ok(BoundItem::Range((
+                        Ok(BoundItem::Range((
                             BoundToken::Ident { id, value: Some(b) },
                             input.parse()?,
-                        )));
+                        )))
                     } else {
-                        return Ok(BoundItem::Single(BoundToken::Ident { id, value: Some(b) }));
+                        Ok(BoundItem::Single(BoundToken::Ident { id, value: Some(b) }))
                     }
                 }
             } else if id == "VI_TRUE" || id == "VI_FALSE" {
-                return Ok(BoundItem::Single(BoundToken::Ident { id, value: None }));
+                Ok(BoundItem::Single(BoundToken::Ident { id, value: None }))
             } else {
                 Err(look.error())
             }

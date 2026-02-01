@@ -1,30 +1,35 @@
 [package]
 name = "visa-rs"
-version = "0.7.0"
+version = "0.7.0-alpha.1"
 authors = ["ITOAR <itoar@outlook.com>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/TsuITOAR/visa-rs"
 homepage = "https://github.com/TsuITOAR/visa-rs"
 keywords = ["control", "visa", "instrument"]
-categories = ["api-bindings", "hardware-support", "science","automotive"]
+categories = ["api-bindings", "hardware-support", "science", "automotive"]
 description = "Safe rust bindings for VISA(Virtual Instrument Software Architecture) library"
 exclude = ["/expand.rs", "/fetch-doc"]
 readme = "README_Crates_io.MD"
 
 [features]
-default = []
+default = ["tokio"]
 # Enable cross-compilation support with predefined platform configurations
 cross-compile = ["visa-rs-proc/cross-compile"]
 # Enable custom repr mapping via environment variables
 custom-repr = ["visa-rs-proc/custom-repr"]
+tokio = ["dep:tokio"]
 
 [dependencies]
 visa-sys = { version = "^0.1.8" }
 bitflags = "^2.6"
 num_enum = "^0.7"
-visa-rs-proc = { version = "^0.7", path = "./visa-rs-proc" }
+visa-rs-proc = { version = "0.7.0-alpha.1", path = "./visa-rs-proc" }
 log = "^0.4"
+dashmap = "^6.1"
+indexmap = "^2.2"
+bytes = "^1"
+tokio = { version = "^1", features = ["io-util"], optional = true }
 
 [dev-dependencies]
 anyhow = "^1"

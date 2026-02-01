@@ -51,6 +51,8 @@ use std::{borrow::Cow, ffi::CString, fmt::Display, time::Duration};
 pub use visa_sys as vs;
 
 mod async_io;
+#[cfg(feature = "tokio")]
+mod async_tokio;
 pub mod enums;
 pub mod flags;
 pub mod handler;
@@ -58,6 +60,8 @@ mod instrument;
 pub mod prelude;
 pub mod session;
 
+#[cfg(feature = "tokio")]
+pub use async_tokio::InstrumentTokioAdapter;
 pub use instrument::Instrument;
 
 use session::{AsRawSs, AsSs, FromRawSs, IntoRawSs, OwnedSs};
@@ -625,10 +629,7 @@ mod test {
     }
     #[test]
     fn convert_to_complete_code() {
-        assert_eq!(
-            0 as vs::ViStatus,
-            CompletionCode::Success.into()
-        );
+        assert_eq!(0 as vs::ViStatus, CompletionCode::Success.into());
     }
     #[test]
     fn convert_to_error_code() {

@@ -406,7 +406,6 @@ impl Instrument {
     ///
     /// # Safety
     /// This function is unsafe because the `buf` passed in may be dropped before the transfer terminates
-    //todo: return VI_SUCCESS_SYNC, means IO operation has finished, so if there is a waker receiving JobID, would be called before JobID set and can't wake corresponding job
     pub unsafe fn visa_write_async(&self, buf: &[u8]) -> Result<JobID> {
         let mut id: vs::ViJobId = 0;
         #[allow(unused_unsafe)]
@@ -433,19 +432,15 @@ impl Instrument {
         ))?;
         Ok(())
     }
-    /// Safe rust wrapper of [`Self::visa_read_async`]
-    ///
-    /// *Note*: for now this function returns a future holding reference of `buf` and `Self`,
-    /// which means it can't be send to another thread
-    pub async fn async_read(&self, buf: &mut [u8]) -> Result<usize> {
-        async_io::AsyncRead::new(self, buf).await
+    /// Wraps the instrument with async I/O support.
+    pub fn into_async(self) -> Result<async_io::AsyncInstrument> {
+        async_io::AsyncInstrument::new(self)
     }
-    /// Safe rust wrapper of [`Self::visa_write_async`]
-    ///
-    /// *Note*: for now this function returns a future holding reference of `buf` and `Self`,
-    /// which means it can't be send to another thread
-    pub async fn async_write(&self, buf: &[u8]) -> Result<usize> {
-        async_io::AsyncWrite::new(self, buf).await
+
+    /// Tokio async IO adapter
+    #[cfg(feature = "tokio")]
+    pub fn into_tokio_async(self) -> Result<async_tokio::InstrumentTokioAdapter> {
+        self.try_into()
     }
 }
 
