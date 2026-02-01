@@ -51,6 +51,8 @@ use std::{borrow::Cow, ffi::CString, fmt::Display, time::Duration};
 pub use visa_sys as vs;
 
 mod async_io;
+#[cfg(feature = "tokio")]
+mod async_tokio;
 pub mod enums;
 pub mod flags;
 pub mod handler;
@@ -58,6 +60,8 @@ mod instrument;
 pub mod prelude;
 pub mod session;
 
+#[cfg(feature = "tokio")]
+pub use async_tokio::InstrumentTokioAdapter;
 pub use instrument::Instrument;
 
 use session::{AsRawSs, AsSs, FromRawSs, IntoRawSs, OwnedSs};
@@ -112,8 +116,9 @@ macro_rules! impl_session_traits_for_borrowed {
     };
 }
 
-impl_session_traits! { DefaultRM, Instrument}
-impl_session_traits_for_borrowed! {WeakRM}
+impl_session_traits! { DefaultRM, Instrument }
+impl_session_traits_for_borrowed! { WeakRM }
+
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Hash)]
 pub struct Error(pub enums::status::ErrorCode);
 
@@ -624,16 +629,13 @@ mod test {
     }
     #[test]
     fn convert_to_complete_code() {
-        assert_eq!(
-            0 as vs::ViStatus,
-            CompletionCode::Success.try_into().unwrap()
-        );
+        assert_eq!(0 as vs::ViStatus, CompletionCode::Success.into());
     }
     #[test]
     fn convert_to_error_code() {
         assert_eq!(
             0xBFFF0011u32 as vs::ViStatus,
-            ErrorCode::ErrorRsrcNfound.try_into().unwrap()
+            ErrorCode::ErrorRsrcNfound.into()
         );
     }
     #[test]
@@ -696,7 +698,7 @@ mod test {
         let vs_error = Error(enums::status::ErrorCode::ErrorTmo);
         let io_error = vs_to_io_err(vs_error);
         assert_eq!(Error::try_from(io_error).unwrap(), vs_error);
-        let no_vs_io_error = std::io::Error::new(std::io::ErrorKind::Other, FromBytesWithNulError);
+        let no_vs_io_error = std::io::Error::other(FromBytesWithNulError);
         assert!(Error::try_from(no_vs_io_error).is_err());
     }
 }

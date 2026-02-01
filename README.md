@@ -13,7 +13,7 @@ This crate needs to link to an installed visa library, for example, [NI-VISA](ht
 
 A default link configuration is used for the default installation setup on Windows, Linux and MacOs.  
 
-You can overwrite the configuration by specifying the name of the visa library file (`visa` for linux, `visa64` or `visa32` for windows) by environment variable `LIB_VISA_NAME`, and the path of the file by environment variable `LIB_VISA_PATH`.
+You can overwrite the configuration by specifying the name of the visa library file (default to `visa` for linux, `visa64` or `visa32` for windows) by environment variable `LIB_VISA_NAME`, and the path of the file by environment variable `LIB_VISA_PATH`.
 
 ## Example
 
@@ -56,5 +56,27 @@ fn find_an_instr() -> visa_rs::Result<()>{
   Ok(())
 }
 ```
+
+## Tokio Feature
+
+Enable `tokio` to use the async adapter that implements `tokio::io::AsyncRead` and
+`tokio::io::AsyncWrite` for VISA sessions.
+
+```toml
+[dependencies]
+visa-rs = { version = "0.7.0-alpha.1", features = ["tokio"] }
+```
+
+This exposes `InstrumentTokioAdapter`, which wraps `AsyncInstrument` and provides
+Tokio-compatible I/O traits.
+
+## Cross-compilation support
+
+Due to some repr of enum depending on the target architecture, there is a explicit feature `cross-compile`. Check [FEATURES.md](FEATURES.md) for more details.
+
+## Feedback (Alpha)
+
+This is an alpha release. If you run into issues, please share your runtime feedback
+and device/driver environment to help improve the next release.
 
 License: MIT OR Apache-2.0

@@ -1,0 +1,13 @@
+[package]
+name = "generate-repr-config"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Tool to generate VISA repr configuration for target platforms"
+
+[[bin]]
+name = "generate-repr-config"
+path = "src/main.rs"
+
+[dependencies]
+visa-sys = { version = "^0.1.8", features = ["proc"] }

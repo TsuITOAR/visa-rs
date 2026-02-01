@@ -1,0 +1,19 @@
+# Custom VISA repr configuration example
+#
+# This file demonstrates how to customize repr mappings for your specific needs.
+# Place this file named "visa_repr_config.toml" in the root of your crate
+# (same directory as Cargo.toml), or set VISA_REPR_CONFIG_PATH to its path.
+# With "cross-compile" it is optional; with "custom-repr" it is required.
+
+[[platforms]]
+condition = 'all()' # Matches all platforms
+[platforms.types]
+ViUInt16 = "u16"
+ViInt16 = "i16"
+ViUInt32 = "u64"
+ViEvent = "u64"
+ViEventType = "u64"
+ViEventFilter = "u64"
+ViAttr = "u64"
+ViStatus = "i64"
+ViInt32 = "i64"

@@ -1,0 +1,81 @@
+# Configuration for VISA type to Rust repr mapping
+# This file defines how VISA types should be represented on different platforms
+
+# Each platform entry must explicitly list all VISA types it supports.
+# This avoids implicit invariants and makes platform mappings fully explicit.
+
+[[platforms]]
+# Windows 64-bit (c_ulong/c_long are 32-bit on Windows)
+condition = 'all(target_os = "windows", target_pointer_width = "64")'
+
+[platforms.types]
+ViUInt16 = "u16"
+ViInt16 = "i16"
+ViUInt32 = "u32"
+ViEvent = "u32"
+ViEventType = "u32"
+ViEventFilter = "u32"
+ViAttr = "u32"
+ViStatus = "i32"
+ViInt32 = "i32"
+
+[[platforms]]
+# Windows 32-bit (same as 64-bit on Windows)
+condition = 'all(target_os = "windows", target_pointer_width = "32")'
+
+[platforms.types]
+ViUInt16 = "u16"
+ViInt16 = "i16"
+ViUInt32 = "u32"
+ViEvent = "u32"
+ViEventType = "u32"
+ViEventFilter = "u32"
+ViAttr = "u32"
+ViStatus = "i32"
+ViInt32 = "i32"
+
+[[platforms]]
+# Linux 64-bit
+condition = 'all(target_os = "linux", target_pointer_width = "64")'
+
+[platforms.types]
+ViUInt16 = "u16"
+ViInt16 = "i16"
+ViUInt32 = "u64"
+ViEvent = "u64"
+ViEventType = "u64"
+ViEventFilter = "u64"
+ViAttr = "u64"
+ViStatus = "i64"
+ViInt32 = "i64"
+
+
+[[platforms]]
+# Linux 32-bit
+condition = 'all(target_os = "linux", target_pointer_width = "32")'
+
+[platforms.types]
+ViUInt16 = "u16"
+ViInt16 = "i16"
+ViUInt32 = "u32"
+ViEvent = "u32"
+ViEventType = "u32"
+ViEventFilter = "u32"
+ViAttr = "u32"
+ViStatus = "i32"
+ViInt32 = "i32"
+
+[[platforms]]
+# macOS 64-bit
+condition = 'all(target_os = "macos", target_pointer_width = "64")'
+
+[platforms.types]
+ViUInt16 = "u16"
+ViInt16 = "i16"
+ViUInt32 = "u64"
+ViEvent = "u64"
+ViEventType = "u64"
+ViEventFilter = "u64"
+ViAttr = "u64"
+ViStatus = "i64"
+ViInt32 = "i64"
