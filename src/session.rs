@@ -6,7 +6,10 @@ use visa_sys as vs;
 pub type RawSs = vs::ViSession;
 
 /// An owned visa session.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+///
+/// Deliberately not [`Clone`]: the session is closed on drop, so a copy would close
+/// the same raw session twice.
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct OwnedSs {
     s: RawSs,
 }

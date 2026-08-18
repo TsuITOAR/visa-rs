@@ -18,14 +18,19 @@ use crate::{
 };
 
 /// Defines the ability for being passed to [`Instrument::install_handler`](crate::Instrument::install_handler)
-pub trait Callback {
-    type Output;
+///
+/// `Send` is required on both the callback and its output because visa invokes handlers
+/// on its own thread and the output is delivered to the installing thread through a
+/// channel -- neither crosses that boundary safely otherwise.
+pub trait Callback: Send {
+    type Output: Send;
     fn call(&mut self, instr: &Instrument, event: &event::Event) -> Self::Output;
 }
 
 impl<F, Out> Callback for F
 where
-    F: FnMut(&Instrument, &event::Event) -> Out,
+    F: FnMut(&Instrument, &event::Event) -> Out + Send,
+    Out: Send,
 {
     type Output = Out;
     fn call(&mut self, instr: &Instrument, event: &event::Event) -> Self::Output {
@@ -81,14 +86,22 @@ fn split_pack<C: Callback>(
         event: vs::ViEvent,
         user_data: *mut c_void,
     ) -> vs::ViStatus {
-        let pack: &mut CallbackPack<T> = &mut *(user_data as *mut CallbackPack<T>);
-        let instr = Instrument::from_raw_ss(instr);
-        let event = event::Event::new(event, event_type);
-        let ret = pack.call(&instr, &event);
-        std::mem::forget(event); // The VISA system automatically invokes the viClose() operation on the event context when a user handler returns. Because the event context must still be valid after the user handler returns (so that VISA can free it up), an application should not invoke the viClose() operation on an event context passed to a user handler.
-        std::mem::forget(instr); // ? no sure yet, in official example session not closed
-
-        ret
+        // Unwinding out of an `extern "system"` fn aborts the process, so a panicking user
+        // callback is contained here. `ManuallyDrop` keeps a panic from running `Drop` on
+        // the borrowed session or on an event context visa frees itself.
+        let ret = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            let pack: &mut CallbackPack<T> = &mut *(user_data as *mut CallbackPack<T>);
+            let instr = std::mem::ManuallyDrop::new(Instrument::from_raw_ss(instr));
+            let event = std::mem::ManuallyDrop::new(event::Event::new(event, event_type));
+            pack.call(&instr, &event)
+        }));
+        match ret {
+            Ok(ret) => ret,
+            Err(_) => {
+                log::error!("panic in visa event handler, ignored");
+                SUCCESS
+            }
+        }
     }
 
     (
