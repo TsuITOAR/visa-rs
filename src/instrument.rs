@@ -128,7 +128,7 @@ impl Instrument {
         let mut ak = new_visa_buf();
         wrap_raw_error_in_unsafe!(vs::viLock(
             self.as_raw_ss(),
-            flags::AccessMode::EXCLUSIVE_LOCK.bits(),
+            flags::AccessMode::SHARED_LOCK.bits(),
             timeout.as_millis() as _,
             vs::VI_NULL as _,
             ak.as_mut_ptr() as _
@@ -140,7 +140,7 @@ impl Instrument {
         let mut ak = new_visa_buf();
         wrap_raw_error_in_unsafe!(vs::viLock(
             self.as_raw_ss(),
-            flags::AccessMode::EXCLUSIVE_LOCK.bits(),
+            flags::AccessMode::SHARED_LOCK.bits(),
             timeout.as_millis() as _,
             key.as_vi_const_string() as _,
             ak.as_mut_ptr() as _
@@ -381,19 +381,28 @@ impl Instrument {
     /// The operation returns jobId, which you can use with either viTerminate() to abort the operation, or with an I/O completion event to identify which asynchronous read operation completed. VISA will never return VI_NULL for a valid jobID.
     ///
     /// If you have enabled VI_EVENT_IO_COMPLETION for queueing (VI_QUEUE), for each successful call to viReadAsync(), you must call viWaitOnEvent() to retrieve the I/O completion event. This is true even if the I/O is done synchronously (that is, if the operation returns VI_SUCCESS_SYNC).
+    ///
+    /// Returns the job id together with the completion code, which is
+    /// [`SuccessSync`](enums::status::CompletionCode::SuccessSync) when the transfer
+    /// already finished. In that case visa may have run the io completion handler before
+    /// this call even returned the job id, so anything tracking jobs by id must tolerate
+    /// a completion that arrives before the job is registered.
+    ///
     /// # Safety
     /// This function is unsafe because the `buf` passed in may be dropped before the transfer terminates
-    //todo: return VI_SUCCESS_SYNC, means IO operation has finished, so if there is a waker receiving JobID, would be called before JobID set and can't wake corresponding job
-    pub unsafe fn visa_read_async(&self, buf: &mut [u8]) -> Result<JobID> {
+    pub unsafe fn visa_read_async(
+        &self,
+        buf: &mut [u8],
+    ) -> Result<(JobID, enums::status::CompletionCode)> {
         let mut id: vs::ViJobId = 0;
         #[allow(unused_unsafe)]
-        wrap_raw_error_in_unsafe!(vs::viReadAsync(
+        let completion = wrap_raw_error_in_unsafe!(vs::viReadAsync(
             self.as_raw_ss(),
             buf.as_mut_ptr(),
             buf.len() as _,
             &mut id as _
         ))?;
-        Ok(JobID(id))
+        Ok((JobID(id), completion))
     }
 
     /// The viWriteAsync() operation asynchronously transfers data. The data to be written is in the buffer represented by buf. This operation normally returns before the transfer terminates.
@@ -404,18 +413,26 @@ impl Instrument {
     ///
     /// If you have enabled VI_EVENT_IO_COMPLETION for queueing (VI_QUEUE), for each successful call to viWriteAsync(), you must call viWaitOnEvent() to retrieve the I/O completion event. This is true even if the I/O is done synchronously (that is, if the operation returns VI_SUCCESS_SYNC).
     ///
+    ///
+    /// Returns the job id together with the completion code; see
+    /// [`visa_read_async`](Self::visa_read_async) for what
+    /// [`SuccessSync`](enums::status::CompletionCode::SuccessSync) implies.
+    ///
     /// # Safety
     /// This function is unsafe because the `buf` passed in may be dropped before the transfer terminates
-    pub unsafe fn visa_write_async(&self, buf: &[u8]) -> Result<JobID> {
+    pub unsafe fn visa_write_async(
+        &self,
+        buf: &[u8],
+    ) -> Result<(JobID, enums::status::CompletionCode)> {
         let mut id: vs::ViJobId = 0;
         #[allow(unused_unsafe)]
-        wrap_raw_error_in_unsafe!(vs::viWriteAsync(
+        let completion = wrap_raw_error_in_unsafe!(vs::viWriteAsync(
             self.as_raw_ss(),
             buf.as_ptr(),
             buf.len() as _,
             &mut id as _
         ))?;
-        Ok(JobID(id))
+        Ok((JobID(id), completion))
     }
 
     /// Requests session to terminate normal execution of an operation.

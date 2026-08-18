@@ -1,6 +1,6 @@
 [package]
 name = "visa-rs"
-version = "0.7.0-alpha.1"
+version = "0.7.0"
 authors = ["ITOAR <itoar@outlook.com>"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -12,6 +12,12 @@ description = "Safe rust bindings for VISA(Virtual Instrument Software Architect
 exclude = ["/expand.rs", "/fetch-doc"]
 readme = "README_Crates_io.MD"
 
+[package.metadata.docs.rs]
+# Pin the feature set docs.rs builds with. `custom-repr` must never be enabled
+# here: it deliberately fails to compile unless the user supplies a repr mapping
+# (see FEATURES.md), so `all-features = true` would break the docs build.
+features = ["tokio", "cross-compile"]
+
 [features]
 default = ["tokio"]
 # Enable cross-compilation support with predefined platform configurations
@@ -21,14 +27,12 @@ custom-repr = ["visa-rs-proc/custom-repr"]
 tokio = ["dep:tokio"]
 
 [dependencies]
-visa-sys = { version = "^0.1.8" }
+visa-sys = { version = "^0.2" }
 bitflags = "^2.6"
 num_enum = "^0.7"
-visa-rs-proc = { version = "0.7.0-alpha.1", path = "./visa-rs-proc" }
+visa-rs-proc = { version = "0.7.0", path = "./visa-rs-proc" }
 log = "^0.4"
 dashmap = "^6.1"
-indexmap = "^2.2"
-bytes = "^1"
 tokio = { version = "^1", features = ["io-util"], optional = true }
 
 [dev-dependencies]
@@ -38,4 +42,7 @@ env_logger = "^0.11"
 
 
 [patch.crates-io]
-#visa-sys = { path = "../visa-sys" }
+# TEMPORARY: visa-sys 0.2 fixes ViInt32/ViUInt32, which were bound to
+# c_long/c_ulong and so were 64-bit on LP64 targets while visa itself uses 32-bit.
+# Comment this out once 0.2.0 is published; `cargo publish` cannot use a path patch.
+visa-sys = { path = "../visa-sys" }

@@ -11,7 +11,7 @@ use visa_rs::{
     enums::event::{self, Event},
     enums::status::ErrorCode,
     flags::AccessMode,
-    AsResourceManager, DefaultRM, Error, Instrument, VisaString, TIMEOUT_IMMEDIATE,
+    AsResourceManager, DefaultRM, Error, Instrument, TIMEOUT_IMMEDIATE,
 };
 fn init_logger() {
     let _ = env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("trace"))
@@ -55,6 +55,82 @@ fn try_default_rm() -> Result<Option<DefaultRM>> {
     }
 }
 
+/// Searches for `expr`, returning `None` when no such instrument is attached so a
+/// hardware-dependent test can skip instead of failing.
+fn find_or_skip(rm: &DefaultRM, expr: &str) -> Result<Option<visa_rs::ResList>> {
+    match rm.find_res_list(&CString::new(expr)?.into()) {
+        Ok(list) => Ok(Some(list)),
+        Err(Error(ErrorCode::ErrorRsrcNfound)) => {
+            log::warn!("no instrument matching {expr}; skipping");
+            Ok(None)
+        }
+        Err(e) => Err(e.into()),
+    }
+}
+
+/// Accepts one connection and never replies, so a read on it stays outstanding.
+fn start_tcp_silent() -> std::io::Result<(u16, thread::JoinHandle<()>)> {
+    let listener = TcpListener::bind("127.0.0.1:0")?;
+    let port = listener.local_addr()?.port();
+    let server = thread::spawn(move || {
+        if let Ok((stream, _)) = listener.accept() {
+            thread::sleep(Duration::from_secs(10));
+            drop(stream);
+        }
+    });
+    Ok((port, server))
+}
+
+/// The cancellation design rests on visa posting an io completion for a *terminated*
+/// job: that event is what tells us the driver has stopped writing, and so what releases
+/// the buffer. If visa stayed silent, every cancelled transfer would leak its buffer.
+#[test]
+fn terminate_posts_io_completion() -> Result<()> {
+    use visa_rs::enums::attribute::{AttrTmoValue, HasAttribute};
+    init_logger();
+    let rm = match try_default_rm()? {
+        Some(rm) => rm,
+        None => return Ok(()),
+    };
+    let (port, _server) = start_tcp_silent()?;
+    let instr = rm.open(
+        &CString::new(format!("TCPIP0::127.0.0.1::{}::SOCKET", port))?.into(),
+        AccessMode::NO_LOCK,
+        Duration::from_secs(3),
+    )?;
+    // Long enough that the read cannot finish by timing out during the test, so any
+    // completion we see is attributable to `viTerminate`.
+    instr.set_attr(AttrTmoValue::new_checked(1_000).expect("1s is a valid timeout"))?;
+
+    let kind = event::EventKind::EventIoCompletion;
+    let handler = instr.install_handler(kind, |_: &Instrument, e: &Event| e.kind())?;
+    instr.enable_event(kind, event::Mechanism::Handler)?;
+
+    // Leaked on purpose: visa keeps writing into it until the completion arrives, and
+    // this test must not free it early even if an assertion below fails.
+    let buf: &'static mut [u8] = Box::leak(vec![0u8; 64].into_boxed_slice());
+    let (job, completion) = unsafe { instr.visa_read_async(buf)? };
+    if completion == visa_rs::enums::status::CompletionCode::SuccessSync {
+        // Some visa implementations run `viReadAsync` synchronously -- it blocks for the
+        // session timeout and returns with the transfer already finished. There is then
+        // no outstanding job to terminate, so this property cannot be observed here.
+        log::warn!("viReadAsync completed synchronously; skipping (nothing to terminate)");
+        return Ok(());
+    }
+    assert!(
+        handler.receiver().try_recv().is_err(),
+        "the read completed on its own, so this proves nothing about terminate"
+    );
+
+    instr.terminate(job)?;
+    let got = handler
+        .receiver()
+        .recv_timeout(Duration::from_secs(5))
+        .expect("viTerminate must post an io completion event");
+    assert_eq!(got, kind);
+    Ok(())
+}
+
 #[test]
 fn list_instr() -> Result<()> {
     let rm = match try_default_rm()? {
@@ -74,7 +150,10 @@ fn send_idn() -> Result<()> {
         Some(rm) => rm,
         None => return Ok(()),
     };
-    let mut list = rm.find_res_list(&CString::new("?*KEYSIGH?*INSTR")?.into())?;
+    let mut list = match find_or_skip(&rm, "?*KEYSIGH?*INSTR")? {
+        Some(list) => list,
+        None => return Ok(()),
+    };
     if let Some(n) = list.find_next()? {
         let mut instr = rm.open(&n, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
         instr.write_all(b"*IDN?\n")?;
@@ -93,7 +172,10 @@ fn handler() -> Result<()> {
         Some(rm) => rm,
         None => return Ok(()),
     };
-    let mut list = rm.find_res_list(&CString::new("?*KEYSIGH?*INSTR")?.into())?;
+    let mut list = match find_or_skip(&rm, "?*KEYSIGH?*INSTR")? {
+        Some(list) => list,
+        None => return Ok(()),
+    };
     if let Some(n) = list.find_next()? {
         let instr = rm.open(&n, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
         let call_back1 = |ins: &Instrument, t: &Event| -> () {
@@ -127,7 +209,10 @@ fn async_io() -> Result<()> {
         Some(rm) => rm,
         None => return Ok(()),
     };
-    let mut list = rm.find_res_list(&CString::new("?*KEYSIGH?*INSTR")?.into())?;
+    let mut list = match find_or_skip(&rm, "?*KEYSIGH?*INSTR")? {
+        Some(list) => list,
+        None => return Ok(()),
+    };
     if let Some(n) = list.find_next()? {
         log::debug!("connecting to {}", n);
         let instr = rm.open(&n, AccessMode::NO_LOCK, TIMEOUT_IMMEDIATE)?;
@@ -135,9 +220,8 @@ fn async_io() -> Result<()> {
         let task = async move {
             let instr = instr.into_async()?;
             instr.async_write(b"*IDN?\n").await?;
-            let mut buf = [0; 256];
-            instr.async_read(buf.as_mut_slice()).await?;
-            log::info!("get response: {}", VisaString::try_from(buf)?);
+            let resp = instr.async_read(Duration::from_secs(3)).await?;
+            log::info!("get response: {}", String::from_utf8_lossy(&resp));
             Result::<()>::Ok(())
         };
         use tokio::runtime::Builder;
@@ -185,9 +269,8 @@ fn async_io_virtual() -> Result<()> {
     let task = async move {
         let instr = instr.into_async()?;
         instr.async_write(b"*IDN?\n").await?;
-        let mut buf = [0; 256];
-        instr.async_read(buf.as_mut_slice()).await?;
-        let resp = String::from_utf8_lossy(&buf);
+        let resp = instr.async_read(Duration::from_secs(3)).await?;
+        let resp = String::from_utf8_lossy(&resp);
         assert!(resp.contains("TEST_INSTRUMENT"));
         Result::<()>::Ok(())
     };
@@ -283,6 +366,12 @@ fn tcpip_socket_idn() -> Result<()> {
         }
     }
     let mut instr = instr_opt.ok_or_else(|| anyhow!("open TCPIP SOCKET failed: {:?}", last_err))?;
+    // Without this `viRead` waits for the full count and the peer closes first, which
+    // surfaces as ErrorIo rather than the response.
+    {
+        use visa_rs::enums::attribute::{AttrTermcharEn, HasAttribute};
+        instr.set_attr(AttrTermcharEn::VI_TRUE)?;
+    }
 
     instr
         .write_all(b"*IDN?\n")

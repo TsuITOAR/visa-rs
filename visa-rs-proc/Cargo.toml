@@ -1,16 +1,30 @@
 [package]
 name = "visa-rs-proc"
-version = "0.7.0-alpha.1"
+version = "0.7.0"
 edition = "2021"
 authors = ["ITOAR <itoar@outlook.com>"]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/TsuITOAR/visa-rs"
 homepage = "https://github.com/TsuITOAR/visa-rs"
 description = "procedural macros used in visa-rs"
-include = ["default_repr_config.toml"]
+# `include` replaces cargo's default file set, so `src/` and the licenses have to
+# be listed explicitly -- otherwise `cargo package` produces a crate with no target.
+# `default_repr_config.toml` is `include_str!`d by the macro and must always ship.
+include = [
+    "src/**/*.rs",
+    "default_repr_config.toml",
+    "repr_config_README.md",
+    "LICENSE-APACHE",
+    "LICENSE-MIT",
+]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 proc-macro = true
+
+[package.metadata.docs.rs]
+# `custom-repr` fails to compile without a user-supplied repr mapping, so the
+# docs.rs feature set is pinned rather than left to `all-features`.
+features = ["cross-compile"]
 
 [features]
 default = []
@@ -23,7 +37,7 @@ custom-repr = ["cross-compile"]
 syn = "^2"
 quote = "^1"
 proc-macro2 = "^1"
-visa-sys = { version = "^0.1.8", features = ["proc"] }
+visa-sys = { version = "^0.2", features = ["proc"] }
 serde = { version = "1.0", features = ["derive"], optional = true }
 toml = { version = "0.9.8", optional = true }
 

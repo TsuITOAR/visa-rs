@@ -41,7 +41,7 @@ For a type like `ViStatus` with the current configuration, the proc macro genera
 
 ```rust
 #[cfg_attr(all(target_os = "windows", target_pointer_width = "64"), repr(i32))]
-#[cfg_attr(all(target_os = "linux", target_pointer_width = "64"), repr(i64))]
+#[cfg_attr(all(target_os = "linux", target_pointer_width = "64"), repr(i32))]
 pub enum ViStatus { ... }
 ```
 
@@ -68,11 +68,11 @@ condition = 'all(target_os = "linux", target_pointer_width = "64")'
 [platforms.types]
 ViUInt16 = "u16"
 ViInt16 = "i16"
-ViUInt32 = "u64"
-ViEvent = "u64"
-ViEventType = "u64"
-ViEventFilter = "u64"
-ViAttr = "u64"
-ViStatus = "i64"
-ViInt32 = "i64"
+ViUInt32 = "u32"
+ViEvent = "u32"
+ViEventType = "u32"
+ViEventFilter = "u32"
+ViAttr = "u32"
+ViStatus = "i32"
+ViInt32 = "i32"
 ```

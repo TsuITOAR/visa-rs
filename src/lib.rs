@@ -6,9 +6,25 @@
 //! # Requirements
 //! This crate needs to link to an installed visa library, for example, [NI-VISA](https://www.ni.com/en-us/support/downloads/drivers/download.ni-visa.html).
 //!
-//! You can specify path of `visa64.lib` file (or `visa32.lib` on 32-bit systems) by setting environment variable `LIB_VISA_PATH`.
+//! A default link configuration is used for the default installation setup on Windows, Linux and MacOs.
 //!
-//! On Windows, the default installation path will be added if no path is specified.
+//! You can overwrite the configuration by specifying the name of the visa library file
+//! (default to `visa` for linux, `visa64` or `visa32` for windows) by environment variable
+//! `LIB_VISA_NAME`, and the path of the file by environment variable `LIB_VISA_PATH`.
+//!
+//! # Features
+//!
+//! | Feature | Default | What it does |
+//! | --------------- | ------- | ------------ |
+//! | `tokio` | yes | Enables `InstrumentTokioAdapter`, which implements `tokio::io::AsyncRead` and `tokio::io::AsyncWrite` for a VISA session. |
+//! | `cross-compile` | no | Chooses enum `repr`s from a per-target table instead of the host's type sizes, so the crate can be cross-compiled. |
+//! | `custom-repr` | no | Takes enum `repr`s from `VISA_REPR_*` environment variables or a user-supplied config file. Implies `cross-compile`. |
+//!
+//! The async API itself ([`Instrument::into_async`], [`AsyncInstrument`]) is always available;
+//! `tokio` only adds the adapter that plugs it into Tokio's IO traits.
+//!
+//! `custom-repr` **deliberately fails to compile** until you supply a repr mapping, so do not
+//! build this crate with `--all-features`. See `FEATURES.md` in the repository for the full guide.
 //!
 //! # Example
 //!
@@ -50,7 +66,7 @@ use std::ffi::CStr;
 use std::{borrow::Cow, ffi::CString, fmt::Display, time::Duration};
 pub use visa_sys as vs;
 
-mod async_io;
+pub mod async_io;
 #[cfg(feature = "tokio")]
 mod async_tokio;
 pub mod enums;
@@ -60,6 +76,7 @@ mod instrument;
 pub mod prelude;
 pub mod session;
 
+pub use async_io::AsyncInstrument;
 #[cfg(feature = "tokio")]
 pub use async_tokio::InstrumentTokioAdapter;
 pub use instrument::Instrument;
@@ -196,8 +213,16 @@ fn vs_to_io_err(err: Error) -> std::io::Error {
             ErrorAsrlOverrun => Other,
             ErrorConnLost => BrokenPipe,
             ErrorInvMask => InvalidInput,
-            ErrorIo => std::io::Error::last_os_error().kind(),
-            _ => unreachable!(),
+            ErrorAlloc => OutOfMemory,
+            ErrorInvFmt | ErrorNsupFmt => InvalidInput,
+            ErrorAbort => Interrupted,
+            ErrorRsrcNfound => NotFound,
+            ErrorNsupMode | ErrorNsupAttr | ErrorNsupAttrState => Unsupported,
+            ErrorAttrReadonly => PermissionDenied,
+            // `last_os_error` here would report an unrelated errno, so stay generic.
+            ErrorIo => Other,
+            // Anything not mapped above is still a real error, not an impossible state.
+            _ => Other,
         },
         err,
     )
@@ -205,11 +230,24 @@ fn vs_to_io_err(err: Error) -> std::io::Error {
 
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// Splits a raw `VI_ATTR_STATUS` into the completion/error halves of [`Result`].
+///
+/// Total: a status matching no known code becomes
+/// [`ErrorSystemError`](enums::status::ErrorCode::ErrorSystemError) -- "unknown system
+/// error" -- rather than panicking, since visa implementations may return codes this
+/// crate does not enumerate.
 impl From<enums::attribute::AttrStatus> for Result<enums::status::CompletionCode> {
     fn from(a: enums::attribute::AttrStatus) -> Self {
-        match a.into_inner() {
-            state if state >= SUCCESS => Ok(state.try_into().unwrap()),
-            e => Err(e.try_into().unwrap()),
+        use enums::status::{CompletionCode, ErrorCode};
+        // `ViStatus` is 32 bits on every platform, so error codes are genuinely negative
+        // and this sign test is sufficient on its own.
+        let state = a.into_inner();
+        if state >= SUCCESS {
+            CompletionCode::try_from(state).map_err(|_| Error(ErrorCode::ErrorSystemError))
+        } else {
+            Err(Error(
+                ErrorCode::try_from(state).unwrap_or(ErrorCode::ErrorSystemError),
+            ))
         }
     }
 }
@@ -407,11 +445,6 @@ pub trait AsResourceManager: AsRawSs {
         ))?;
         Ok(unsafe { Instrument::from_raw_ss(instr) })
     }
-
-    /// Close this session and all find lists and device sessions.
-    fn close_all(&self) {
-        std::mem::drop(unsafe { DefaultRM::from_raw_ss(self.as_raw_ss()) })
-    }
 }
 
 impl<'a> AsResourceManager for WeakRM<'a> {}
@@ -460,6 +493,16 @@ impl DefaultRM {
     ///
     /// When a Resource Manager session is dropped, not only is that session closed, but also all find lists and device sessions (which that Resource Manager session was used to create) are closed.
     ///
+    /// Close this session and, with it, all find lists and device sessions it opened.
+    ///
+    /// Exactly equivalent to dropping the [`DefaultRM`]; it consumes `self` so the
+    /// session cannot be used afterwards. Deliberately not available on [`WeakRM`],
+    /// which does not own its session -- closing through a borrow would leave the
+    /// owning [`DefaultRM`] to close the same raw session a second time.
+    pub fn close_all(self) {
+        std::mem::drop(self)
+    }
+
     pub fn new() -> Result<Self> {
         let mut new: vs::ViSession = 0;
         wrap_raw_error_in_unsafe!(vs::viOpenDefaultRM(&mut new as _))?;
@@ -473,6 +516,16 @@ pub struct ResList {
     list: vs::ViFindList,
     cnt: i32,
     instr_desc: VisaBuf,
+}
+
+impl Drop for ResList {
+    fn drop(&mut self) {
+        // visa allocates a find list for `viFindRsrc`; without this it leaks until the
+        // resource manager itself is closed.
+        unsafe {
+            vs::viClose(self.list as _);
+        }
+    }
 }
 
 impl Iterator for ResList {
@@ -671,7 +724,10 @@ mod test {
         let r1 = rm1.as_raw_ss();
         assert_ne!(rm1, rm2);
         std::mem::drop(rm1);
-        let expr = CString::new("?*").unwrap().into();
+        // Not `"?*"`: some visa builds reject the bare-wildcard search with
+        // ErrorInvSetup even on a freshly opened resource manager, which has nothing to
+        // do with what this test is checking.
+        let expr = CString::new("?*INSTR").unwrap().into();
         match unsafe { DefaultRM::from_raw_ss(r1).leak() }.find_res(&expr) {
             Err(crate::Error(crate::enums::status::ErrorCode::ErrorInvObject)) => {
                 Ok::<_, crate::Error>(())
@@ -694,11 +750,54 @@ mod test {
     }
 
     #[test]
+    fn attr_status_splits_without_panicking() {
+        use enums::attribute::AttrStatus;
+        use enums::status::{CompletionCode, ErrorCode};
+        // `Result` in this module is anyhow's, so name the crate's explicitly
+        let of = |v: vs::ViStatus| -> crate::Result<CompletionCode> {
+            unsafe { AttrStatus::new_unchecked(v) }.into()
+        };
+        assert_eq!(of(0).unwrap(), CompletionCode::Success);
+        assert_eq!(
+            of(ErrorCode::ErrorTmo.into()).unwrap_err(),
+            Error(ErrorCode::ErrorTmo)
+        );
+        // codes this crate does not enumerate must not panic, either sign
+        assert_eq!(
+            of(0x3FFF_7FFE).unwrap_err(),
+            Error(ErrorCode::ErrorSystemError)
+        );
+        assert_eq!(of(-12345).unwrap_err(), Error(ErrorCode::ErrorSystemError));
+    }
+
+    #[test]
     fn convert_io_error() {
-        let vs_error = Error(enums::status::ErrorCode::ErrorTmo);
+        use enums::status::ErrorCode::ErrorTmo;
+        let vs_error = Error(ErrorTmo);
         let io_error = vs_to_io_err(vs_error);
         assert_eq!(Error::try_from(io_error).unwrap(), vs_error);
         let no_vs_io_error = std::io::Error::other(FromBytesWithNulError);
         assert!(Error::try_from(no_vs_io_error).is_err());
+
+        // The code rides along as the payload whichever `ErrorKind` it maps to, so this
+        // holds regardless of how the mapping table changes.
+        use enums::status::ErrorCode::{ErrorAlloc, ErrorInvJobId, ErrorQueueError};
+        for code in [ErrorTmo, ErrorAlloc, ErrorInvJobId, ErrorQueueError] {
+            assert_eq!(
+                Error::try_from(vs_to_io_err(Error(code))).unwrap(),
+                Error(code)
+            );
+        }
+        // Codes with no specific kind share the `Other` catch-all, but stay fully
+        // distinguishable through the payload and its description.
+        assert_eq!(
+            vs_to_io_err(Error(ErrorInvJobId)).kind(),
+            std::io::ErrorKind::Other
+        );
+        assert_ne!(
+            vs_to_io_err(Error(ErrorInvJobId)).to_string(),
+            vs_to_io_err(Error(ErrorQueueError)).to_string(),
+            "the visa description must survive into the io error"
+        );
     }
 }
