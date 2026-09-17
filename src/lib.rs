@@ -17,14 +17,11 @@
 //! | Feature | Default | What it does |
 //! | --------------- | ------- | ------------ |
 //! | `tokio` | yes | Enables `InstrumentTokioAdapter`, which implements `tokio::io::AsyncRead` and `tokio::io::AsyncWrite` for a VISA session. |
-//! | `cross-compile` | no | Chooses enum `repr`s from a per-target table instead of the host's type sizes, so the crate can be cross-compiled. |
-//! | `custom-repr` | no | Takes enum `repr`s from `VISA_REPR_*` environment variables or a user-supplied config file. Implies `cross-compile`. |
 //!
 //! The async API itself ([`Instrument::into_async`], [`AsyncInstrument`]) is always available;
 //! `tokio` only adds the adapter that plugs it into Tokio's IO traits.
 //!
-//! `custom-repr` **deliberately fails to compile** until you supply a repr mapping, so do not
-//! build this crate with `--all-features`. See `FEATURES.md` in the repository for the full guide.
+//! Fixed-width VISA enum representations support cross-compilation by default.
 //!
 //! # Example
 //!
@@ -66,6 +63,7 @@ use std::ffi::CStr;
 use std::{borrow::Cow, ffi::CString, fmt::Display, time::Duration};
 pub use visa_sys as vs;
 
+mod abi;
 pub mod async_io;
 #[cfg(feature = "tokio")]
 mod async_tokio;

@@ -320,6 +320,7 @@ fn tokio_async_rw_virtual() -> Result<()> {
         let async_instr = instr.into_async().map_err(std::io::Error::other)?;
         let mut adapter = visa_rs::InstrumentTokioAdapter::new(async_instr);
         adapter.write_all(b"*IDN?\n").await?;
+        adapter.flush().await?;
         let mut buf = [0u8; 64];
         let n = adapter.read(&mut buf).await?;
         let resp = String::from_utf8_lossy(&buf[..n]);

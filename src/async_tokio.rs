@@ -6,20 +6,24 @@ use std::{
 };
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
-/// Adapts a VISA session to tokio's IO traits.
+/// Adapts a VISA instrument to Tokio's [`AsyncRead`] and [`AsyncWrite`] traits.
 ///
-/// Visa transfers own their buffer until the completion event arrives, so this holds its
-/// own buffers rather than lending out the caller's. A read that returns more bytes than
-/// the caller's `ReadBuf` can take keeps the remainder for the next call.
+/// `write().await` and `write_all().await` start VISA transfers as bytes are accepted;
+/// they do not wait for completion or automatically flush. `flush().await` waits for
+/// completion and reports write errors; it is not needed to start the transfer.
+/// Flush before reading a response or dropping/converting the adapter.
+///
+/// Dropping a Tokio read, write, or flush future does not cancel an already started
+/// transfer. Dropping or converting the adapter requests cancellation of pending I/O.
 pub struct InstrumentTokioAdapter {
+    // VISA retains buffer pointers until completion; never lend it the caller's buffer.
     instr: AsyncInstrument,
     read_current: Option<JobID>,
     write_current: Option<JobID>,
-    /// Bytes read from the device but not yet handed to the caller, and how far into
-    /// them we have got. When drained, the allocation is recycled for the next read.
+    // Undelivered bytes and cursor. Recycle the allocation once drained.
     read_buf: Vec<u8>,
     read_pos: usize,
-    /// Recycled allocation for the next write.
+    // Recycled allocation for the next write.
     write_buf: Vec<u8>,
 }
 
@@ -81,8 +85,7 @@ impl InstrumentTokioAdapter {
         }
     }
 
-    /// Moves as much of `read_buf` into `buf` as fits, keeping any remainder for the
-    /// next `poll_read`. Never writes past `buf.remaining()`.
+    // Deliver what fits, retaining the remainder for the next poll_read.
     fn deliver(&mut self, buf: &mut ReadBuf<'_>) {
         let available = &self.read_buf[self.read_pos..];
         let n = available.len().min(buf.remaining());
@@ -94,19 +97,39 @@ impl InstrumentTokioAdapter {
         }
     }
 
-    fn poll_current_write(&mut self, cx: &Context<'_>) -> Poll<io::Result<usize>> {
+    fn poll_current_write(&mut self, cx: &Context<'_>) -> Poll<io::Result<()>> {
         let Some(job_id) = self.write_current else {
-            return Poll::Ready(Ok(0));
+            return Poll::Ready(Ok(()));
         };
         match self.instr.poll_job(job_id, cx) {
             Poll::Ready((result, mut buf)) => {
                 self.write_current = None;
+                let expected = buf.len();
                 buf.clear();
                 self.write_buf = buf;
-                Poll::Ready(result.map(|c| c.count).map_err(|e| {
+                let completion = result.map_err(|e| {
                     log::error!("tokio async write completion error: {}", e);
                     Self::map_vs_err(e)
-                }))
+                })?;
+                // These bytes have already been acknowledged to the caller. A short
+                // completion must not silently discard the untransferred suffix.
+                if completion.count != expected {
+                    let kind = if completion.count == 0 {
+                        io::ErrorKind::WriteZero
+                    } else if completion.count > expected {
+                        io::ErrorKind::InvalidData
+                    } else {
+                        io::ErrorKind::Other
+                    };
+                    return Poll::Ready(Err(io::Error::new(
+                        kind,
+                        format!(
+                            "VISA wrote {} of {expected} accepted bytes",
+                            completion.count
+                        ),
+                    )));
+                }
+                Poll::Ready(Ok(()))
             }
             Poll::Pending => Poll::Pending,
         }
@@ -137,7 +160,10 @@ impl AsyncRead for InstrumentTokioAdapter {
             }
             let mut owned = std::mem::take(&mut me.read_buf);
             owned.clear();
-            owned.resize(buf.remaining(), 0);
+            owned.resize(
+                crate::instrument::async_transfer_count(buf.remaining()) as usize,
+                0,
+            );
             me.read_pos = 0;
             match me.instr.start_read_id(owned, cx.waker()) {
                 Ok(job_id) => me.read_current = Some(job_id),
@@ -168,41 +194,47 @@ impl AsyncRead for InstrumentTokioAdapter {
 }
 
 impl AsyncWrite for InstrumentTokioAdapter {
-    /// Note that while a write is in flight this reports on *that* transfer; the
-    /// contract allows `buf` to differ between polls, so poll to completion before
-    /// changing what you are writing.
+    /// Starts writing accepted bytes. While the previous transfer is pending,
+    /// no bytes from this call are accepted. Completion errors are deferred until
+    /// the next write or flush.
     fn poll_write(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
         let me = self.get_mut();
-        if me.write_current.is_none() {
-            if buf.is_empty() {
-                return Poll::Ready(Ok(0));
+        match me.poll_current_write(cx) {
+            Poll::Pending => {
+                if !buf.is_empty() {
+                    log::warn!(
+                        "tokio write waiting for previous VISA job; {} input bytes not accepted yet",
+                        buf.len()
+                    );
+                }
+                return Poll::Pending;
             }
-            let mut owned = std::mem::take(&mut me.write_buf);
-            owned.clear();
-            owned.extend_from_slice(buf);
-            match me.instr.start_write_id(owned, cx.waker()) {
-                Ok(job_id) => me.write_current = Some(job_id),
-                Err(e) => return Poll::Ready(Err(Self::map_vs_err(e))),
-            }
+            Poll::Ready(result) => result?,
         }
-        me.poll_current_write(cx)
+        if buf.is_empty() {
+            return Poll::Ready(Ok(0));
+        }
+        // VISA's count is 32-bit. A larger slice is accepted in multiple writes.
+        let n = crate::instrument::async_transfer_count(buf.len()) as usize;
+        let mut owned = std::mem::take(&mut me.write_buf);
+        owned.clear();
+        owned.extend_from_slice(&buf[..n]);
+        match me.instr.start_write_id(owned, cx.waker()) {
+            Ok(job_id) => me.write_current = Some(job_id),
+            Err(e) => return Poll::Ready(Err(Self::map_vs_err(e))),
+        }
+        Poll::Ready(Ok(n))
     }
 
     fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         use crate::flags::FlushMode;
         let me = self.get_mut();
         // A queued write has to reach the device before flushing means anything.
-        if me.write_current.is_some() {
-            match me.poll_current_write(cx) {
-                Poll::Pending => return Poll::Pending,
-                Poll::Ready(Err(e)) => return Poll::Ready(Err(e)),
-                Poll::Ready(Ok(_)) => {}
-            }
-        }
+        std::task::ready!(me.poll_current_write(cx))?;
         me.instr
             .instrument()
             .visa_flush(FlushMode::WRITE_BUF | FlushMode::IO_OUT_BUF)
@@ -210,8 +242,7 @@ impl AsyncWrite for InstrumentTokioAdapter {
         Poll::Ready(Ok(()))
     }
 
-    /// Visa has no half-close, so this is a flush: pending output reaches the device,
-    /// and the session itself closes when the adapter is dropped.
+    /// Flushes pending output without closing the session.
     fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
         self.poll_flush(cx)
     }

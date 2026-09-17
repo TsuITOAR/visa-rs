@@ -3,6 +3,11 @@ use super::*;
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Instrument(pub(crate) OwnedSs);
 
+// One VISA operation can represent at most a 32-bit byte count.
+pub(crate) fn async_transfer_count(len: usize) -> vs::ViUInt32 {
+    len.min(vs::ViUInt32::MAX as usize) as vs::ViUInt32
+}
+
 impl std::io::Write for Instrument {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         <&Instrument>::write(&mut &*self, buf)
@@ -388,6 +393,8 @@ impl Instrument {
     /// this call even returned the job id, so anything tracking jobs by id must tolerate
     /// a completion that arrives before the job is registered.
     ///
+    /// Transfers at most `u32::MAX` bytes in one operation.
+    ///
     /// # Safety
     /// This function is unsafe because the `buf` passed in may be dropped before the transfer terminates
     pub unsafe fn visa_read_async(
@@ -399,7 +406,7 @@ impl Instrument {
         let completion = wrap_raw_error_in_unsafe!(vs::viReadAsync(
             self.as_raw_ss(),
             buf.as_mut_ptr(),
-            buf.len() as _,
+            async_transfer_count(buf.len()),
             &mut id as _
         ))?;
         Ok((JobID(id), completion))
@@ -418,6 +425,8 @@ impl Instrument {
     /// [`visa_read_async`](Self::visa_read_async) for what
     /// [`SuccessSync`](enums::status::CompletionCode::SuccessSync) implies.
     ///
+    /// Transfers at most `u32::MAX` bytes in one operation.
+    ///
     /// # Safety
     /// This function is unsafe because the `buf` passed in may be dropped before the transfer terminates
     pub unsafe fn visa_write_async(
@@ -429,7 +438,7 @@ impl Instrument {
         let completion = wrap_raw_error_in_unsafe!(vs::viWriteAsync(
             self.as_raw_ss(),
             buf.as_ptr(),
-            buf.len() as _,
+            async_transfer_count(buf.len()),
             &mut id as _
         ))?;
         Ok((JobID(id), completion))
